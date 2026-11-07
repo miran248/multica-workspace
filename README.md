@@ -89,6 +89,8 @@ an enforced byte identity; Git is the pin, and each skill directory is its file 
 - Run `just validate && just test`, then open a PR. A merge reaches every workspace's next
   scheduled sync; runtime access and verification stay local.
 
+CI runs `just validate && just test` on every push and pull request.
+
 ## License
 
 MIT — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
