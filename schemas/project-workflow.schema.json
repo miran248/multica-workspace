@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "status_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "new_status": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "category": {
+                "enum": [
+                  "unstarted",
+                  "started",
+                  "done",
+                  "cancelled"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "category"
+            ],
+            "additionalProperties": false
+          },
+          "handler": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "enum": [
+                  "none",
+                  "project_lead",
+                  "creator",
+                  "agent",
+                  "member"
+                ]
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          "instructions": {
+            "type": "string",
+            "minLength": 1
+          },
+          "next_status_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "back_status_key": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "status_key"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "key",
+    "name",
+    "description",
+    "steps"
+  ],
+  "additionalProperties": false
+}

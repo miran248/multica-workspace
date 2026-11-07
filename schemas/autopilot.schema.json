@@ -1,0 +1,88 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cron": {
+      "type": "string",
+      "minLength": 1
+    },
+    "execution_mode": {
+      "enum": [
+        "create_issue",
+        "run_only"
+      ]
+    },
+    "issue_title_template": {
+      "type": "string",
+      "minLength": 1
+    },
+    "prompt": {
+      "type": "string",
+      "pattern": "^(?:shared|roles|squads|templates|skills)/[a-zA-Z0-9_./-]+$"
+    },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "workspace_name",
+          "workspace_slug",
+          "workspace_id",
+          "human_name",
+          "human_user_id",
+          "timezone",
+          "repository"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "policy": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "key",
+    "title",
+    "role",
+    "cron",
+    "execution_mode",
+    "prompt",
+    "parameters"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "execution_mode": {
+            "const": "create_issue"
+          }
+        },
+        "required": [
+          "execution_mode"
+        ]
+      },
+      "then": {
+        "required": [
+          "issue_title_template"
+        ]
+      }
+    }
+  ]
+}

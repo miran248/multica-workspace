@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+import { readFileSync, writeFileSync } from 'node:fs';
+import { command } from './platform.js';
+const args = process.argv.slice(2);
+if (process.env.FAKE_ERROR) { console.error('fake diagnostic'); process.exit(7); }
+if (process.env.FAKE_INVALID_JSON) { console.log('{broken'); process.exit(0); }
+const state = JSON.parse(readFileSync(process.env.FAKE_STATE, 'utf8'));
+try {
+  if (args.at(-2) !== '--output' || args.at(-1) !== 'json') throw new Error('Missing scope or JSON flags');
+  const scoped = args[0] === '--workspace-id';
+  if (!scoped && args.slice(0, -2).join(' ') !== 'workspace get') throw new Error('Only workspace identity lookup may omit scope');
+  const result = command(state, scoped ? args[1] : '', ...args.slice(scoped ? 2 : 0, -2));
+  writeFileSync(process.env.FAKE_STATE, JSON.stringify(state));
+  if (process.env.FAKE_STDERR) console.error('fake warning');
+  console.log(JSON.stringify(result));
+} catch (error) { console.error(error.message); process.exit(1); }

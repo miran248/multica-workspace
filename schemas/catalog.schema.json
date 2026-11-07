@@ -1,0 +1,233 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "id": {
+      "const": "default"
+    },
+    "timezone": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_policy": {
+      "const": "flash-first-v1"
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thinking_level": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_provider": {
+          "enum": [
+            "dsh",
+            "codex"
+          ]
+        }
+      },
+      "required": [
+        "model",
+        "thinking_level",
+        "required_provider"
+      ],
+      "additionalProperties": false
+    },
+    "labels": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resource_type": {
+            "enum": [
+              "issue"
+            ]
+          },
+          "triage": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "color",
+          "description",
+          "resource_type"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "shared_instructions": {
+      "type": "string",
+      "pattern": "^(?:shared|roles|squads|templates|skills)/[a-zA-Z0-9_./-]+$"
+    },
+    "agents": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "max_concurrent_tasks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "thinking_level": {
+            "enum": [
+              "low",
+              "high"
+            ]
+          }
+        },
+        "required": [
+          "description",
+          "max_concurrent_tasks",
+          "skills"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "squads": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "leader": {
+            "type": "string",
+            "minLength": 1
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "instructions": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "leader",
+          "members",
+          "instructions"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "documents": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^(?:shared|roles|policies|templates|skills)/[a-zA-Z0-9_./-]+$"
+      }
+    },
+    "policies": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^(?:shared|roles|policies|templates|skills)/[a-zA-Z0-9_./-]+$"
+      }
+    },
+    "skill_manifest": {
+      "type": "string",
+      "pattern": "^(?:shared|roles|squads|templates|skills)/[a-zA-Z0-9_./-]+$"
+    },
+    "autopilots": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^(?:shared|roles|squads|templates|skills)/[a-zA-Z0-9_./-]+$"
+      }
+    },
+    "workflows": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^(?:shared|roles|policies|templates|skills)/[a-zA-Z0-9_./-]+$"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "timezone",
+    "model_policy",
+    "defaults",
+    "labels",
+    "shared_instructions",
+    "agents",
+    "squads",
+    "documents",
+    "policies",
+    "skill_manifest",
+    "autopilots",
+    "workflows"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "workspace_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "human_user_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "owner_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "workspace_name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,79}$"
+        },
+        "workspace_slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "human_name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,79}$"
+        }
+      },
+      "required": [
+        "workspace_name",
+        "workspace_slug",
+        "human_name"
+      ],
+      "additionalProperties": false
+    },
+    "agent_runtimes": {
+      "type": "object",
+      "properties": {
+        "general": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "planner": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "implementer": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "reviewer": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "release": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "general",
+        "planner",
+        "implementer",
+        "reviewer",
+        "release"
+      ],
+      "additionalProperties": false
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^https://[^\\s{}]+$"
+    }
+  },
+  "required": [
+    "workspace_id",
+    "human_user_id",
+    "owner_ids",
+    "identity",
+    "agent_runtimes",
+    "repository"
+  ],
+  "additionalProperties": false
+}

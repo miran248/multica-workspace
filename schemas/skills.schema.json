@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "repo": {
+          "const": "mattpocock/skills"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "license": {
+          "const": "MIT"
+        },
+        "notice": {
+          "const": "NOTICE"
+        }
+      },
+      "required": [
+        "repo",
+        "commit",
+        "license",
+        "notice"
+      ],
+      "additionalProperties": false
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "logical_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "enum": [
+                  "identical",
+                  "fork",
+                  "rewrite",
+                  "own"
+                ]
+              },
+              "upstream": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "logical_id",
+          "provenance"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "provenance",
+    "skills"
+  ],
+  "additionalProperties": false
+}

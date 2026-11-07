@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "key": "factory",
+  "name": "Factory",
+  "description": "Spec-approved work becomes merged code: implementer \u2192 reviewer \u2192 merged, with a human merge column only when the epic asks for it.",
+  "steps": [
+    {
+      "status_key": "backlog"
+    },
+    {
+      "status_key": "todo"
+    },
+    {
+      "status_key": "in_progress",
+      "handler": {
+        "type": "agent",
+        "role": "implementer"
+      },
+      "next_status_key": "in_review",
+      "instructions": "Implement this ticket as one reviewable pull request. Read the ticket, its spec and the repository conventions first; reproduce any demonstrated failure before fixing it. Run the check that covers the diff with a finite timeout. Link the PR to this ticket. Then move the ticket to in_review. Never merge and never review your own work. An external blocker moves the ticket to blocked with the reason."
+    },
+    {
+      "status_key": "in_review",
+      "handler": {
+        "type": "agent",
+        "role": "reviewer"
+      },
+      "next_status_key": "done",
+      "back_status_key": "in_progress",
+      "instructions": "Review the linked pull request at its exact head against the ticket's acceptance criteria and the repository standards. If this ticket or its parent carries manual-merge, move it to awaiting_merge for the human. Otherwise arm auto-merge (gh pr merge --auto --squash --delete-branch) and move it to done. On a blocking finding, comment the evidence and move it back to in_progress. Never review or merge your own work."
+    },
+    {
+      "status_key": "awaiting_merge",
+      "new_status": {
+        "name": "Awaiting merge",
+        "category": "started"
+      },
+      "handler": {
+        "type": "member",
+        "role": "human"
+      },
+      "next_status_key": "done",
+      "instructions": "Merge the reviewed pull request when you are satisfied, then move this ticket to done. If it should change first, move it back to in_progress with the reason."
+    },
+    {
+      "status_key": "blocked"
+    },
+    {
+      "status_key": "done"
+    },
+    {
+      "status_key": "cancelled"
+    }
+  ]
+}

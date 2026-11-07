@@ -1,0 +1,145 @@
+{
+  "schema_version": 2,
+  "provenance": {
+    "repo": "mattpocock/skills",
+    "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+    "license": "MIT",
+    "notice": "NOTICE"
+  },
+  "skills": [
+    {
+      "logical_id": "decision-interview",
+      "provenance": {
+        "status": "own"
+      }
+    },
+    {
+      "logical_id": "research",
+      "provenance": {
+        "status": "fork",
+        "upstream": "research"
+      }
+    },
+    {
+      "logical_id": "domain-modeling",
+      "provenance": {
+        "status": "rewrite",
+        "upstream": "domain-modeling"
+      }
+    },
+    {
+      "logical_id": "spec-drafting",
+      "provenance": {
+        "status": "own"
+      }
+    },
+    {
+      "logical_id": "ticket-slicing",
+      "provenance": {
+        "status": "own"
+      }
+    },
+    {
+      "logical_id": "diagnosing-bugs",
+      "provenance": {
+        "status": "rewrite",
+        "upstream": "diagnosing-bugs"
+      }
+    },
+    {
+      "logical_id": "tdd",
+      "provenance": {
+        "status": "rewrite",
+        "upstream": "tdd"
+      }
+    },
+    {
+      "logical_id": "module-design",
+      "provenance": {
+        "status": "own"
+      }
+    },
+    {
+      "logical_id": "pr-writing",
+      "provenance": {
+        "status": "own"
+      }
+    },
+    {
+      "logical_id": "agent-retro",
+      "provenance": {
+        "status": "own"
+      }
+    },
+    {
+      "logical_id": "code-review",
+      "provenance": {
+        "status": "fork",
+        "upstream": "code-review"
+      }
+    },
+    {
+      "logical_id": "grill-me",
+      "provenance": {
+        "status": "identical",
+        "upstream": "grill-me"
+      }
+    },
+    {
+      "logical_id": "grill-with-docs",
+      "provenance": {
+        "status": "identical",
+        "upstream": "grill-with-docs"
+      }
+    },
+    {
+      "logical_id": "grilling",
+      "provenance": {
+        "status": "fork",
+        "upstream": "grilling"
+      }
+    },
+    {
+      "logical_id": "improve-codebase-architecture",
+      "provenance": {
+        "status": "fork",
+        "upstream": "improve-codebase-architecture"
+      }
+    },
+    {
+      "logical_id": "prototype",
+      "provenance": {
+        "status": "identical",
+        "upstream": "prototype"
+      }
+    },
+    {
+      "logical_id": "setup-multica-project",
+      "provenance": {
+        "status": "rewrite",
+        "upstream": "setup-matt-pocock-skills"
+      }
+    },
+    {
+      "logical_id": "to-spec",
+      "provenance": {
+        "status": "fork",
+        "upstream": "to-spec"
+      }
+    },
+    {
+      "logical_id": "to-tickets",
+      "provenance": {
+        "status": "fork",
+        "upstream": "to-tickets"
+      }
+    },
+    {
+      "logical_id": "wayfinder",
+      "provenance": {
+        "status": "fork",
+        "upstream": "wayfinder"
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "cron": "0 8 * * *",
+  "execution_mode": "create_issue",
+  "issue_title_template": "Daily catalog sync \u2014 {{date}}",
+  "key": "config-sync",
+  "parameters": [
+    "workspace_name",
+    "workspace_id",
+    "human_name",
+    "repository"
+  ],
+  "prompt": "templates/autopilots/config-sync.md",
+  "role": "general",
+  "schema_version": 2,
+  "title": "Daily catalog sync"
+}

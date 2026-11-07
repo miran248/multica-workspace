@@ -1,0 +1,6 @@
+__pycache__/
+.local/
+.venv/
+node_modules/
+.skill-import-*/
+.skill-update-*/

@@ -1,0 +1,141 @@
+{
+  "agents": {
+    "general": {
+      "description": "Workspace assistant, intake and the improvement loop.",
+      "max_concurrent_tasks": 1,
+      "skills": [
+        "agent-retro",
+        "setup-multica-project"
+      ]
+    },
+    "implementer": {
+      "description": "Implement one approved ticket as a verified, reviewable PR.",
+      "max_concurrent_tasks": 3,
+      "skills": [
+        "diagnosing-bugs",
+        "tdd",
+        "module-design",
+        "pr-writing"
+      ]
+    },
+    "planner": {
+      "description": "Grill, spec, slice and own the epic through acceptance.",
+      "max_concurrent_tasks": 1,
+      "skills": [
+        "grilling",
+        "grill-me",
+        "decision-interview",
+        "research",
+        "domain-modeling",
+        "spec-drafting",
+        "ticket-slicing",
+        "prototype",
+        "to-spec",
+        "to-tickets",
+        "improve-codebase-architecture",
+        "grill-with-docs",
+        "wayfinder"
+      ]
+    },
+    "release": {
+      "description": "Production promotion and recovery only.",
+      "max_concurrent_tasks": 1,
+      "skills": [],
+      "thinking_level": "low"
+    },
+    "reviewer": {
+      "description": "Independent exact-head review; PASS merges, FAIL returns.",
+      "max_concurrent_tasks": 1,
+      "skills": [
+        "code-review"
+      ]
+    }
+  },
+  "autopilots": {
+    "config-sync": "templates/autopilots/config-sync.json"
+  },
+  "defaults": {
+    "model": "deepseek-official/deepseek-flash",
+    "required_provider": "dsh",
+    "thinking_level": "high"
+  },
+  "documents": {
+    "handoff": "templates/handoff.md"
+  },
+  "id": "default",
+  "labels": {
+    "bug": {
+      "color": "#ef4444",
+      "description": "Something is broken",
+      "name": "bug",
+      "resource_type": "issue",
+      "triage": true
+    },
+    "enhancement": {
+      "color": "#0ea5e9",
+      "description": "New feature or improvement",
+      "name": "enhancement",
+      "resource_type": "issue",
+      "triage": true
+    },
+    "human-assigned": {
+      "color": "#d946ef",
+      "description": "Epic flag: every ticket is assigned to the human.",
+      "name": "human-assigned",
+      "resource_type": "issue",
+      "triage": false
+    },
+    "manual-merge": {
+      "color": "#f97316",
+      "description": "Epic flag: the human merges after review.",
+      "name": "manual-merge",
+      "resource_type": "issue",
+      "triage": false
+    },
+    "needs-info": {
+      "color": "#3b82f6",
+      "description": "Waiting on the reporter for more information",
+      "name": "needs-info",
+      "resource_type": "issue",
+      "triage": true
+    },
+    "needs-triage": {
+      "color": "#f59e0b",
+      "description": "Maintainer needs to evaluate this issue",
+      "name": "needs-triage",
+      "resource_type": "issue",
+      "triage": true
+    },
+    "ready-for-agent": {
+      "color": "#10b981",
+      "description": "Fully specified, ready for an agent to implement",
+      "name": "ready-for-agent",
+      "resource_type": "issue",
+      "triage": true
+    },
+    "ready-for-human": {
+      "color": "#8b5cf6",
+      "description": "Requires human implementation",
+      "name": "ready-for-human",
+      "resource_type": "issue",
+      "triage": true
+    },
+    "wontfix": {
+      "color": "#6b7280",
+      "description": "Will not be actioned",
+      "name": "wontfix",
+      "resource_type": "issue",
+      "triage": true
+    }
+  },
+  "model_policy": "flash-first-v1",
+  "policies": {},
+  "schema_version": 2,
+  "shared_instructions": "shared/instructions.md",
+  "skill_manifest": "skills/manifest.json",
+  "squads": {},
+  "timezone": "UTC",
+  "workflows": {
+    "factory": "templates/workflows/factory.json"
+  }
+}
