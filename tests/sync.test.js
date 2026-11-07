@@ -39,7 +39,7 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
   assert.equal(workflow.steps.find(step => step.status_key === 'in_progress').handler.id, f.state.agents.find(agent => agent.name === 'implementer').id);
   assert.equal(workflow.steps.find(step => step.status_key === 'in_review').handler.id, f.state.agents.find(agent => agent.name === 'reviewer').id);
   assert.equal(workflow.steps.find(step => step.status_key === 'awaiting_merge').handler.id, f.state.human);
-  assert.equal(f.state.labels.length, 9);
+  assert.equal(f.state.labels.length, 14);
   assert.equal(journal(f).status, 'verified');
   f.state.calls = [];
   apply(f);
