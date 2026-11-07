@@ -19,8 +19,8 @@ test('every catalog skill is declared once and bound to exactly one role', () =>
   const manifest = readJSON(join(ROOT, 'skills/manifest.json'));
   const bound = Object.entries(catalog.agents).flatMap(([role, agent]) => agent.skills.map(skill => [skill, role]));
   const directories = readdirSync(join(ROOT, 'skills'), { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
-  assert.equal(bound.length, 21);
-  assert.equal(new Set(bound.map(([name]) => name)).size, 21);
+  assert.equal(bound.length, 16);
+  assert.equal(new Set(bound.map(([name]) => name)).size, 16);
   assert.deepEqual(bound.map(([name]) => name).sort(), directories);
   assert.deepEqual(bound.map(([name]) => name).sort(), manifest.skills.map(entry => entry.logical_id).sort());
   for (const entry of manifest.skills) assert.deepEqual(Object.keys(entry).sort(), ['logical_id', 'provenance']);
@@ -33,7 +33,7 @@ test('provenance is a record, not a pin: no bytes or hashes in the manifest', ()
   assert.match(manifest.provenance.commit, /^[a-f0-9]{40}$/);
   const counts = Object.fromEntries(['identical', 'fork', 'rewrite', 'own'].map(status =>
     [status, manifest.skills.filter(entry => entry.provenance.status === status).length]));
-  assert.deepEqual(counts, { identical: 4, fork: 7, rewrite: 4, own: 6 });
+  assert.deepEqual(counts, { identical: 2, fork: 7, rewrite: 4, own: 3 });
   assert.deepEqual(manifest.skills.filter(entry => entry.provenance.status === 'rewrite').map(entry => entry.logical_id).sort(),
     ['diagnosing-bugs', 'domain-modeling', 'setup-multica-project', 'tdd']);
   for (const entry of manifest.skills) {
@@ -65,6 +65,48 @@ test('every skill the catalog names resolves, so pruning cannot silence a depend
     }
   }
   assert.deepEqual(dangling, []);
+});
+
+/** Dispatch reads descriptions only, so a duplicated description makes it a coin flip; a
+ *  retired seat in a skill body is dead vocabulary the role contracts already refuse. */
+function guardrailViolations(root) {
+  const bound = Object.values(readJSON(join(root, 'templates/default.json')).agents).flatMap(agent => agent.skills);
+  const descriptions = new Map();
+  const violations = [];
+  for (const name of [...bound].sort()) {
+    const directory = join(root, 'skills', name);
+    const main = readFileSync(join(directory, 'SKILL.md'), 'utf8');
+    const description = /^description:\s*(.+)$/m.exec(main)?.[1].trim().replace(/^["']|["']$/g, '').toLowerCase();
+    if (!description) violations.push(`${name}: missing description`);
+    else if (descriptions.has(description)) violations.push(`${name}: description duplicates ${descriptions.get(description)}`);
+    else descriptions.set(description, name);
+    for (const entry of readdirSync(directory, { recursive: true, withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+      if (/Coordinator/.test(readFileSync(join(entry.parentPath ?? entry.path, entry.name), 'utf8')))
+        violations.push(`${name}/${entry.name}: names a retired seat`);
+    }
+  }
+  return violations;
+}
+
+test('bound descriptions are distinct and no skill names a retired seat', () => {
+  assert.deepEqual(guardrailViolations(ROOT), []);
+});
+
+for (const [name, mutate] of Object.entries({
+  'a duplicate description': root => {
+    const source = /^description:\s*(.+)$/m.exec(readFileSync(join(root, 'skills/to-spec/SKILL.md'), 'utf8'))[1];
+    const path = join(root, 'skills/to-tickets/SKILL.md');
+    writeFileSync(path, readFileSync(path, 'utf8').replace(/^description:.*$/m, `description: ${source.toUpperCase()}`));
+  },
+  'a retired seat name': root => {
+    const path = join(root, 'skills/grilling/SKILL.md');
+    writeFileSync(path, `${readFileSync(path, 'utf8')}\n\nHand the approved scope to Coordinator.\n`);
+  },
+})) test(`the skill guardrails refuse ${name}`, t => {
+  const f = fixture(t);
+  mutate(f.root);
+  assert.notDeepEqual(guardrailViolations(f.root), []);
 });
 
 for (const [name, mutate] of Object.entries({

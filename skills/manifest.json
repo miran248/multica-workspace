@@ -8,12 +8,6 @@
   },
   "skills": [
     {
-      "logical_id": "decision-interview",
-      "provenance": {
-        "status": "own"
-      }
-    },
-    {
       "logical_id": "research",
       "provenance": {
         "status": "fork",
@@ -25,18 +19,6 @@
       "provenance": {
         "status": "rewrite",
         "upstream": "domain-modeling"
-      }
-    },
-    {
-      "logical_id": "spec-drafting",
-      "provenance": {
-        "status": "own"
-      }
-    },
-    {
-      "logical_id": "ticket-slicing",
-      "provenance": {
-        "status": "own"
       }
     },
     {
@@ -83,20 +65,6 @@
       "provenance": {
         "status": "fork",
         "upstream": "code-review"
-      }
-    },
-    {
-      "logical_id": "grill-me",
-      "provenance": {
-        "status": "identical",
-        "upstream": "grill-me"
-      }
-    },
-    {
-      "logical_id": "grill-with-docs",
-      "provenance": {
-        "status": "identical",
-        "upstream": "grill-with-docs"
       }
     },
     {

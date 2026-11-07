@@ -29,11 +29,10 @@ This product includes skill text derived from mattpocock/skills
 
 Derived skills, by status (see skills/manifest.json for the exact record):
 
-  identical  codebase-design, grill-me, grill-with-docs, prototype
+  identical  codebase-design, prototype
   fork       research, code-review, grilling, improve-codebase-architecture,
              to-spec, to-tickets, wayfinder
   rewrite    domain-modeling, diagnosing-bugs, tdd, setup-multica-project
              (upstream: setup-matt-pocock-skills)
 
-Local contracts with no upstream: agent-retro, decision-interview, module-design,
-pr-writing, spec-drafting, ticket-slicing.
+Local contracts with no upstream: agent-retro, module-design, pr-writing.

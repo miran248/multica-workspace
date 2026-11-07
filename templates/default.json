@@ -23,18 +23,13 @@
       "max_concurrent_tasks": 1,
       "skills": [
         "grilling",
-        "grill-me",
-        "decision-interview",
         "research",
         "domain-modeling",
-        "spec-drafting",
-        "ticket-slicing",
         "prototype",
         "to-spec",
         "to-tickets",
         "codebase-design",
         "improve-codebase-architecture",
-        "grill-with-docs",
         "wayfinder"
       ]
     },

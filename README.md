@@ -59,7 +59,7 @@ and ensures exactly one enabled schedule trigger.
 | --- | --- |
 | `shared/instructions.md` | rules shared by every role |
 | `roles/` | five seats, each one job |
-| `skills/` | the twenty-one bound methods; each attaches to exactly one role |
+| `skills/` | the sixteen bound methods; each attaches to exactly one role |
 | `templates/default.json` | the only deployable catalog: agents, labels, defaults, documents |
 | `templates/autopilots/` | the `config-sync` control and its prompt |
 | `templates/workflows/` | the `Factory` project workflow |
