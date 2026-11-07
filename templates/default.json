@@ -121,6 +121,41 @@
       "resource_type": "issue",
       "triage": true
     },
+    "wayfinder-grilling": {
+      "color": "#ec4899",
+      "description": "Wayfinder ticket: a live interview that resolves a decision",
+      "name": "wayfinder:grilling",
+      "resource_type": "issue",
+      "triage": false
+    },
+    "wayfinder-map": {
+      "color": "#6366f1",
+      "description": "Wayfinder map: the destination and the decisions-so-far index for a multi-session effort",
+      "name": "wayfinder:map",
+      "resource_type": "issue",
+      "triage": false
+    },
+    "wayfinder-prototype": {
+      "color": "#a855f7",
+      "description": "Wayfinder ticket: a throwaway prototype that resolves a decision",
+      "name": "wayfinder:prototype",
+      "resource_type": "issue",
+      "triage": false
+    },
+    "wayfinder-research": {
+      "color": "#14b8a6",
+      "description": "Wayfinder ticket: investigation that resolves a decision",
+      "name": "wayfinder:research",
+      "resource_type": "issue",
+      "triage": false
+    },
+    "wayfinder-task": {
+      "color": "#64748b",
+      "description": "Wayfinder ticket: an execution task carried inside the map",
+      "name": "wayfinder:task",
+      "resource_type": "issue",
+      "triage": false
+    },
     "wontfix": {
       "color": "#6b7280",
       "description": "Will not be actioned",
