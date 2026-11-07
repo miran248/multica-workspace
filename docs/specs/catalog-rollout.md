@@ -1,8 +1,9 @@
 # Catalog rollout: finish the migration, then gate it in CI
 
-Proposed. This revision awaits the approval-owner comment on MIR-120; no ticket is
-created and no catalog byte changes before it. The contract itself is settled and
-shipped; this spec scopes only what the rollout still owes.
+Accepted 2026-11-07. Approved by the approval owner in MIR-120. Delivery is the rollout
+tickets: MIR-126 (the remaining workspace), MIR-127 (CI, done) and MIR-128 (required
+check on `main`). The contract itself is settled and shipped; this spec scopes only
+what the rollout still owes.
 
 ## Problem Statement
 

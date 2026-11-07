@@ -22,20 +22,6 @@ jobs:
         with:
           node-version: "26.12.x"
           cache: npm
-      - name: Install just
-        env:
-          JUST_VERSION: 1.59.0
-        run: |
-          set -euo pipefail
-          asset="just-${JUST_VERSION}-x86_64-unknown-linux-musl.tar.gz"
-          base="https://github.com/casey/just/releases/download/${JUST_VERSION}"
-          curl -fsSL --retry 3 "$base/$asset" -o "$RUNNER_TEMP/$asset"
-          curl -fsSL --retry 3 "$base/SHA256SUMS" -o "$RUNNER_TEMP/SHA256SUMS"
-          (cd "$RUNNER_TEMP" && grep " $asset\$" SHA256SUMS | sha256sum -c -)
-          mkdir -p "$HOME/.local/bin"
-          tar -xzf "$RUNNER_TEMP/$asset" -C "$HOME/.local/bin" just
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          "$HOME/.local/bin/just" --version
       - run: npm ci
-      - run: just validate
-      - run: just test
+      - run: npm run validate
+      - run: npm test

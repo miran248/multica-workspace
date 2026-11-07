@@ -4,6 +4,13 @@ This repository is the anonymous, stateless catalog. It contains no workspace id
 owner, runtime or consumer URL; a sync derives all of them from the live platform. Keep it
 that way — that is what makes the catalog reusable and public.
 
+## Knowledge
+
+- Index: [docs/README.md](docs/README.md)
+- Vocabulary: [GLOSSARY.md](GLOSSARY.md); decisions: [docs/adr/](docs/adr/); accepted specs:
+  [docs/specs/](docs/specs/)
+- Applying it to a workspace: [docs/apply.md](docs/apply.md)
+
 ## Conventions
 
 - Use Conventional Commits: `type(scope): description`, optional scope, `!` for breaking
