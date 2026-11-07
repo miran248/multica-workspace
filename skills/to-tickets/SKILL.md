@@ -1,7 +1,6 @@
 ---
 name: to-tickets
 description: Break a plan, spec, or the current conversation into a set of tracer-bullet tickets, each declaring its blocking edges, and publish them to Multica as child issues once the approval-owner comment approves the breakdown.
-disable-model-invocation: true
 ---
 
 # To Tickets

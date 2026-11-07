@@ -1,7 +1,6 @@
 ---
 name: retro
 description: "Conduct a retrospective on admitted Agent Improvement evidence; not an ordinary General request or a generic session retro."
-disable-model-invocation: true
 ---
 
 The user has asked for a **retrospective**. You are suggesting improvements to the coding agent's **environment** to improve future runs.

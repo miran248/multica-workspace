@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { deploy } from '../scripts/deploy.js';
 import { ROOT, readJSON, resolve, sha256 } from '../scripts/config.js';
@@ -210,4 +210,15 @@ test('duplicate live skills with one name refuse before any write', t => {
   f.state.calls = [];
   assert.throws(() => apply(f), /Multiple live skills named tdd/);
   assert.equal(writes(f.state).length, 0);
+});
+
+test('no skill gates its own invocation, in the body or in the sidecar', () => {
+  const gated = [];
+  const names = readdirSync(join(ROOT, 'skills'), { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name);
+  for (const name of names) {
+    if (/^disable-model-invocation:/m.test(readFileSync(join(ROOT, 'skills', name, 'SKILL.md'), 'utf8'))) gated.push(`${name}: SKILL.md`);
+    const sidecar = join(ROOT, 'skills', name, 'agents/openai.yaml');
+    if (existsSync(sidecar) && /allow_implicit_invocation:\s*false/.test(readFileSync(sidecar, 'utf8'))) gated.push(`${name}: agents/openai.yaml`);
+  }
+  assert.deepEqual(gated, []);
 });

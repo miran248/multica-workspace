@@ -1,7 +1,6 @@
 ---
 name: setup-multica-project
 description: "Bring a repository's knowledge layer to Multica: scaffold GLOSSARY.md, docs/adr/, docs/specs/ and a routing-only AGENTS.md for a new project, or strip an existing project's agent instructions and replace them with that routing file. Agent behavior, the issue tracker and labels come from the workspace contract, not the repository."
-disable-model-invocation: true
 ---
 
 # Setup Multica Project

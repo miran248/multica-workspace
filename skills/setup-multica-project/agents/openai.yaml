@@ -1,5 +1,3 @@
 interface:
   display_name: "Setup Multica Project"
   short_description: "Bring a repo's knowledge layer to Multica"
-policy:
-  allow_implicit_invocation: false

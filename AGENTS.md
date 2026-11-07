@@ -19,6 +19,9 @@ that way — that is what makes the catalog reusable and public.
   labels and bindings in `templates/default.json`; skills in `skills/<logical-id>/`.
 - A skill attaches to exactly one role, declared only in `templates/default.json`. Do not add
   a second binding or a byte pin: Git is the pin, and the skill directory is its file set.
+- Never gate a skill's invocation in the catalog: no `disable-model-invocation`, no
+  `allow_implicit_invocation: false`. The runtime drops a gated skill from model invocation
+  entirely, including a human slash selection (ADR-0003).
 - `migrations/changelog.jsonl` is the only place for a rename or an authorized retirement.
   Scope an autopilot event to a workspace slug.
 - Keep the anonymity test green: no live UUIDs, no personal email or user name, no workspace
