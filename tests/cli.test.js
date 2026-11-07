@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT } from '../scripts/config.js';
 import { fixture } from './support/helpers.js';
 
 test('just sync applies in a clean checkout and converges; failures propagate', t => {
   const f = fixture(t);
+  // A live skill the catalog no longer declares exercises the delete path.
+  f.state.skills.push({ id: '00000000-0000-4000-8000-000000009999', name: 'retired-method', content: 'old', files: [] });
   for (const name of ['scripts', 'justfile', 'package.json']) cpSync(join(ROOT, name), join(f.root, name), { recursive: true });
   symlinkSync(join(ROOT, 'node_modules'), join(f.root, 'node_modules'));
   writeFileSync(join(f.root, '.gitignore'), '.local/\nnode_modules/\n');
@@ -29,6 +31,7 @@ test('just sync applies in a clean checkout and converges; failures propagate', 
   assert.match(first.stdout, /"status": "verified"/);
   assert.match(first.stdout, /"operations": [1-9]/);
   assert.match(first.stdout, /just schedule/);
+  assert.ok(!JSON.parse(readFileSync(statePath, 'utf8')).skills.some(skill => skill.name === 'retired-method'));
   const second = invoke('just', ['sync']);
   assert.equal(second.status, 0, second.stderr + second.stdout);
   assert.match(second.stdout, /"operations": 0/);
