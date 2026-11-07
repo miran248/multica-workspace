@@ -7,9 +7,11 @@
 
 Planner carried fourteen skill entries for about nine methods. Each collision had the same
 shape: a short local contract and an upstream method doing the same job, plus aliases whose
-entire body was a call to another skill. Dispatch is by skill description; the platform does
-not read `disable-model-invocation`, and no usage record exists, so the entry that wins is the
-one with the sharper description rather than the one the seat would choose.
+entire body was a call to another skill. Dispatch is by skill description, and no usage record
+exists, so the entry that wins is the one with the sharper description rather than the one the
+seat would choose. Six of the survivors also carried `disable-model-invocation: true`, which
+the runtime honours by dropping the skill from model invocation entirely — those six were
+unreachable, not merely gated (ADR-0003).
 
 ## Decision
 
