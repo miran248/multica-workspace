@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { deploy } from '../scripts/deploy.js';
 import { ROOT, readJSON, resolve, sha256 } from '../scripts/config.js';
 import { fixture, apply, writes, seedImport, readSkill } from './support/helpers.js';
@@ -19,8 +19,8 @@ test('every catalog skill is declared once and bound to exactly one role', () =>
   const manifest = readJSON(join(ROOT, 'skills/manifest.json'));
   const bound = Object.entries(catalog.agents).flatMap(([role, agent]) => agent.skills.map(skill => [skill, role]));
   const directories = readdirSync(join(ROOT, 'skills'), { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
-  assert.equal(bound.length, 20);
-  assert.equal(new Set(bound.map(([name]) => name)).size, 20);
+  assert.equal(bound.length, 21);
+  assert.equal(new Set(bound.map(([name]) => name)).size, 21);
   assert.deepEqual(bound.map(([name]) => name).sort(), directories);
   assert.deepEqual(bound.map(([name]) => name).sort(), manifest.skills.map(entry => entry.logical_id).sort());
   for (const entry of manifest.skills) assert.deepEqual(Object.keys(entry).sort(), ['logical_id', 'provenance']);
@@ -33,7 +33,7 @@ test('provenance is a record, not a pin: no bytes or hashes in the manifest', ()
   assert.match(manifest.provenance.commit, /^[a-f0-9]{40}$/);
   const counts = Object.fromEntries(['identical', 'fork', 'rewrite', 'own'].map(status =>
     [status, manifest.skills.filter(entry => entry.provenance.status === status).length]));
-  assert.deepEqual(counts, { identical: 3, fork: 7, rewrite: 4, own: 6 });
+  assert.deepEqual(counts, { identical: 4, fork: 7, rewrite: 4, own: 6 });
   assert.deepEqual(manifest.skills.filter(entry => entry.provenance.status === 'rewrite').map(entry => entry.logical_id).sort(),
     ['diagnosing-bugs', 'domain-modeling', 'setup-multica-project', 'tdd']);
   for (const entry of manifest.skills) {
@@ -43,6 +43,28 @@ test('provenance is a record, not a pin: no bytes or hashes in the manifest', ()
     else assert.equal(typeof entry.provenance.upstream, 'string', entry.logical_id);
   }
   assert.match(readFileSync(join(ROOT, 'NOTICE'), 'utf8'), /mattpocock\/skills/);
+});
+
+test('every skill the catalog names resolves, so pruning cannot silence a dependency', () => {
+  const names = new Set(readJSON(join(ROOT, 'skills/manifest.json')).skills.map(entry => entry.logical_id));
+  // Prose paths that look like invocations: a filesystem temp dir and a prototype's route.
+  const prose = new Set(['tmp', 'settings']);
+  const dangling = [];
+  for (const id of names) {
+    const directory = join(ROOT, 'skills', id);
+    for (const entry of readdirSync(directory, { recursive: true, withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+      const path = join(entry.parentPath ?? entry.path, entry.name);
+      const text = readFileSync(path, 'utf8');
+      for (const [, name] of text.matchAll(/Skill tool with "([a-z0-9-]+)"/g)) {
+        if (!names.has(name) && !prose.has(name)) dangling.push(`${relative(ROOT, path)}: Skill tool with "${name}"`);
+      }
+      for (const [, name] of text.matchAll(/`\/([a-z0-9-]+)`/g)) {
+        if (!names.has(name) && !prose.has(name)) dangling.push(`${relative(ROOT, path)}: /${name}`);
+      }
+    }
+  }
+  assert.deepEqual(dangling, []);
 });
 
 for (const [name, mutate] of Object.entries({
