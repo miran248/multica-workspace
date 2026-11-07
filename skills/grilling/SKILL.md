@@ -27,4 +27,8 @@ Each round the user answers reshapes the tree: settled decisions push the fronti
 
 Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now. The _decisions_ are the user's: put each to them and wait.
 
+Keep a **decision ledger** across rounds: for each question, its prerequisites, the accepted answer or the evidence that settled it, and the remaining consequential uncertainty. Never reopen a settled decision without cited new evidence, a changed constraint, or an explicit request to reconsider; recompute the frontier from the ledger instead. When existing decisions already settle the task, skip the interview and say so.
+
 The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
+
+A completed interview is not approval: the decisions are settled, while the spec and ticket breakdown still wait for the approval-owner comment. When a decision changes the project's vocabulary or leaves a durable architectural choice, load `domain-modeling` alongside this skill so the glossary and ADRs capture it in the same pass.
