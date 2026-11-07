@@ -46,7 +46,7 @@ test('shared autopilot templates carry no catalog identity and no stale reposito
   for (const [key, path] of Object.entries(catalog.autopilots)) {
     const prompt = readFileSync(join(ROOT, readJSON(join(ROOT, path)).prompt), 'utf8');
     assert.doesNotMatch(prompt, uuid, `${key} embeds a workspace ID`);
-    assert.doesNotMatch(prompt, /agent-config/, `${key} names a retired consumer catalog`);
+    assert.doesNotMatch(prompt, /https?:\/\/github\.com\//, `${key} hardcodes a repository URL`);
     assert.match(prompt, /\{\{repository\}\}/, `${key} asks the run for its own origin`);
     assert.match(prompt, /just sync/);
   }

@@ -25,21 +25,6 @@ just schedule           # optional: install the daily sync
 | no `origin` | `git remote add origin <url>`; the rendered prompt uses it |
 | uncommitted source | commit or stash the checkout |
 
-## Switching from a private catalog
-
-A private catalog names its sync autopilot after itself, so the live title differs from
-`Daily catalog sync`. Because an undeclared autopilot blocks a sync, rename the existing
-control once, before the first sync from this catalog:
-
-```sh
-multica autopilot list --output json | jq '.[] | select(.title | startswith("Daily")) | {id, title}'
-multica autopilot update <id> --title "Daily catalog sync"
-```
-
-Then run `just sync`. The sync refreshes the control's prompt to this repository's `origin`
-and leaves its triggers alone; run `just schedule` only if the workspace has no schedule yet.
-Retire the old repository afterwards.
-
 ## Operational notes
 
 - The journal and lock live under `.local/config-sync/`; `CONFIG_SYNC_STATE` moves them. A
