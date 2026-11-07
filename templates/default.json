@@ -4,7 +4,7 @@
       "description": "Workspace assistant, intake and the improvement loop.",
       "max_concurrent_tasks": 1,
       "skills": [
-        "agent-retro",
+        "retro",
         "setup-multica-project"
       ]
     },
@@ -14,8 +14,7 @@
       "skills": [
         "diagnosing-bugs",
         "tdd",
-        "module-design",
-        "pr-writing"
+        "pr"
       ]
     },
     "planner": {
