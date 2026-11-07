@@ -1,10 +1,9 @@
 # Catalog skill cleanup: retire the last three local contracts
 
-Proposed. This revision awaits the approval-owner comment on MIR-122; no catalog edit
-happens before it. The decisions are the owner's answer in the MIR-122 grilling thread
-(2026-11-07): *same thing as in other ticket, retire custom skills in favor of upstream
-skills* — the rule MIR-121 settled, applied to all three entries here, which is Q1 (a),
-Q2 (a) and Q3 (a) of round 1.
+Accepted 2026-11-07. Approved by the approval owner in MIR-122 and delivered by MIR-125.
+The decisions are the owner's answer in the MIR-122 grilling thread: *same thing as in
+other ticket, retire custom skills in favor of upstream skills* — the rule MIR-121
+settled, applied to all three entries here, which is Q1 (a), Q2 (a) and Q3 (a) of round 1.
 
 ## Problem Statement
 

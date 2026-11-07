@@ -1,8 +1,8 @@
 # Planner skill dedupe: retain, merge or retire
 
-Proposed. This revision awaits the approval-owner comment on MIR-121; no catalog edit
-happens before it. Decisions are the owner's answers in the MIR-121 grilling thread
-(2026-11-07): *retire custom ones in favor of upstream skills*, Q5 (a), Q4 (a).
+Accepted 2026-11-07. Approved by the approval owner in MIR-121 and delivered by MIR-123
+and MIR-124. Decisions are the owner's answers in the MIR-121 grilling thread:
+*retire custom ones in favor of upstream skills*, Q5 (a), Q4 (a).
 
 ## Problem Statement
 

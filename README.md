@@ -7,6 +7,10 @@ email or consumer repository URL: every run resolves those from the live platfor
 The same catalog applies to any number of workspaces, on any Multica account. A workspace
 never writes back to Git, so the catalog stays a delivery input rather than a workspace record.
 
+Documentation: [docs/README.md](docs/README.md) is the index; [GLOSSARY.md](GLOSSARY.md) holds
+the vocabulary, [docs/adr/](docs/adr/) the decisions, [docs/specs/](docs/specs/) the accepted
+specs, and [docs/apply.md](docs/apply.md) the application guide.
+
 ## Apply it to a workspace
 
 Run this from the workspace's own runtime — the command uses that runtime's `multica`
@@ -67,6 +71,9 @@ and ensures exactly one enabled schedule trigger.
 | `migrations/` | optional ledger for renames and authorized retirements |
 | `scripts/` | resolver, live binding, plan/apply, lock and journal |
 | `tests/` | offline suite; the platform is a stateful test double |
+| `GLOSSARY.md` | the catalog's vocabulary |
+| `docs/` | documentation index, ADRs, accepted specs and the apply guide |
+| `.github/workflows/` | CI: the offline suite on every push and pull request |
 
 `just validate` resolves the whole catalog against a placeholder binding — no workspace,
 credentials or network needed. `just test` runs the suite.
@@ -89,7 +96,7 @@ an enforced byte identity; Git is the pin, and each skill directory is its file 
 - Run `just validate && just test`, then open a PR. A merge reaches every workspace's next
   scheduled sync; runtime access and verification stay local.
 
-CI runs `just validate && just test` on every push and pull request.
+CI runs `npm run validate` and `npm test` on every push and pull request.
 
 ## License
 
