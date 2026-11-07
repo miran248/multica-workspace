@@ -8,7 +8,7 @@ import { fixture, apply, writes, seedImport, readSkill } from './support/helpers
 import { id } from './support/platform.js';
 
 const skill = (f, name) => f.state.skills.find(entry => entry.name === name);
-function missing(f, key = 'agent-retro') {
+function missing(f, key = 'retro') {
   f.state.skills = f.state.skills.filter(entry => entry.name !== key);
   seedImport(f, key);
 }
@@ -19,8 +19,8 @@ test('every catalog skill is declared once and bound to exactly one role', () =>
   const manifest = readJSON(join(ROOT, 'skills/manifest.json'));
   const bound = Object.entries(catalog.agents).flatMap(([role, agent]) => agent.skills.map(skill => [skill, role]));
   const directories = readdirSync(join(ROOT, 'skills'), { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
-  assert.equal(bound.length, 16);
-  assert.equal(new Set(bound.map(([name]) => name)).size, 16);
+  assert.equal(bound.length, 15);
+  assert.equal(new Set(bound.map(([name]) => name)).size, 15);
   assert.deepEqual(bound.map(([name]) => name).sort(), directories);
   assert.deepEqual(bound.map(([name]) => name).sort(), manifest.skills.map(entry => entry.logical_id).sort());
   for (const entry of manifest.skills) assert.deepEqual(Object.keys(entry).sort(), ['logical_id', 'provenance']);
@@ -33,7 +33,8 @@ test('provenance is a record, not a pin: no bytes or hashes in the manifest', ()
   assert.match(manifest.provenance.commit, /^[a-f0-9]{40}$/);
   const counts = Object.fromEntries(['identical', 'fork', 'rewrite', 'own'].map(status =>
     [status, manifest.skills.filter(entry => entry.provenance.status === status).length]));
-  assert.deepEqual(counts, { identical: 2, fork: 7, rewrite: 4, own: 3 });
+  assert.deepEqual(counts, { identical: 2, fork: 9, rewrite: 4, own: 0 });
+  assert.deepEqual(manifest.skills.filter(entry => entry.provenance.status === 'own'), []);
   assert.deepEqual(manifest.skills.filter(entry => entry.provenance.status === 'rewrite').map(entry => entry.logical_id).sort(),
     ['diagnosing-bugs', 'domain-modeling', 'setup-multica-project', 'tdd']);
   for (const entry of manifest.skills) {
@@ -111,7 +112,7 @@ for (const [name, mutate] of Object.entries({
 
 for (const [name, mutate] of Object.entries({
   'missing status': m => delete m.skills[0].provenance,
-  'own with upstream': m => { m.skills.find(entry => entry.provenance.status === 'own').provenance.upstream = 'x'; },
+  'own with upstream': m => { const entry = m.skills.find(entry => entry.provenance.status === 'fork'); entry.provenance.status = 'own'; },
   'duplicate upstream': m => { const [first, second] = m.skills.filter(entry => entry.provenance.status !== 'own'); second.provenance.upstream = first.provenance.upstream; },
   'missing upstream': m => { delete m.skills.find(entry => entry.provenance.status === 'fork').provenance.upstream; },
   'missing commit': m => { delete m.provenance.commit; },
@@ -125,14 +126,14 @@ for (const [name, mutate] of Object.entries({
 
 test('a skill directory outside the manifest is refused', t => {
   const f = fixture(t), path = join(f.root, 'skills/manifest.json'), manifest = readJSON(path);
-  manifest.skills = manifest.skills.filter(entry => entry.logical_id !== 'agent-retro');
+  manifest.skills = manifest.skills.filter(entry => entry.logical_id !== 'retro');
   writeFileSync(path, JSON.stringify(manifest));
   assert.throws(() => resolve(f.binding, f.root), /skills: unknown or missing logical key/);
 });
 
 test('a skill bound to two roles is refused', t => {
   const f = fixture(t), path = join(f.root, 'templates/default.json'), catalog = readJSON(path);
-  catalog.agents.reviewer.skills.push('agent-retro');
+  catalog.agents.reviewer.skills.push('retro');
   writeFileSync(path, JSON.stringify(catalog));
   assert.throws(() => resolve(f.binding, f.root), /bound to more than one role/);
 });
@@ -198,7 +199,7 @@ test('a half-applied skill update resumes from live bytes without duplicating', 
 });
 
 test('an import whose readback does not match leaves the run partial', t => {
-  const f = fixture(t); missing(f); f.state.importContent['agent-retro'] = 'wrong';
+  const f = fixture(t); missing(f); f.state.importContent['retro'] = 'wrong';
   assert.throws(() => apply(f, { pack() {} }), /Readback mismatch/);
   assert.equal(journal(f).status, 'partially-applied');
 });

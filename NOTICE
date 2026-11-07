@@ -31,8 +31,6 @@ Derived skills, by status (see skills/manifest.json for the exact record):
 
   identical  codebase-design, prototype
   fork       research, code-review, grilling, improve-codebase-architecture,
-             to-spec, to-tickets, wayfinder
+             to-spec, to-tickets, wayfinder, retro, pr
   rewrite    domain-modeling, diagnosing-bugs, tdd, setup-multica-project
              (upstream: setup-matt-pocock-skills)
-
-Local contracts with no upstream: agent-retro, module-design, pr-writing.

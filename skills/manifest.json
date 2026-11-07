@@ -36,28 +36,10 @@
       }
     },
     {
-      "logical_id": "module-design",
-      "provenance": {
-        "status": "own"
-      }
-    },
-    {
       "logical_id": "codebase-design",
       "provenance": {
         "status": "identical",
         "upstream": "codebase-design"
-      }
-    },
-    {
-      "logical_id": "pr-writing",
-      "provenance": {
-        "status": "own"
-      }
-    },
-    {
-      "logical_id": "agent-retro",
-      "provenance": {
-        "status": "own"
       }
     },
     {
@@ -114,6 +96,20 @@
       "provenance": {
         "status": "fork",
         "upstream": "wayfinder"
+      }
+    },
+    {
+      "logical_id": "retro",
+      "provenance": {
+        "status": "fork",
+        "upstream": "retro"
+      }
+    },
+    {
+      "logical_id": "pr",
+      "provenance": {
+        "status": "fork",
+        "upstream": "pr"
       }
     }
   ]
