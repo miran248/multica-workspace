@@ -15,7 +15,6 @@ export function assertCurrentWorkspace(binding, runner = run) {
   if (current.id !== binding.workspace_id) throw new Error('Workspace changed during the run; start again from the target runtime');
 }
 export const render = (role, binding, root = ROOT) => resolve(binding, root).agents[role].instructions;
-export const renderPrompt = item => item.deployment_prompt;
 
 export function sourceIdentity(root = ROOT) {
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();

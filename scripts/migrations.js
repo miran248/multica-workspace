@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const LEDGER_PATH = 'migrations/changelog.jsonl';
-export const ENTITIES = ['agent', 'autopilot', 'label', 'skill', 'squad', 'workflow'];
 
 export function loadLedger(root) {
   const path = join(root, LEDGER_PATH);
