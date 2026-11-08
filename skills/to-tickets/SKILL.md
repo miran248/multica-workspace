@@ -56,7 +56,14 @@ This presentation is the approval packet, not a second approval: iterate on the 
 
 ### 5. Publish the children to Multica
 
-After the approval-owner comment, publish one Multica child issue per ticket in dependency order (blockers first), so each child's blocking edges reference real identifiers. Create every child with `--parent` (the source issue, when there is one), `--stage` (its position in the sequence) and `--assignee` (the role that will do the work). The CLI exposes no dependency object, so write each blocking edge into the child's `Blocked by` section. Apply the `ready-for-agent` triage label only now, after approval. Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
+After the approval-owner comment, publish one Multica child issue per ticket in dependency order (blockers first), so each child's blocking edges reference real identifiers. Create every child with `--parent` (the source issue, when there is one), `--stage` and `--assignee` (the role that will do the work). The CLI exposes no dependency object, so write each blocking edge into the child's `Blocked by` section. Apply the `ready-for-agent` triage label only now, after approval. Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
+
+**A stage is a parallel barrier group, not a position label.** The platform wakes the parent assignee when a stage closes while a later stage waits; that wake is the promotion trigger, so do not arm a per-ticket "X is done" wake for it. Two rules follow:
+
+- **Serial tickets get distinct stages.** A ticket blocked by another must never share its blocker's stage: the stage cannot close until both are terminal, the blocked ticket is never promoted, and the parent is never woken. A stage may hold several tickets only when they are genuinely parallel.
+- **Later stages are created `--status backlog`; only the frontier is `todo`.** A non-backlog status on an agent-assigned issue enqueues its assignee at create time, so creating a serial chain as `todo` starts the whole chain at once. Promote a parked stage with `multica issue status <id> todo` when the parent wake says the previous stage closed.
+
+Check the staged layout with `multica issue children <parent-id>` before finishing: every `backlog` ticket must be in a later stage than the ticket that blocks it.
 
 Do NOT close or modify any parent issue.
 
