@@ -35,10 +35,16 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
     assert.match(agent.instructions, /github\.com\/example\/multica-workspace/);
   }
   const workflow = f.state.workflows[0];
-  assert.deepEqual(workflow.steps.map(step => step.status_key), ['backlog', 'todo', 'in_progress', 'in_review', 'awaiting_merge', 'blocked', 'done', 'cancelled']);
+  assert.deepEqual(workflow.steps.map(step => step.status_key), ['backlog', 'todo', 'spec_progress', 'spec_review', 'in_progress', 'in_review', 'awaiting_merge', 'blocked', 'done', 'cancelled']);
+  const planner = f.state.agents.find(agent => agent.name === 'planner').id;
+  const reviewer = f.state.agents.find(agent => agent.name === 'reviewer').id;
+  assert.equal(workflow.steps.find(step => step.status_key === 'spec_progress').handler.id, planner);
+  assert.equal(workflow.steps.find(step => step.status_key === 'spec_review').handler.id, reviewer);
+  assert.equal(workflow.steps.find(step => step.status_key === 'spec_review').back_status_key, 'spec_progress');
   assert.equal(workflow.steps.find(step => step.status_key === 'in_progress').handler.id, f.state.agents.find(agent => agent.name === 'implementer').id);
-  assert.equal(workflow.steps.find(step => step.status_key === 'in_review').handler.id, f.state.agents.find(agent => agent.name === 'reviewer').id);
+  assert.equal(workflow.steps.find(step => step.status_key === 'in_review').handler.id, reviewer);
   assert.equal(workflow.steps.find(step => step.status_key === 'awaiting_merge').handler.id, f.state.human);
+  assert.equal(workflow.steps.find(step => step.status_key === 'blocked').handler.id, planner);
   assert.equal(f.state.labels.length, 14);
   assert.equal(journal(f).status, 'verified');
   f.state.calls = [];
