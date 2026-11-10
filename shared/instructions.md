@@ -13,11 +13,11 @@
 - New windows start non-activating and unfocused; nothing you launch takes focus or raises itself.
 
 ## Merging
-- Merge only through a PR whose required check is green; `main` takes no direct push. Arm auto-merge only after the exact-head verdict; disarm on any later push.
+- Merge only through a PR whose required check is green; `main` takes no direct push. Merge after the exact-head verdict is published; never enable auto-merge.
 
 ## Steps
 - Read bounded ranges, not whole files; batch calls; verify once, not per step.
 
 ## Handoffs
 - Five-line `templates/handoff.md`; link, never restate; over-cap blocks review.
-- The status move is the handoff: work one workflow step, then move the ticket to its next status. Never dispatch by mention.
+- The comment is the handoff; the status move (or merge) is your last action: publish the note, then move. Never dispatch by mention.

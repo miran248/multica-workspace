@@ -82,9 +82,11 @@ nobody.
 
 ## Factory
 
-**handoff** — the status move that assigns the issue to the new column's handler and starts
-that handler's run. Nothing advances a ticket when a run ends; the handler makes the next
-move. A member handler is assigned and runs nothing.
+**handoff** — the comment that records the work, followed by the status move that assigns the
+issue to the new column's handler and starts that handler's run. The comment goes first and the
+move last, so the next run can read the record; the move is what dispatches it. Nothing advances
+a ticket when a run ends; the handler makes the next move. A member handler is assigned and runs
+nothing.
 
 **factory mode** — the epic-level choice of who implements and who merges, encoded by the
 `human-assigned` and `manual-merge` labels before the spec is approved. With neither label the

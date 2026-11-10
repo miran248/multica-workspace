@@ -15,8 +15,9 @@ or verdict; line 3 actual checks; line 4 the limits of the claim; line 5 the nex
 owner and action. Write `reviewed` in place of `at` for an acceptance verdict.
 The next owner is dispatched by a state change on the issue — assignee, status,
 stage or `issue wakeup` — and line 5 reports it; the comment is never the trigger.
-Make the change before you post: a handoff or verdict posted while the issue is
-still assigned to its author wakes nobody and is incomplete.
+Post the comment first and make the change last: a change made before the comment
+hands the next owner a ticket with no record, and the comment alone dispatches
+nobody until the change follows.
 
 1. `<issue>/<ticket> <delivered|PASS|RETURN>; <open|closed>. [PR #<n>](<url>) at `<sha>`; [run](<url>); [issue](<url>).`
 2. `<behavior delivered, or verdict on both review axes>.`
@@ -32,22 +33,23 @@ Open, unapplied; no CI checks reported.
 Next: in_review moved to awaiting_merge; Release merges and applies.
 ```
 
-## The status move is the handoff
+## The comment is the handoff
 
-Every handoff and verdict moves the ticket to the status its next owner handles,
-before the comment is posted. The workflow hands the ticket to that step's
-handler: the implementer at `in_progress`, the reviewer at `in_review` or `human_review`, the human
-at `awaiting_merge`. A ticket left in the status you just worked wakes nobody.
+Every handoff and verdict is posted before the ticket moves to the status its next
+owner handles. The workflow hands the ticket to that step's handler: the
+implementer at `in_progress`, the reviewer at `in_review` or `human_review`, the human
+at `awaiting_merge`. A ticket left in the status you just worked wakes nobody, so
+the move must follow the comment in the same run.
 
 | Case | What you do |
 | --- | --- |
-| the next step is obvious | move the ticket to that status, then comment |
-| the ticket closes here | move it to `done`, then comment |
-| a blocker stops you | move it to `blocked` and assign the human or Planner |
-| a human gate or approval waits | move it to `awaiting_merge` or `blocked`, never leave it in your step |
+| the next step is obvious | comment, then move the ticket to that status |
+| the ticket closes here | comment, then merge; the merge completes it, so do not move it to `done` |
+| a blocker stops you | comment, then move it to `blocked` and assign the human or Planner |
+| a human gate or approval waits | comment, then move it to `awaiting_merge` or `blocked`; never leave it in your step |
 
-The move is the trigger, the comment is the record. Assign or mention, never
-both: a mention plus an assignment starts two runs.
+The move is the trigger, the comment is the record; the comment goes first. Assign
+or mention, never both: a mention plus an assignment starts two runs.
 
 ## Verdict
 
@@ -62,7 +64,7 @@ child for a fix and a fresh independent review.
 4. `Checks: <command> <result>; <n>/<n> tests; <unverified claims>.`
 5. `Next: done; the parent wakeup promotes the next stage.`
 
-On RETURN, line 5 names the fresh verdict after moving the ticket back.
+On RETURN, line 5 names the fresh verdict before moving the ticket back.
 
 ```
 RETURN — Spec: 1 blocking finding; Standards: PASS.
