@@ -12,11 +12,13 @@ test('the shared contract reaches every role and the status move owns dispatch',
   const f = fixture(t), resolved = resolve(f.binding, f.root);
   for (const role of ROLES) {
     assert.match(render(role, f.binding, f.root), /Use Conventional Commits/, role);
+    assert.match(render(role, f.binding, f.root), /summary, TICKET/, role);
     assert.match(render(role, f.binding, f.root), /The status move is the handoff/, role);
   }
   assert.match(render('reviewer', f.binding, f.root), /never approve your own implementation/);
   assert.match(render('planner', f.binding, f.root), /grilling to acceptance/);
-  assert.match(render('implementer', f.binding, f.root), /move the ticket to `in_review`/);
+  assert.match(render('implementer', f.binding, f.root), /Title the PR/);
+  assert.match(render('implementer', f.binding, f.root), /move it to `in_review`/);
   for (const role of ROLES) assert.doesNotMatch(readFileSync(join(ROOT, `roles/${role}.md`), 'utf8'), /Coordinator|squad/, role);
   assert.deepEqual(Object.keys(resolved.shared.workflows), ['factory']);
   assert.equal(resolved.shared.catalog.timezone, 'UTC');

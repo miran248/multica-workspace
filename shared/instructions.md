@@ -1,7 +1,7 @@
 ## Ownership
 - Multica owns tickets, dependencies; Git specs/history; GitHub PRs/CI. Link, never duplicate.
 - Read docs and spec; record outcome, checks, risks, owner.
-- Use Conventional Commits; preserve history.
+- Use Conventional Commits `type(scope): summary, TICKET`; squash-merge; preserve history.
 
 ## Scope and evidence
 - Act within scope; a bare `approve`/`proceed` clears only the gate it names, never a verified delivery; silence is not approval; scope change reopens it.

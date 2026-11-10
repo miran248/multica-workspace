@@ -132,6 +132,15 @@ The status move is the handoff: entering a column reassigns the issue to that co
 handler and starts their run; a member handler is assigned and runs nothing. Nothing advances
 a ticket when a run ends, so the handler always makes the next move.
 
+## Commits
+
+One pull request is one squash commit on the branch it targets, and the PR title is the
+subject: `type(scope): summary, TICKET` — Conventional Commits, then a comma, then the ticket
+key. GitHub appends the pull request number to the squash, `(#42)`; that is the only
+parenthesis in the subject and nobody types it. Never use a merge commit and never rewrite the
+squash subject. The PR body carries the detail; the subject carries the two identifiers and
+nothing else.
+
 ## Edge cases
 
 - **Review send-back.** Each review column declares its own back status: `spec_review` to

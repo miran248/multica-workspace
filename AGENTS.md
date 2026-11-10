@@ -14,8 +14,10 @@ that way — that is what makes the catalog reusable and public.
 
 ## Conventions
 
-- Use Conventional Commits: `type(scope): description`, optional scope, `!` for breaking
-  changes. Preserve history.
+- Use Conventional Commits: `type(scope): description, ABC-123`, optional scope, `!` for
+  breaking changes, the ticket key after a comma at the end. One PR is one squash commit: the
+  PR title is the subject, never a merge commit, and never type the pull request number — the
+  squash appends `(#N)`. Preserve history.
 - Shared behavior belongs in `shared/instructions.md`; role behavior in `roles/`; defaults,
   labels and bindings in `templates/default.json`; skills in `skills/<logical-id>/`.
 - A skill attaches to exactly one role, declared only in `templates/default.json`. Do not add
