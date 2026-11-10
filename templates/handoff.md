@@ -67,7 +67,7 @@ On RETURN, line 5 names the fresh verdict after moving the ticket back.
 ```
 RETURN — Spec: 1 blocking finding; Standards: PASS.
 Reviewed [PR #21](https://github.com/OWNER/REPO/pull/21) at `4f0bb61`; [run](<run-url>).
-P2 — `shared/instructions.md:7`: the gate omits the recorded approval signal; fix: require one approval-owner comment covering the spec SHA and ticket list.
+P2 — `shared/instructions.md:7`: the gate omits the recorded approval signal; fix: name the merged spec PR and its head.
 Checks: validate PASS; 152/152 tests; 243 words.
 Next: in_progress; Implementer fixes the gate, then a fresh verdict at the new head.
 ```

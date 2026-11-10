@@ -92,9 +92,13 @@ epic is autonomous. `human-assigned` without `manual-merge` is human implementat
 merge; `manual-merge` alone is agent implementation with a human merge; both are human
 implementation and merge.
 
-**spec child** — the epic's stage-1 child that carries the spec pull request. Its merge is the
-approval: the workspace PR rule completes the child, which wakes the Planner to slice. The
-spec PR is never linked to the epic.
+**spec child** — the epic's stage-1 child that carries the spec pull request, including the
+proposed breakdown. Its merge is the approval of both: the workspace PR rule completes the
+child, which wakes the Planner to slice. The spec PR is never linked to the epic.
+
+**proposed breakdown** — the ticket list and blocking edges carried by the spec pull request.
+It is reviewed with the spec, and the merge that approves the spec approves the breakdown;
+nothing is published from it before that merge.
 
 **human lane** — the human's columns: `human_progress` for implementation, `human_review` for
 the Reviewer's verdict on it, and `awaiting_merge` for the merge that approves a spec or

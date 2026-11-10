@@ -23,7 +23,7 @@ const ROUTES = {
   human_progress: ['human_review', 'blocked'],
   in_review: ['in_progress', 'awaiting_merge', 'done'],
   human_review: ['human_progress', 'awaiting_merge', 'done'],
-  awaiting_merge: ['spec_progress', 'in_progress', 'human_progress'],
+  awaiting_merge: ['spec_progress', 'in_progress', 'human_progress', 'cancelled'],
   blocked: ['spec_progress', 'human_progress', 'in_progress', 'cancelled', 'Blocked by'],
 };
 
@@ -121,7 +121,27 @@ test('the route table resolves: every named target is a column and every column 
   }
   const merge = steps.get('awaiting_merge').instructions;
   assert.match(merge, /merge completes this ticket/);
+  assert.match(merge, /approves the spec and its proposed breakdown/);
+  assert.match(merge, /Closing the pull request/);
+  assert.match(merge, /not an automatic rejection/);
   assert.doesNotMatch(merge, /move (it|this ticket) to done/);
+});
+
+test('the spec PR carries the breakdown its merge approves', () => {
+  for (const key of ['spec_progress', 'spec_review'])
+    assert.match(steps.get(key).instructions, /proposed breakdown/, `${key} does not name the breakdown`);
+  assert.match(spec, /proposed breakdown/);
+  assert.match(readFileSync(join(ROOT, 'roles/planner.md'), 'utf8'), /proposed breakdown/);
+  for (const path of ['skills/to-spec/SKILL.md', 'skills/to-tickets/SKILL.md'])
+    assert.match(readFileSync(join(ROOT, path), 'utf8'), /Proposed breakdown|proposed breakdown/, path);
+});
+
+test('approval is the merge, not an approval comment', () => {
+  assert.doesNotMatch(spec, /approval comment/);
+  assert.doesNotMatch(spec, /approves the spec and the ticket breakdown/);
+  assert.doesNotMatch(readFileSync(join(ROOT, 'roles/planner.md'), 'utf8'), /approval comment/);
+  for (const path of ['skills/to-spec/SKILL.md', 'skills/to-tickets/SKILL.md', 'skills/grilling/SKILL.md'])
+    assert.doesNotMatch(readFileSync(join(ROOT, path), 'utf8'), /approval-owner comment/, path);
 });
 
 test('the usage guide names every column, the labels and the modes', () => {

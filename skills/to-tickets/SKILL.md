@@ -1,6 +1,6 @@
 ---
 name: to-tickets
-description: Break a plan, spec, or the current conversation into a set of tracer-bullet tickets, each declaring its blocking edges, and publish them to Multica as child issues once the approval-owner comment approves the breakdown.
+description: Break a plan, spec, or the current conversation into a set of tracer-bullet tickets, each declaring its blocking edges, and publish them to Multica as child issues after the spec pull request carrying the breakdown merges.
 ---
 
 # To Tickets
@@ -38,25 +38,13 @@ Give each ticket its **blocking edges**: the other tickets that must complete be
 
 **Wide refactors are the exception to vertical slicing.** A **wide refactor** is one mechanical change (rename a column, retype a shared symbol) whose **blast radius** fans across the whole codebase, so a single edit breaks thousands of call sites at once and no vertical slice can land green. Don't force it into a tracer bullet; sequence it as **expand–contract**. First expand: add the new form beside the old so nothing breaks. Then migrate the call sites over in batches sized by blast radius (per package, per directory), each batch its own ticket blocked by the expand, keeping CI green batch to batch because the old form still exists. Finally contract: delete the old form once no caller remains, in a ticket blocked by every migrate batch. When even the batches can't stay green alone, keep the sequence but let them share an integration branch that all block a final integrate-and-verify ticket; green is promised only there.
 
-### 4. Present the approval packet
+### 4. Read the approved breakdown
 
-Present the proposed breakdown as a numbered list. For each ticket, show:
-
-- **Title**: short descriptive name
-- **Blocked by**: which other tickets (if any) must complete first
-- **What it delivers**: the end-to-end behaviour this ticket makes work
-
-Ask the user:
-
-- Does the granularity feel right? (too coarse / too fine)
-- Are the blocking edges correct: does each ticket only depend on tickets that genuinely gate it?
-- Should any tickets be merged or split further?
-
-This presentation is the approval packet, not a second approval: iterate on the framing until the approval-owner comment approves the exact spec revision and the breakdown together. Nothing is published or labelled before that comment.
+The spec pull request carries the proposed breakdown, and its merge approved it. Use that list as written: for each ticket, the title, the blocking edges and the behaviour it delivers. A change to the ticket set is a new spec revision, not a decision to make here. If the merged spec has no breakdown, stop and report the gap rather than inventing a slice.
 
 ### 5. Publish the children to Multica
 
-After the approval-owner comment, publish one Multica child issue per ticket in dependency order (blockers first), so each child's blocking edges reference real identifiers. Create every child with `--parent` (the source issue, when there is one), `--stage` and `--assignee` (the role that will do the work). The CLI exposes no dependency object, so write each blocking edge into the child's `Blocked by` section. Apply the `ready-for-agent` triage label only now, after approval. Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
+After the spec child is done, publish one Multica child issue per ticket in dependency order (blockers first), so each child's blocking edges reference real identifiers. Create every child with `--parent` (the source issue, when there is one), `--stage` and `--assignee` (the role that will do the work). The CLI exposes no dependency object, so write each blocking edge into the child's `Blocked by` section. Apply the `ready-for-agent` triage label only now, after the merge. Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
 
 **A stage is a parallel barrier group, not a position label.** The platform wakes the parent assignee when a stage closes while a later stage waits; that wake is the promotion trigger, so do not arm a per-ticket "X is done" wake for it. Two rules follow:
 

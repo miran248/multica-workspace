@@ -31,4 +31,4 @@ Keep a **decision ledger** across rounds: for each question, its prerequisites, 
 
 The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
 
-A completed interview is not approval: the decisions are settled, while the spec and ticket breakdown still wait for the approval-owner comment. When a decision changes the project's vocabulary or leaves a durable architectural choice, load `domain-modeling` alongside this skill so the glossary and ADRs capture it in the same pass.
+A completed interview is not approval: the decisions are settled, while the spec and its proposed breakdown still wait for the spec pull request to merge. When a decision changes the project's vocabulary or leaves a durable architectural choice, load `domain-modeling` alongside this skill so the glossary and ADRs capture it in the same pass.

@@ -23,7 +23,7 @@
         "role": "planner"
       },
       "next_status_key": "spec_review",
-      "instructions": "Rework the spec, ADR and any amended contracts to answer the review findings; keep the approved direction intact. One reviewable pull request at the exact head, linked to this ticket, then move the ticket to spec_review. This ticket is the epic's stage-1 spec child: its merge is the approval, so never close it yourself and never link the spec PR to the epic. An external blocker moves the ticket to blocked with the reason."
+      "instructions": "Rework the spec, ADR and any amended contracts to answer the review findings; keep the approved direction intact. One reviewable pull request at the exact head, carrying the proposed breakdown, linked to this ticket, then move the ticket to spec_review. This ticket is the epic's stage-1 spec child: its merge approves the spec and the breakdown, so never close it yourself and never link the spec PR to the epic. An external blocker moves the ticket to blocked with the reason."
     },
     {
       "status_key": "spec_review",
@@ -39,7 +39,7 @@
       },
       "next_status_key": "awaiting_merge",
       "back_status_key": "spec_progress",
-      "instructions": "Review the spec pull request at its exact head against the ticket, the approved direction and the repository standards. Do not rewrite the spec; comment the findings and move the ticket back to spec_progress. On PASS, leave the pull request open and move the ticket to awaiting_merge: the human merge is the approval. Never merge or arm a spec pull request for auto-merge, and never move it to done. Never review or merge your own work."
+      "instructions": "Review the spec pull request at its exact head against the ticket, the approved direction, the proposed breakdown and the repository standards. Do not rewrite the spec; comment the findings and move the ticket back to spec_progress. On PASS, leave the pull request open and move the ticket to awaiting_merge: the human merge is the approval. A closed spec pull request is a withdrawal: move the ticket back to spec_progress, never done. Never merge or arm a spec pull request for auto-merge. Never review or merge your own work."
     },
     {
       "status_key": "in_progress",
@@ -73,7 +73,7 @@
       },
       "next_status_key": "done",
       "back_status_key": "in_progress",
-      "instructions": "Review the linked pull request at its exact head against the ticket's acceptance criteria and the repository standards. If this ticket or its parent carries manual-merge, move it to awaiting_merge for the human. Otherwise arm auto-merge (gh pr merge --auto --squash --delete-branch) and move it to done. On a blocking finding, comment the evidence and move the ticket back to in_progress. Never review or merge your own work. A human-assigned ticket is reviewed at human_review, not here."
+      "instructions": "Review the linked pull request at its exact head against the ticket's acceptance criteria and the repository standards. If this ticket or its parent carries manual-merge, move it to awaiting_merge for the human. Otherwise arm auto-merge (gh pr merge --auto --squash --delete-branch) and move it to done. On a blocking finding, comment the evidence and move the ticket back to in_progress. A closed pull request is a withdrawal: move the ticket back to in_progress, never done. Never review or merge your own work. A human-assigned ticket is reviewed at human_review, not here."
     },
     {
       "status_key": "human_review",
@@ -89,7 +89,7 @@
       },
       "next_status_key": "done",
       "back_status_key": "human_progress",
-      "instructions": "Review the human's pull request at its exact head against the ticket's acceptance criteria and the repository standards. If this ticket or its parent carries manual-merge, move it to awaiting_merge for the human. Otherwise arm auto-merge (gh pr merge --auto --squash --delete-branch) and move it to done. On a blocking finding, comment the evidence and move the ticket back to human_progress. Never review or merge your own work. A spec pull request is reviewed at spec_review, not here."
+      "instructions": "Review the human's pull request at its exact head against the ticket's acceptance criteria and the repository standards. If this ticket or its parent carries manual-merge, move it to awaiting_merge for the human. Otherwise arm auto-merge (gh pr merge --auto --squash --delete-branch) and move it to done. On a blocking finding, comment the evidence and move the ticket back to human_progress. A closed pull request is a withdrawal: move the ticket back to human_progress, never done. Never review or merge your own work. A spec pull request is reviewed at spec_review, not here."
     },
     {
       "status_key": "awaiting_merge",
@@ -103,7 +103,7 @@
         "type": "member",
         "role": "human"
       },
-      "instructions": "Merge the reviewed pull request at its exact head when you are satisfied; the merge completes this ticket, so do not move it. A spec child's merge is the approval that wakes the Planner to slice. If it should change first, move it to spec_progress for planner-owned spec text, in_progress for agent delivery, or human_progress for human delivery, with the reason."
+      "instructions": "Merge the reviewed pull request at its exact head when you are satisfied; the merge completes this ticket, so do not move it. A spec child's merge approves the spec and its proposed breakdown and wakes the Planner to slice. If it should change first, move it to spec_progress for planner-owned spec text, in_progress for agent delivery, or human_progress for human delivery, with the reason. Closing the pull request without merging does not move the ticket and is not an automatic rejection: close it, then move the ticket to the owning lane, or move the ticket to cancelled and cancel its epic. Delete the head branch when you merge."
     },
     {
       "status_key": "blocked",
