@@ -23,7 +23,7 @@ const ROUTES = {
   human_progress: ['human_review', 'blocked'],
   in_review: ['in_progress', 'awaiting_merge', 'done'],
   human_review: ['human_progress', 'awaiting_merge', 'done'],
-  awaiting_merge: ['spec_progress', 'in_progress', 'human_progress', 'cancelled'],
+  awaiting_merge: ['spec_progress', 'in_progress', 'human_progress'],
   blocked: ['spec_progress', 'human_progress', 'in_progress', 'cancelled', 'Blocked by'],
 };
 
@@ -122,9 +122,29 @@ test('the route table resolves: every named target is a column and every column 
   const merge = steps.get('awaiting_merge').instructions;
   assert.match(merge, /merge completes this ticket/);
   assert.match(merge, /approves the spec and its proposed breakdown/);
-  assert.match(merge, /Closing the pull request/);
-  assert.match(merge, /not an automatic rejection/);
   assert.doesNotMatch(merge, /move (it|this ticket) to done/);
+});
+
+test('only a merge moves a ticket: no column handles a close', () => {
+  // The platform writes nothing on a close and no wakeup observes one, so an instruction that
+  // reacts to it would be a convention with no event behind it. A close is ambiguous too:
+  // rejected, superseded, rebased and cancelled PRs close identically.
+  for (const step of workflow.steps) {
+    const text = step.instructions ?? '';
+    assert.doesNotMatch(text, /closed (pull request|PR)|withdrawal|Closing the pull request/i, `${step.status_key} handles a close`);
+  }
+  // A review still needs something to review; that is an entry precondition, not a close handler.
+  for (const key of ['spec_review', 'in_review', 'human_review']) {
+    const text = steps.get(key).instructions;
+    assert.match(text, /not open/, `${key} does not check for an open PR`);
+    assert.match(text, new RegExp(`back to ${steps.get(key).back_status_key}`), `${key} does not name its back status`);
+  }
+  assert.match(spec, /A close is not a workflow event/);
+  assert.doesNotMatch(spec, /Close is a withdrawal/);
+  assert.match(spec, /A review needs an open PR/);
+  const adr = readFileSync(join(ROOT, 'docs/adr/0005-the-merged-spec-pr-is-the-approval.md'), 'utf8');
+  assert.match(adr, /A close is not a workflow event/);
+  assert.doesNotMatch(adr, /A close without merge is a withdrawal/);
 });
 
 test('the spec PR carries the breakdown its merge approves', () => {

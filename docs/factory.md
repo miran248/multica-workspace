@@ -121,8 +121,10 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
   head, evidence per criterion, a status move at the end. A spec PASS reviews the spec and its
   proposed breakdown, leaves the PR open and moves to `awaiting_merge`; never merge or arm a
   spec PR. A delivery PASS arms auto-merge and moves to `done`, or moves to `awaiting_merge`
-  when `manual-merge` is on. FAIL moves the ticket to the review column's back status. The
-  Reviewer never merges by hand and never reviews its own work.
+  when `manual-merge` is on. FAIL moves the ticket to the review column's back status. A review
+  starts from an open pull request: with no open link, comment the state and send the ticket
+  back rather than judging or completing it. The Reviewer never merges by hand and never
+  reviews its own work.
 - **Implementer.** Owns `in_progress`: implement, validate, link the PR, move to `in_review`.
 - **Release.** Owns production only; see `roles/release.md`.
 
@@ -139,12 +141,17 @@ a ticket when a run ends, so the handler always makes the next move.
 - **Merge is the transition.** `awaiting_merge` declares no next status. Merging the reviewed
   PR completes the ticket; moving it to `done` by hand would close it without a merge, so
   don't. A change request moves it to the lane that owns the work.
-- **Close is a withdrawal.** The platform completes a ticket on merge, never on a close. A
-  closed, unmerged PR changes no status: close it, then move the ticket to the lane that owns
-  the work, or move it to `cancelled` and cancel its epic. Closing it alone leaves the ticket
-  parked and the epic stalled.
-  Close is not an automatic rejection: a superseded, rebased or cancelled PR closes the same
-  way.
+- **A close is not a workflow event.** The platform completes a ticket on merge and does
+  nothing on a close: a closed, unmerged PR changes no status, wakes nobody, and is not an
+  automatic rejection — rejected, superseded, rebased and cancelled PRs all close the same
+  way, so a close cannot be assumed to mean any of them. The actor who closes the PR owns the
+  move: `cancelled` for abandoned work, or the lane that owns the rework, with the reason on
+  the ticket. There is no CLI unlink, so a human who closes a linked PR removes the stale link
+  on the issue page before linking a replacement.
+- **A review needs an open PR.** Each review column checks the link before judging: with no
+  open pull request there is nothing to review, so the Reviewer comments the state and moves
+  the ticket to that column's back status. This is a precondition on entry, not a reaction to
+  a close — nothing in the graph fires on one.
 - **Spec approval.** The spec child is approved by merging its PR, which completes the child
   and wakes the Planner. The PR carries the proposed breakdown, so the merge approves both. A
   spec PR is reviewed at `spec_review`, never at `in_review`, and the Reviewer never arms it

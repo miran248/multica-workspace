@@ -28,9 +28,8 @@ One artifact, one approval act.
 - There is no separate approval-owner comment for a Factory spec. `to-spec` writes the
   breakdown, `to-tickets` reads the merged list and publishes it, and a change to that list
   is a new spec revision, not a slice decision made after approval.
-- A close without merge is a withdrawal: the ticket returns to the work column that owns it,
-  or the epic is cancelled. The close is the signal; the status move is the record, because
-  the platform does not act on a close.
+- A close is not a workflow event. No column instruction reacts to one; only the merge moves a
+  ticket, and the actor who closes a PR owns the status move.
 
 ## Consequences
 
@@ -40,8 +39,9 @@ One artifact, one approval act.
   history stays.
 - The Planner cannot publish a slice the merged PR does not carry; a missing or wrong
   breakdown is a review finding before the merge, not a post-approval negotiation.
-- A closed spec PR does not wake the Planner. The human must move the child back to
-  `spec_progress`, or cancel the epic; a close alone leaves it at `awaiting_merge` and the
-  epic stalled.
+- A closed PR leaves its ticket where it is and wakes nobody: the actor who closed it moves the
+  ticket, and the 90m review check is what catches a stall. A human who closes a linked PR
+  removes the stale link on the issue page before linking a replacement, because there is no
+  CLI unlink.
 - The guide, the role and the three skills move together, and the offline matrix fails if the
   approval comment returns or the breakdown leaves the spec PR.
