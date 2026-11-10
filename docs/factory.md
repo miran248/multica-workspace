@@ -83,6 +83,9 @@ The spec lane runs in every mode: the Planner writes the spec at `spec_progress`
 Reviewer verdicts it at `spec_review`, and a PASS lands the spec PR at `awaiting_merge` when
 `manual-merge` is on the epic and at `done` otherwise.
 
+To route one ticket to a human, assign that member and move it to `human_progress`; assigning
+alone starts nothing. `todo` is a waiting room, not a handoff.
+
 ## Who moves what
 
 - **Human.** One approval comment approves the spec and the ticket breakdown. Add
