@@ -42,7 +42,7 @@ just schedule           # optional: install the daily sync
   branch itself, and the catalog cannot set repository settings.
 - Leave **Allow auto-merge** off. Auto-merge is a pull-request setting, not a ticket status: an
   armed pull request merges as soon as its checks pass, and the platform completes the linked
-  ticket on merge from any non-terminal status — including `awaiting_merge` and a spec child.
+  ticket on merge — including an `awaiting_merge` ticket and a spec child.
   Arming therefore bypasses the human merge gate and can wake the Planner to slice an
   unapproved breakdown. With the setting off, GitHub refuses the arm, which is the mechanical
   guard behind the Reviewer instruction.

@@ -24,8 +24,8 @@ yet.
 Enabling `allow_auto_merge` did not produce a single `auto_merge_enabled` event: the Reviewer
 waits for the required check before arming, so `gh pr merge --auto` merged directly. Auto-merge
 is also status-blind: an armed PR at `awaiting_merge`, or a carried spec PR, merges as soon as
-its checks pass, and the platform completes the linked ticket on merge from any non-terminal
-status. Arming is therefore a second merge authority that bypasses the human gate.
+its checks pass, and the platform completes the linked ticket on merge. Arming is therefore a
+second merge authority that bypasses the human gate.
 
 ## Decision
 

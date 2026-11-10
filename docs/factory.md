@@ -160,10 +160,10 @@ nothing else.
   it without a merge, so don't. A change request moves it to the lane that owns the work.
 - **Auto-merge stays off.** Leave **Allow auto-merge** off on every Factory repository. Auto-merge
   is a pull-request setting, not a ticket status: an armed PR merges as soon as its checks pass,
-  and the platform completes the linked ticket on merge from any non-terminal status — including
-  `awaiting_merge` and a spec child. An arm would therefore bypass the human gate, and a spec
-  merge would wake the Planner to slice an unapproved breakdown. The Reviewer merges after a
-  PASS instead, and GitHub refuses an arm while the setting is off.
+  and the platform completes the linked ticket on merge — including an
+  `awaiting_merge` ticket and a spec child. An arm would therefore bypass the human gate, and
+  a spec merge would wake the Planner to slice an unapproved breakdown. The Reviewer merges
+  after a PASS instead, and GitHub refuses an arm while the setting is off.
 - **A close is not a workflow event.** The platform completes a ticket on merge and does
   nothing on a close: a closed, unmerged PR changes no status, wakes nobody, and is not an
   automatic rejection — rejected, superseded, rebased and cancelled PRs all close the same
