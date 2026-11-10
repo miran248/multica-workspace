@@ -35,6 +35,7 @@ export function discover(call) {
     labels: unpack(call('label', 'list', '--resource-type', 'issue'), 'labels'),
     skills: unpack(call('skill', 'list'), 'skills'),
     workflows: unpack(call('workflow', 'list'), 'workflows'),
+    statuses: unpack(call('issue-status', 'list'), 'statuses'),
     autopilots: unpack(call('autopilot', 'list'), 'autopilots'),
     projects: unpack(call('project', 'list'), 'projects'),
   };
@@ -58,6 +59,13 @@ const concreteSteps = (live, binding, steps) => steps.map(step => ({ ...step,
   handler: step.handler.type === 'agent' ? { type: 'agent', id: idOf(live, 'agent', step.handler.role) }
     : step.handler.type === 'member' ? { type: 'member', id: binding.human_user_id } : step.handler }));
 const handlerArg = handler => ['agent', 'member'].includes(handler.type) ? handler.id : handler.type;
+/** A status declaration carries presentation the workflow write cannot update in place: a
+ *  status created before the icon existed keeps its category default. Only declared fields
+ *  are compared, so an undeclared icon or colour is never rewritten. */
+const statusFields = declared => Object.fromEntries(['icon', 'color'].filter(field => declared?.[field] !== undefined).map(field => [field, declared[field]]));
+const declaredStatuses = workflows => Object.fromEntries(Object.values(workflows).flatMap(workflow => workflow.steps
+  .filter(step => step.new_status && Object.keys(statusFields(step.new_status)).length)
+  .map(step => [step.status_key, statusFields(step.new_status)])));
 
 export function resolvedForDeployment(binding, { root = ROOT } = {}) {
   const output = resolve(binding, root);
@@ -218,6 +226,16 @@ export function buildPlan(binding, { root = ROOT, runner, keepUnmanaged = false 
     operation('workflow', key, record?.id, before, after, record ? 'update' : 'create');
     const planned = [...operations, ...checks].findLast(item => item.entity === 'workflow' && item.key === key);
     if (planned) planned.new_statuses = Object.fromEntries(workflow.steps.filter(step => step.new_status).map(step => [step.status_key, step.new_status]));
+    // The workflow write creates a missing status with its declared presentation, but it
+    // reuses an existing one by name and never corrects it. Repair those here, and verify
+    // every declared status after the write so a dropped icon cannot pass as configured.
+    for (const step of workflow.steps) {
+      const fields = statusFields(step.new_status);
+      if (!Object.keys(fields).length) continue;
+      const record = live.statuses.find(status => status.key === step.status_key && !status.archived_at);
+      if (!record) continue;
+      operation('status', step.status_key, record.id, pick(record, Object.keys(fields)), fields);
+    }
   }
 
   const projects = [...new Set(live.projects.map(project => project.id))];
@@ -263,8 +281,9 @@ export function buildPlan(binding, { root = ROOT, runner, keepUnmanaged = false 
     }
   }
 
-  const plan = { version: 4, workspace_id: binding.workspace_id, shared_hash: resolved.shared_hash, binding_hash: resolved.binding_hash,
+  const plan = { version: 5, workspace_id: binding.workspace_id, shared_hash: resolved.shared_hash, binding_hash: resolved.binding_hash,
     ledger_hash: resolved.ledger_hash, sync_control: control ? 'configured' : 'absent',
+    statuses: declaredStatuses(resolved.shared.workflows),
     operations, checks };
   return { ...plan, plan_hash: digest(plan) };
 }
@@ -300,6 +319,12 @@ export function executePlan(binding, plan, { root = ROOT, runner, assets = {}, p
     if (entity === 'skill') return replacement('skill', call('skill', 'get', id, '--with-content'));
     const response = call(entity === 'sync' ? 'autopilot' : entity, 'get', id);
     return replacement(entity, entity === 'autopilot' || entity === 'sync' ? response.autopilot : response);
+  };
+  const refreshStatus = key => {
+    const record = call('issue-status', 'get', key);
+    const index = live.statuses.findIndex(item => item.key === record.key);
+    if (index === -1) live.statuses.push(record); else live.statuses[index] = record;
+    return record;
   };
   const findRecord = (entity, op) => {
     const list = live[group(entity)];
@@ -339,6 +364,10 @@ export function executePlan(binding, plan, { root = ROOT, runner, assets = {}, p
     if (op.entity === 'workflow') {
       const record = findRecord('workflow', op);
       return record ? { name: record.name, description: record.description ?? '', steps: workflowSteps(live, binding, record.steps) } : null;
+    }
+    if (op.entity === 'status') {
+      const record = live.statuses.find(status => status.key === op.key);
+      return record ? pick(record, Object.keys(op.after)) : null;
     }
     if (op.entity === 'schedule') {
       const record = live.autopilots.find(pilot => pilot.title === op.title) ?? null;
@@ -483,6 +512,10 @@ export function executePlan(binding, plan, { root = ROOT, runner, assets = {}, p
         refresh('workflow', id);
       } finally { rmSync(temp, { recursive: true, force: true }); }
     }
+    if (op.entity === 'status') {
+      call('issue-status', 'update', op.key, ...flags(after));
+      refreshStatus(op.key);
+    }
     if (op.entity === 'project-workflow') call('project', 'workflow', 'set', op.id, idOf(live, 'workflow', op.workflow_name));
     if (op.entity === 'schedule') {
       const pilot = live.autopilots.find(item => item.title === op.title);
@@ -493,6 +526,13 @@ export function executePlan(binding, plan, { root = ROOT, runner, assets = {}, p
   }
   // A chained rename moves the same object again, so only its own step can be compared to the intermediate name.
   for (const op of [...plan.operations, ...plan.checks]) if (op.action !== 'rename' && !same(readOperation(op), desired(op))) throw new Error(`Final readback mismatch: ${op.entity}.${op.key}`);
+  // A status the workflow creates has no planned operation to read back, so verify every
+  // declared status explicitly: a created status whose icon was dropped is not configured.
+  for (const [key, fields] of Object.entries(plan.statuses ?? {})) {
+    let record;
+    try { record = call('issue-status', 'get', key); } catch { throw new Error(`Readback mismatch: status.${key}; inspect live state before retry`); }
+    if (!same(pick(record, Object.keys(fields)), fields)) throw new Error(`Readback mismatch: status.${key}; inspect live state before retry`);
+  }
   return { status: 'verified', plan_hash: plan.plan_hash, operations: plan.operations.length,
     pruned: plan.operations.filter(op => op.action === 'archive' || op.action === 'delete').length,
     retired: plan.operations.filter(op => op.action === 'archive' || op.action === 'delete').map(op => ({ entity: op.entity, key: op.key })),

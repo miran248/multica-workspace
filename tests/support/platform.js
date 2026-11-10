@@ -2,8 +2,20 @@
 import { readFileSync } from 'node:fs';
 
 export const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const statusKey = name => name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+// Workflow create/update declares a status by `new_status`; the server reuses an existing
+// status of the same name unchanged, which is the behaviour the sync has to repair.
+const ensureStatuses = (state, parsed) => {
+  for (const step of parsed) {
+    if (!step.new_status) continue;
+    const key = statusKey(step.new_status.name);
+    if (state.statuses.some(status => status.key === key)) continue;
+    state.statuses.push({ id: id(state.next++), key, name: step.new_status.name, category: step.new_status.category,
+      color: step.new_status.color ?? '#3b82f6', icon: step.new_status.icon ?? '', is_system: false, position: state.statuses.length, archived_at: null });
+  }
+};
 export function initialState() {
-  return { workspace: { id: id(1), slug: 'fixture', name: 'Fixture' }, runtime: { id: id(2), workspace_id: id(1), provider: 'dsh', status: 'online' }, human: id(3), humanName: 'miran', agents: [], skills: [], squads: [], labels: [], autopilots: [], workflows: [], projectWorkflows: {}, projects: [], issues: [], calls: [], next: 10 };
+  return { workspace: { id: id(1), slug: 'fixture', name: 'Fixture' }, runtime: { id: id(2), workspace_id: id(1), provider: 'dsh', status: 'online' }, human: id(3), humanName: 'miran', agents: [], skills: [], squads: [], labels: [], autopilots: [], workflows: [], statuses: [], projectWorkflows: {}, projects: [], issues: [], calls: [], next: 10 };
 }
 export function command(state, workspace, ...args) {
   state.calls.push([workspace, ...args]);
@@ -32,9 +44,22 @@ export function command(state, workspace, ...args) {
     return { project_id: project, uses_default: true, workflow: { id: id(800), name: 'Default', steps: [] } };
   }
   if (entity === 'workflow' && action === 'list') return state.workflows;
+  if (entity === 'issue-status' && action === 'list') return state.statuses;
+  if (entity === 'issue-status' && action === 'get') {
+    const record = state.statuses.find(status => status.key === third || status.name === third || status.id === third);
+    if (!record) throw new Error(`status "${third}" not found`);
+    return record;
+  }
+  if (entity === 'issue-status' && action === 'update') {
+    const record = state.statuses.find(status => status.key === third || status.name === third || status.id === third);
+    if (!record) throw new Error(`status "${third}" not found`);
+    for (const field of ['name', 'description', 'icon', 'color']) if (flags[field] !== undefined) record[field] = flags[field];
+    return record;
+  }
   if (entity === 'workflow' && action === 'create') {
     const parsed = JSON.parse(readFileSync(flags.steps_file, 'utf8'));
-    const steps = parsed.map(step => ({ status_key: step.new_status ? step.new_status.name.toLowerCase().replace(/[^a-z0-9]+/g, '_') : step.status_key,
+    ensureStatuses(state, parsed);
+    const steps = parsed.map(step => ({ status_key: step.new_status ? statusKey(step.new_status.name) : step.status_key,
       handler: { type: 'none' }, instructions: '' }));
     const record = { id: id(state.next++), name: flags.name, description: flags.description ?? '', steps };
     state.workflows.push(record); return record;
@@ -44,7 +69,11 @@ export function command(state, workspace, ...args) {
     if (!record) throw new Error(`Missing workflow ${third}`);
     if (flags.name) record.name = flags.name;
     if (flags.description !== undefined) record.description = flags.description;
-    if (flags.steps_file) record.steps = JSON.parse(readFileSync(flags.steps_file, 'utf8')).map(step => ({ status_key: step.new_status ? step.new_status.name.toLowerCase().replace(/[^a-z0-9]+/g, '_') : step.status_key, handler: { type: 'none' }, instructions: '' }));
+    if (flags.steps_file) {
+      const parsed = JSON.parse(readFileSync(flags.steps_file, 'utf8'));
+      ensureStatuses(state, parsed);
+      record.steps = parsed.map(step => ({ status_key: step.new_status ? statusKey(step.new_status.name) : step.status_key, handler: { type: 'none' }, instructions: '' }));
+    }
     return record;
   }
   if (entity === 'workflow' && action === 'handoff' && third === 'set') {

@@ -14,7 +14,9 @@
       "status_key": "spec_progress",
       "new_status": {
         "name": "Spec progress",
-        "category": "started"
+        "category": "started",
+        "icon": "half",
+        "color": "#3b82f6"
       },
       "handler": {
         "type": "agent",
@@ -27,7 +29,9 @@
       "status_key": "spec_review",
       "new_status": {
         "name": "Spec review",
-        "category": "started"
+        "category": "started",
+        "icon": "three_quarters",
+        "color": "#3b82f6"
       },
       "handler": {
         "type": "agent",
@@ -44,7 +48,22 @@
         "role": "implementer"
       },
       "next_status_key": "in_review",
-      "instructions": "Implement this ticket as one reviewable pull request. Read the ticket, its spec and the repository conventions first; reproduce any demonstrated failure before fixing it. Run the check that covers the diff with a finite timeout. Link the PR to this ticket. Then move the ticket to in_review. Never merge and never review your own work. An external blocker moves the ticket to blocked with the reason. Planner-owned spec text belongs in spec_progress, not here."
+      "instructions": "Implement this ticket as one reviewable pull request. Read the ticket, its spec and the repository conventions first; reproduce any demonstrated failure before fixing it. Run the check that covers the diff with a finite timeout. Link the PR to this ticket. Then move the ticket to in_review. Never merge and never review your own work. An external blocker moves the ticket to blocked with the reason. Planner-owned spec text belongs in spec_progress, not here. A human-assigned ticket belongs in human_progress, never here."
+    },
+    {
+      "status_key": "human_progress",
+      "new_status": {
+        "name": "Human progress",
+        "category": "started",
+        "icon": "half",
+        "color": "#8b5cf6"
+      },
+      "handler": {
+        "type": "member",
+        "role": "human"
+      },
+      "next_status_key": "in_review",
+      "instructions": "Implement this ticket as one reviewable pull request; this column is the human's delivery. Read the ticket, its spec and the repository conventions first. Run the check that covers the diff with a finite timeout. Link the PR to this ticket, then move it to in_review. Never merge and never review your own work. An external blocker moves the ticket to blocked with the reason. Planner-owned spec text belongs in spec_progress, not here."
     },
     {
       "status_key": "in_review",
@@ -54,20 +73,22 @@
       },
       "next_status_key": "done",
       "back_status_key": "in_progress",
-      "instructions": "Review the linked pull request at its exact head against the ticket's acceptance criteria and the repository standards. If this ticket or its parent carries manual-merge, move it to awaiting_merge for the human. Otherwise arm auto-merge (gh pr merge --auto --squash --delete-branch) and move it to done. On a blocking finding, comment the evidence and move it back to in_progress, except planner-owned spec text, which goes to spec_progress. Never review or merge your own work."
+      "instructions": "Review the linked pull request at its exact head against the ticket's acceptance criteria and the repository standards. If this ticket or its parent carries manual-merge, move it to awaiting_merge for the human. Otherwise arm auto-merge (gh pr merge --auto --squash --delete-branch) and move it to done. On a blocking finding, comment the evidence and move it back: human-assigned tickets to human_progress, planner-owned spec text to spec_progress, other delivery to in_progress. Never review or merge your own work."
     },
     {
       "status_key": "awaiting_merge",
       "new_status": {
         "name": "Awaiting merge",
-        "category": "started"
+        "category": "started",
+        "icon": "three_quarters",
+        "color": "#8b5cf6"
       },
       "handler": {
         "type": "member",
         "role": "human"
       },
       "next_status_key": "done",
-      "instructions": "Merge the reviewed pull request when you are satisfied, then move this ticket to done. If it should change first, move it back to in_progress with the reason, or to spec_progress for planner-owned spec text."
+      "instructions": "Merge the reviewed pull request when you are satisfied, then move this ticket to done. If it should change first, move it back to in_progress with the reason, to human_progress for human-assigned work, or to spec_progress for planner-owned spec text."
     },
     {
       "status_key": "blocked",
@@ -75,7 +96,7 @@
         "type": "agent",
         "role": "planner"
       },
-      "instructions": "Triage why the ticket stopped. Planner-owned spec work moves to spec_progress; delivery work moves to in_progress; an external blocker is unblocked or the ticket is cancelled. A blocker is never left parked here."
+      "instructions": "Triage why the ticket stopped. Planner-owned spec work moves to spec_progress; human-assigned delivery to human_progress; other delivery to in_progress; an external blocker is unblocked or the ticket is cancelled. A blocker is never left parked here."
     },
     {
       "status_key": "done"
