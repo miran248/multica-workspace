@@ -35,7 +35,7 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
     assert.match(agent.instructions, /github\.com\/example\/multica-workspace/);
   }
   const workflow = f.state.workflows[0];
-  assert.deepEqual(workflow.steps.map(step => step.status_key), ['backlog', 'todo', 'spec_progress', 'spec_review', 'in_progress', 'human_progress', 'in_review', 'awaiting_merge', 'blocked', 'done', 'cancelled']);
+  assert.deepEqual(workflow.steps.map(step => step.status_key), ['backlog', 'todo', 'spec_progress', 'spec_review', 'in_progress', 'human_progress', 'in_review', 'human_review', 'awaiting_merge', 'blocked', 'done', 'cancelled']);
   const planner = f.state.agents.find(agent => agent.name === 'planner').id;
   const reviewer = f.state.agents.find(agent => agent.name === 'reviewer').id;
   assert.equal(workflow.steps.find(step => step.status_key === 'spec_progress').handler.id, planner);
@@ -44,11 +44,15 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
   assert.equal(workflow.steps.find(step => step.status_key === 'in_progress').handler.id, f.state.agents.find(agent => agent.name === 'implementer').id);
   assert.equal(workflow.steps.find(step => step.status_key === 'human_progress').handler.id, f.state.human);
   assert.equal(workflow.steps.find(step => step.status_key === 'in_review').handler.id, reviewer);
+  assert.equal(workflow.steps.find(step => step.status_key === 'human_review').handler.id, reviewer);
+  assert.equal(workflow.steps.find(step => step.status_key === 'human_review').back_status_key, 'human_progress');
   assert.equal(workflow.steps.find(step => step.status_key === 'awaiting_merge').handler.id, f.state.human);
+  assert.equal(workflow.steps.find(step => step.status_key === 'awaiting_merge').next_status_key, undefined);
   assert.equal(workflow.steps.find(step => step.status_key === 'blocked').handler.id, planner);
   assert.deepEqual(f.state.statuses.map(status => [status.key, status.icon, status.color]), [
     ['spec_progress', 'half', '#3b82f6'], ['spec_review', 'three_quarters', '#3b82f6'],
-    ['human_progress', 'half', '#8b5cf6'], ['awaiting_merge', 'three_quarters', '#8b5cf6']]);
+    ['human_progress', 'half', '#8b5cf6'], ['human_review', 'three_quarters', '#8b5cf6'],
+    ['awaiting_merge', 'three_quarters', '#8b5cf6']]);
   assert.equal(f.state.labels.length, 14);
   assert.equal(journal(f).status, 'verified');
   f.state.calls = [];

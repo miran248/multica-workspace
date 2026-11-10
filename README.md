@@ -12,6 +12,45 @@ the vocabulary, [docs/adr/](docs/adr/) the decisions, [docs/specs/](docs/specs/)
 specs, [docs/factory.md](docs/factory.md) the Factory workflow guide, and
 [docs/apply.md](docs/apply.md) the application guide.
 
+## The Factory workflow
+
+The workflow turns an epic into merged code. A stage-1 spec child is approved by merging its
+PR, then agent and human lanes deliver, each with its own review column and send-back.
+
+```mermaid
+flowchart TD
+  T["todo"]
+  SP["spec_progress<br/>Planner"]
+  SR["spec_review<br/>Reviewer"]
+  IP["in_progress<br/>Implementer"]
+  HP["human_progress<br/>human"]
+  IR["in_review<br/>Reviewer"]
+  HR["human_review<br/>Reviewer"]
+  AM["awaiting_merge<br/>human"]
+  DN["done"]
+
+  T -.->|"stage 1: spec child"| SP
+  T -.->|"stage 2+: agent work"| IP
+  T -.->|"stage 2+: human work"| HP
+  SP --> SR
+  SR -->|"FAIL"| SP
+  SR -->|"PASS: PR left open"| AM
+  IP --> IR
+  HP --> HR
+  IR -->|"FAIL"| IP
+  HR -->|"FAIL"| HP
+  IR -->|"PASS + manual-merge"| AM
+  HR -->|"PASS + manual-merge"| AM
+  IR -->|"PASS: auto-merge"| DN
+  HR -->|"PASS: auto-merge"| DN
+  AM -->|"merge: the ticket completes"| DN
+  T -.->|"all children done"| DN
+```
+
+`blocked` is triage for any column, and `done`/`cancelled` are terminal. The spec child's
+merge is the approval: it wakes the Planner to slice. Modes, edge cases and the live
+acceptance checklist are in [docs/factory.md](docs/factory.md).
+
 ## Apply it to a workspace
 
 Run this from the workspace's own runtime — the command uses that runtime's `multica`

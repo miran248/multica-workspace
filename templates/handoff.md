@@ -36,7 +36,7 @@ Next: in_review moved to awaiting_merge; Release merges and applies.
 
 Every handoff and verdict moves the ticket to the status its next owner handles,
 before the comment is posted. The workflow hands the ticket to that step's
-handler: the implementer at `in_progress`, the reviewer at `in_review`, the human
+handler: the implementer at `in_progress`, the reviewer at `in_review` or `human_review`, the human
 at `awaiting_merge`. A ticket left in the status you just worked wakes nobody.
 
 | Case | What you do |
