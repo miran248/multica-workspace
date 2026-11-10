@@ -79,3 +79,23 @@ and ensures exactly one enabled schedule trigger.
 statuses where entering a column hands the issue to that column's handler. Catalog issues
 outside a project fall back to the workspace default workflow, whose columns hand off to
 nobody.
+
+## Factory
+
+**handoff** — the status move that assigns the issue to the new column's handler and starts
+that handler's run. Nothing advances a ticket when a run ends; the handler makes the next
+move. A member handler is assigned and runs nothing.
+
+**factory mode** — the epic-level choice of who implements and who merges, encoded by the
+`human-assigned` and `manual-merge` labels before the spec is approved. With neither label the
+epic is autonomous. `human-assigned` without `manual-merge` is human implementation with agent
+merge; `manual-merge` alone is agent implementation with a human merge; both are human
+implementation and merge.
+
+**human lane** — the two member-handled columns: `human_progress` for implementation and
+`awaiting_merge` for the review-and-merge gate. Both are violet; the Reviewer still owns the
+independent verdict at `in_review`.
+
+**declared status** — a custom status a workflow step creates through `new_status`, including
+its name, category, icon and colour. Sync creates a missing one with the workflow write,
+repairs a present one through `multica issue-status`, and reads every declared field back.

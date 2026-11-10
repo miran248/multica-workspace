@@ -41,6 +41,21 @@
                   "done",
                   "cancelled"
                 ]
+              },
+              "icon": {
+                "enum": [
+                  "dotted",
+                  "circle",
+                  "half",
+                  "three_quarters",
+                  "check",
+                  "slash",
+                  "cross"
+                ]
+              },
+              "color": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
               }
             },
             "required": [

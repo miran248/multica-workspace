@@ -9,7 +9,8 @@ never writes back to Git, so the catalog stays a delivery input rather than a wo
 
 Documentation: [docs/README.md](docs/README.md) is the index; [GLOSSARY.md](GLOSSARY.md) holds
 the vocabulary, [docs/adr/](docs/adr/) the decisions, [docs/specs/](docs/specs/) the accepted
-specs, and [docs/apply.md](docs/apply.md) the application guide.
+specs, [docs/factory.md](docs/factory.md) the Factory workflow guide, and
+[docs/apply.md](docs/apply.md) the application guide.
 
 ## Apply it to a workspace
 
@@ -72,7 +73,7 @@ and ensures exactly one enabled schedule trigger.
 | `scripts/` | resolver, live binding, plan/apply, lock and journal |
 | `tests/` | offline suite; the platform is a stateful test double |
 | `GLOSSARY.md` | the catalog's vocabulary |
-| `docs/` | documentation index, ADRs, accepted specs and the apply guide |
+| `docs/` | documentation index, ADRs, accepted specs, the Factory usage guide and the apply guide |
 | `.github/workflows/` | CI: the offline suite on every push and pull request |
 
 `just validate` resolves the whole catalog against a placeholder binding — no workspace,
