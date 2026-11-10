@@ -8,6 +8,7 @@ repository.
 | [GLOSSARY.md](../GLOSSARY.md) | the catalog's vocabulary, one definition per term |
 | [adr/](adr/) | architecture decisions, one per file, immutable once accepted |
 | [specs/](specs/) | approved specs, one per result, cited from the Multica issue at a commit |
+| [factory.md](factory.md) | how the Factory workflow hands off, its modes, and the live acceptance run |
 | [apply.md](apply.md) | how to apply this catalog to a workspace, and the refusals it can hit |
 | [AGENTS.md](../AGENTS.md) | repository conventions, the sync contract, requirements |
 

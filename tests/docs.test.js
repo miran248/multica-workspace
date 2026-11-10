@@ -7,7 +7,7 @@ import { ROOT } from '../scripts/config.js';
 const read = path => readFileSync(join(ROOT, path), 'utf8');
 
 test('the knowledge layer exists and the routing file links to it', () => {
-  for (const path of ['GLOSSARY.md', 'docs/README.md', 'docs/adr/README.md', 'docs/specs/README.md', 'docs/apply.md'])
+  for (const path of ['GLOSSARY.md', 'docs/README.md', 'docs/adr/README.md', 'docs/specs/README.md', 'docs/apply.md', 'docs/factory.md'])
     assert.equal(existsSync(join(ROOT, path)), true, `${path} is missing`);
 
   const routing = read('AGENTS.md');
@@ -17,7 +17,7 @@ test('the knowledge layer exists and the routing file links to it', () => {
 
 test('every relative link in the knowledge index resolves', () => {
   const dangling = [];
-  for (const source of ['AGENTS.md', 'docs/README.md', 'README.md']) {
+  for (const source of ['AGENTS.md', 'docs/README.md', 'README.md', 'docs/factory.md']) {
     for (const [, target] of read(source).matchAll(/\]\(([^)]+)\)/g)) {
       if (/^(https?:|#|mailto:)/.test(target)) continue;
       const path = join(ROOT, dirname(source), target.split('#')[0]);

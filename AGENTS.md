@@ -10,6 +10,7 @@ that way — that is what makes the catalog reusable and public.
 - Vocabulary: [GLOSSARY.md](GLOSSARY.md); decisions: [docs/adr/](docs/adr/); accepted specs:
   [docs/specs/](docs/specs/)
 - Applying it to a workspace: [docs/apply.md](docs/apply.md)
+- Using the Factory workflow: [docs/factory.md](docs/factory.md)
 
 ## Conventions
 

@@ -37,6 +37,10 @@ just schedule           # optional: install the daily sync
 - Autopilot status and extra triggers are operator state. No sync and no `just schedule` run
   pauses, enables, deletes or reschedules a webhook: `just schedule` ensures exactly one
   enabled schedule trigger and refuses when it finds more than one.
+- A workflow's declared statuses are presentation too: sync creates a missing one with the
+  workflow write, repairs an existing one through `multica issue-status update`, and reads
+  every declared `icon` and `color` back. Built-in statuses, names, categories, descriptions
+  and positions are not managed.
 - The runtime is verified only by provider and online status. `runtime list` exposes no model
   or thinking-level inventory, so an unsupported model/effort pair surfaces at agent create
   time, not before the write.
