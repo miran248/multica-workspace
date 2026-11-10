@@ -6,7 +6,8 @@ workspace Default workflow, whose columns hand off to nobody.
 
 The workflow file is the source: `templates/workflows/factory.json`. This guide is the
 contract the human and the seats read. `tests/factory-workflow.test.js` fails when a column,
-an edge or a mode is not described here.
+an edge or a mode is not described here. The route allocation behind the graph is
+[ADR-0004](adr/0004-columns-carry-agent-decided-routes.md).
 
 ## Status graph
 
