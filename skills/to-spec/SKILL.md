@@ -15,7 +15,7 @@ The spec is a Git document; Multica owns the tickets, approval records and publi
 
 Check with the user that these seams match their expectations.
 
-3. Write the spec to `docs/specs/<change>.md`, using the template below, and keep the draft provisional. Present the exact revision, with the proposed ticket breakdown, for the approval-owner comment. Nothing is published or labelled from here, and no tracker issue holds the spec: after the comment, hand the approved revision to `to-tickets`, which publishes the children.
+3. Write the spec to `docs/specs/<change>.md`, using the template below, with a `Proposed breakdown` section naming the tickets and their blocking edges, and open the spec pull request. The review and merge of that PR is the approval of the spec and the breakdown; nothing is published or labelled from here, and no tracker issue holds the spec. After the merge, hand the spec to `to-tickets`, which publishes the children.
 
 <spec-template>
 
@@ -66,6 +66,10 @@ A list of testing decisions that were made. Include:
 ## Out of Scope
 
 A description of the things that are out of scope for this spec.
+
+## Proposed breakdown
+
+The ticket list the approval covers: one line per ticket with its blocking edges and the behavior it delivers.
 
 ## Further Notes
 

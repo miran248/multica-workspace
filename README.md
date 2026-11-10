@@ -12,6 +12,14 @@ the vocabulary, [docs/adr/](docs/adr/) the decisions, [docs/specs/](docs/specs/)
 specs, [docs/factory.md](docs/factory.md) the Factory workflow guide, and
 [docs/apply.md](docs/apply.md) the application guide.
 
+## The Factory workflow
+
+The workflow turns an epic into merged code. A stage-1 spec child is approved by merging its
+PR, then agent and human lanes deliver, each with its own review column and send-back.
+`blocked` is triage for any column, and `done`/`cancelled` are terminal. The status graph,
+the modes, the edge cases and the live acceptance checklist are in
+[docs/factory.md](docs/factory.md).
+
 ## Apply it to a workspace
 
 Run this from the workspace's own runtime — the command uses that runtime's `multica`

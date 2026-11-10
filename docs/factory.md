@@ -6,54 +6,70 @@ workspace Default workflow, whose columns hand off to nobody.
 
 The workflow file is the source: `templates/workflows/factory.json`. This guide is the
 contract the human and the seats read. `tests/factory-workflow.test.js` fails when a column,
-an edge or a mode is not described here.
+an edge or a mode is not described here. The route allocation behind the graph is
+[ADR-0004](adr/0004-columns-carry-agent-decided-routes.md); the approval artifact is
+[ADR-0005](adr/0005-the-merged-spec-pr-is-the-approval.md).
 
 ## Status graph
 
 ```mermaid
 flowchart TD
   backlog --> todo
-  todo --> spec_progress
+  todo -.->|"spec child, stage 1"| spec_progress
+  todo -.->|"agent delivery"| in_progress
+  todo -.->|"human delivery"| human_progress
   spec_progress -->|"spec PR"| spec_review
   spec_review -->|"FAIL"| spec_progress
-  spec_review -->|"PASS"| done
-  spec_review -->|"PASS + manual-merge"| awaiting_merge
-  todo --> in_progress
-  todo --> human_progress
+  spec_review -->|"PASS: PR left open"| awaiting_merge
   in_progress -->|"delivery PR"| in_review
-  human_progress -->|"delivery PR"| in_review
-  in_review -->|"FAIL: delivery"| in_progress
-  in_review -->|"FAIL: human-assigned"| human_progress
-  in_review -->|"FAIL: spec text"| spec_progress
-  in_review -->|"PASS"| done
+  human_progress -->|"delivery PR"| human_review
+  in_review -->|"FAIL"| in_progress
+  human_review -->|"FAIL"| human_progress
   in_review -->|"PASS + manual-merge"| awaiting_merge
-  awaiting_merge -->|"merge"| done
-  awaiting_merge -->|"changes"| in_progress
-  awaiting_merge -->|"changes: human-assigned"| human_progress
-  awaiting_merge -->|"changes: spec text"| spec_progress
+  human_review -->|"PASS + manual-merge"| awaiting_merge
+  in_review -->|"PASS: auto-merge"| done
+  human_review -->|"PASS: auto-merge"| done
+  awaiting_merge -->|"merge completes the ticket"| done
+  awaiting_merge -->|"changes: spec"| spec_progress
+  awaiting_merge -->|"changes: agent"| in_progress
+  awaiting_merge -->|"changes: human"| human_progress
   blocked --> spec_progress
   blocked --> human_progress
   blocked --> in_progress
   blocked --> cancelled
+  todo -.->|"all children done"| done
 ```
 
 Any ticket can enter `blocked`; it is a triage column, never a parking spot. `done` and
-`cancelled` are terminal and hand off to nobody.
+`cancelled` are terminal and hand off to nobody. The arrow labelled "merge completes the
+ticket" is the platform's PR rule, not a status move: merging a linked pull request completes
+the ticket it is linked to.
+
+## The spec is a stage-1 child
+
+The Planner creates the spec as the epic's stage-1 child and keeps the epic at `todo`. The
+spec PR carries the proposed breakdown and links only that child — never the epic, and never
+after `Closes`, `Fixes` or `Resolves`. The Reviewer leaves the spec PR open on PASS and moves
+the child to `awaiting_merge`; the human merges it, the workspace PR rule completes the child
+to `done`, and that completion wakes the Planner to slice. So there is no approval column and
+no per-issue auto-complete override: the merge approves the spec and the breakdown, and the
+epic is accepted only after every child closes.
 
 ## Columns
 
 | Column | Handler | Entered by | Leaves to |
 | --- | --- | --- | --- |
 | `backlog` | none | planner parks a later stage | `todo` or the stage's start column |
-| `todo` | none | human or planner | a work column; the ticket waits here |
-| `spec_progress` | Planner | planner starts a spec | `spec_review` |
-| `spec_review` | Reviewer | planner submits the spec PR | `spec_progress` (FAIL) or `done` / `awaiting_merge` (PASS) |
+| `todo` | none | human or planner | a work column; the epic waits here |
+| `spec_progress` | Planner | planner creates the spec child | `spec_review` |
+| `spec_review` | Reviewer | planner submits the spec PR | `spec_progress` (FAIL) or `awaiting_merge` (PASS) |
 | `in_progress` | Implementer | planner promotes agent work | `in_review` |
-| `human_progress` | human | planner promotes human work | `in_review` |
-| `in_review` | Reviewer | implementer or human delivers | `in_progress`, `human_progress`, `spec_progress` on FAIL; `done` or `awaiting_merge` on PASS |
-| `awaiting_merge` | human | reviewer PASS with `manual-merge` | `done` after merge; back on changes |
-| `blocked` | Planner | any seat that cannot proceed | triage route |
-| `done` | none | the last handler | terminal |
+| `human_progress` | human | planner promotes human work | `human_review` |
+| `in_review` | Reviewer | the implementer delivers | `in_progress` (FAIL), `done` or `awaiting_merge` (PASS) |
+| `human_review` | Reviewer | the human delivers | `human_progress` (FAIL), `done` or `awaiting_merge` (PASS) |
+| `awaiting_merge` | human | reviewer PASS with `manual-merge`, or a spec PASS | `done` after the merge; the owning lane on changes |
+| `blocked` | Planner | any seat that cannot proceed | triage route; a dependency wait stays |
+| `done` | none | a merge, or the last handler | terminal |
 | `cancelled` | none | any seat | terminal |
 
 Custom statuses carry presentation that sync reconciles and reads back:
@@ -63,6 +79,7 @@ Custom statuses carry presentation that sync reconciles and reads back:
 | `spec_progress` | `half` | `#3b82f6` |
 | `spec_review` | `three_quarters` | `#3b82f6` |
 | `human_progress` | `half` | `#8b5cf6` |
+| `human_review` | `three_quarters` | `#8b5cf6` |
 | `awaiting_merge` | `three_quarters` | `#8b5cf6` |
 
 ## Modes
@@ -74,35 +91,40 @@ already in flight.
 
 | Mode | Epic labels | Implements | Reviews | Merges | Human work |
 | --- | --- | --- | --- | --- | --- |
-| autonomous | neither | Implementer | Reviewer | Reviewer arms auto-merge | one approval comment |
-| human merge | `manual-merge` | Implementer | Reviewer | human at `awaiting_merge` | approval, merge |
-| human implements | `human-assigned` | human at `human_progress` | Reviewer | Reviewer arms auto-merge | approval, implementation |
-| human implements and merges | `human-assigned` + `manual-merge` | human at `human_progress` | Reviewer | human at `awaiting_merge` | approval, implementation, merge |
+| autonomous | neither | Implementer | Reviewer | Reviewer arms auto-merge | the spec merge |
+| human merge | `manual-merge` | Implementer | Reviewer | human at `awaiting_merge` | the spec merge, the delivery merge |
+| human implements | `human-assigned` | human at `human_progress` | Reviewer | Reviewer arms auto-merge | the spec merge, implementation |
+| human implements and merges | `human-assigned` + `manual-merge` | human at `human_progress` | Reviewer | human at `awaiting_merge` | the spec merge, implementation, the delivery merge |
 
 The spec lane runs in every mode: the Planner writes the spec at `spec_progress`, the
-Reviewer verdicts it at `spec_review`, and a PASS lands the spec PR at `awaiting_merge` when
-`manual-merge` is on the epic and at `done` otherwise.
+Reviewer verdicts it at `spec_review`, and a PASS always lands at `awaiting_merge`. The spec
+PR carries the proposed breakdown, and the human merge of that PR approves both, in every
+mode, including autonomous.
 
 To route one ticket to a human, assign that member and move it to `human_progress`; assigning
 alone starts nothing. `todo` is a waiting room, not a handoff.
 
 ## Who moves what
 
-- **Human.** One approval comment approves the spec and the ticket breakdown. Add
-  `human-assigned` and/or `manual-merge` to the epic before that comment when the mode needs
-  them. Implement a `human-assigned` ticket at `human_progress`, open its PR, and move it to
-  `in_review`. Merge at `awaiting_merge` when satisfied. Never move human work into
+- **Human.** The spec PR is the approval: it carries the proposed breakdown, so merging it
+  approves both. Add `human-assigned` and/or `manual-merge` to the epic before the merge when
+  the mode needs them. Implement a `human-assigned` ticket at `human_progress`, open its PR,
+  and move it to `human_review`. At `awaiting_merge`, merge the reviewed PR: the merge
+  completes the ticket, so do not move it to `done` yourself. Never move human work into
   `in_progress`.
-- **Planner.** Owns `spec_progress`: rework the spec, link one PR, move to `spec_review`.
-  Slice only after approval, one ticket and one PR per slice. Promote a stage by moving its
-  agent work to `in_progress` and its human work to `human_progress`; keep later stages in
-  `backlog`. Triage `blocked` and accept the epic when every child closes.
-- **Reviewer.** Owns `spec_review` and `in_review`: one verdict at the exact head, evidence
-  per criterion, a status move at the end. PASS arms auto-merge only after the verdict and
-  moves to `done`, or to `awaiting_merge` when `manual-merge` is on the ticket or its parent.
-  FAIL moves spec text to `spec_progress`, human-assigned delivery to `human_progress`, and
-  other delivery to `in_progress`. The Reviewer never merges by hand and never reviews its
-  own work.
+- **Planner.** Create the spec as the epic's stage-1 child at `spec_progress`; the spec carries
+  the proposed breakdown; link the spec PR to that child only. Slice only after the spec child
+  is done. Promote a stage by moving its agent work to `in_progress` and its human work to
+  `human_progress`; keep later stages in `backlog`. Triage `blocked` and accept the epic when
+  every child closes.
+- **Reviewer.** Owns `spec_review`, `in_review` and `human_review`: one verdict at the exact
+  head, evidence per criterion, a status move at the end. A spec PASS reviews the spec and its
+  proposed breakdown, leaves the PR open and moves to `awaiting_merge`; never merge or arm a
+  spec PR. A delivery PASS arms auto-merge and moves to `done`, or moves to `awaiting_merge`
+  when `manual-merge` is on. FAIL moves the ticket to the review column's back status. A review
+  starts from an open pull request: with no open link, comment the state and send the ticket
+  back rather than judging or completing it. The Reviewer never merges by hand and never
+  reviews its own work.
 - **Implementer.** Owns `in_progress`: implement, validate, link the PR, move to `in_review`.
 - **Release.** Owns production only; see `roles/release.md`.
 
@@ -112,13 +134,35 @@ a ticket when a run ends, so the handler always makes the next move.
 
 ## Edge cases
 
-- **Review send-back.** `in_review` names `in_progress` as its needs-changes column, which is
-  right for agent delivery. A human-assigned ticket sent back there would hand the work to the
-  Implementer, so the Reviewer moves it to `human_progress` explicitly, and the human does the
-  same if using the review control.
+- **Review send-back.** Each review column declares its own back status: `spec_review` to
+  `spec_progress`, `in_review` to `in_progress`, `human_review` to `human_progress`. The
+  platform's needs-changes control uses that declared status, so a send-back cannot hand a
+  ticket to the wrong seat.
+- **Merge is the transition.** `awaiting_merge` declares no next status. Merging the reviewed
+  PR completes the ticket; moving it to `done` by hand would close it without a merge, so
+  don't. A change request moves it to the lane that owns the work.
+- **A close is not a workflow event.** The platform completes a ticket on merge and does
+  nothing on a close: a closed, unmerged PR changes no status, wakes nobody, and is not an
+  automatic rejection — rejected, superseded, rebased and cancelled PRs all close the same
+  way, so a close cannot be assumed to mean any of them. The actor who closes the PR owns the
+  move: `cancelled` for abandoned work, or the lane that owns the rework, with the reason on
+  the ticket. There is no CLI unlink, so a human who closes a linked PR removes the stale link
+  on the issue page before linking a replacement.
+- **A review needs an open PR.** Each review column checks the link before judging: with no
+  open pull request there is nothing to review, so the Reviewer comments the state and moves
+  the ticket to that column's back status. This is a precondition on entry, not a reaction to
+  a close — nothing in the graph fires on one.
+- **Spec approval.** The spec child is approved by merging its PR, which completes the child
+  and wakes the Planner. The PR carries the proposed breakdown, so the merge approves both. A
+  spec PR is reviewed at `spec_review`, never at `in_review`, and the Reviewer never arms it
+  for auto-merge.
 - **Blocked.** Any seat can move a ticket to `blocked`. The Planner triages it to a work
-  column, or cancels it; a blocker is never left parked.
+  column, or cancels it. A ticket waiting on another ticket names it in a `Blocked by` section
+  in its body and stays in `blocked` until that ticket closes; a dependency is not triage.
 - **Cancel and duplicate.** Move to `cancelled`; use `--duplicate-of` so the original lists it.
+- **Branch cleanup.** Enable **Automatically delete head branches** on the repository. The
+  human merge instruction deletes the head branch it merges, but a deferred auto-merge and a
+  merge from the GitHub UI rely on that setting; the catalog cannot set it.
 - **Issue outside a project.** The workspace Default workflow accepts every status and hands
   off to nobody. The Factory modes above do not apply until the issue is in a project.
 - **Manual override.** Any member can move a ticket to any column; the move is the handoff and
@@ -135,11 +179,12 @@ with a repository resource and the Factory workflow bound.
 
 | Scenario | Shape | Expected evidence |
 | --- | --- | --- |
-| autonomous | epic, spec + three parallel children + one serial child | spec and delivery PRs review, auto-merge and close; the parent wakes per stage |
-| human merge | `manual-merge` ticket | PASS lands at `awaiting_merge`; the human merges and moves to `done` |
-| human implements | `human-assigned` ticket | the ticket sits in `human_progress` assigned to the human; a human PR is reviewed and auto-merged |
-| human implements and merges | both labels | `human_progress` to `in_review` to `awaiting_merge`; the human merges |
+| autonomous | epic, spec child + three parallel children + one serial child | the spec PR is reviewed, left open, merged by the human, the child closes and the Planner slices; delivery PRs auto-merge and close |
+| human merge | `manual-merge` ticket | PASS lands at `awaiting_merge`; the human merges and the merge completes the ticket |
+| human implements | `human-assigned` ticket | the ticket sits in `human_progress` assigned to the human; its PR is reviewed at `human_review` and auto-merged |
+| human implements and merges | both labels | `human_progress` to `human_review` to `awaiting_merge`; the human merges |
 | blocked | any ticket moved to `blocked` | the Planner triages it back to a work column or cancels it |
+| dependency | a ticket whose body names an open blocker | it stays in `blocked` until the blocker closes |
 
 Record `multica issue timeline <id>` before closing each item: it carries the status and
 assignee changes that prove the route. Put the result on the test issue, not in this

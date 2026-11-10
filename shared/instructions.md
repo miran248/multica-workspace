@@ -4,7 +4,7 @@
 - Use Conventional Commits; preserve history.
 
 ## Scope and evidence
-- Act within scope; a bare `approve`/`proceed` clears the pending gate packet (spec, tickets, production revision), never a verified delivery; silence is not approval; scope change reopens it.
+- Act within scope; a bare `approve`/`proceed` clears only the gate it names, never a verified delivery; silence is not approval; scope change reopens it.
 - Report configured/verified/pending/deployed; missing evidence is a gap, not a pass.
 - Comments: handoffs, verdicts, findings, evidence; edit bodies, never narrate.
 

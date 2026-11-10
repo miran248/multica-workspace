@@ -37,6 +37,9 @@ just schedule           # optional: install the daily sync
 - Autopilot status and extra triggers are operator state. No sync and no `just schedule` run
   pauses, enables, deletes or reschedules a webhook: `just schedule` ensures exactly one
   enabled schedule trigger and refuses when it finds more than one.
+- Repository settings are operator state. Enable **Automatically delete head branches** on
+  every repository a Factory project uses: a deferred auto-merge and a merge from the GitHub
+  UI do not delete the head branch themselves, and the catalog cannot set repository settings.
 - A workflow's declared statuses are presentation too: sync creates a missing one with the
   workflow write, repairs an existing one through `multica issue-status update`, and reads
   every declared `icon` and `color` back. Built-in statuses, names, categories, descriptions

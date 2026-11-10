@@ -36,7 +36,7 @@ Next: in_review moved to awaiting_merge; Release merges and applies.
 
 Every handoff and verdict moves the ticket to the status its next owner handles,
 before the comment is posted. The workflow hands the ticket to that step's
-handler: the implementer at `in_progress`, the reviewer at `in_review`, the human
+handler: the implementer at `in_progress`, the reviewer at `in_review` or `human_review`, the human
 at `awaiting_merge`. A ticket left in the status you just worked wakes nobody.
 
 | Case | What you do |
@@ -67,7 +67,7 @@ On RETURN, line 5 names the fresh verdict after moving the ticket back.
 ```
 RETURN — Spec: 1 blocking finding; Standards: PASS.
 Reviewed [PR #21](https://github.com/OWNER/REPO/pull/21) at `4f0bb61`; [run](<run-url>).
-P2 — `shared/instructions.md:7`: the gate omits the recorded approval signal; fix: require one approval-owner comment covering the spec SHA and ticket list.
+P2 — `shared/instructions.md:7`: the gate omits the recorded approval signal; fix: name the merged spec PR and its head.
 Checks: validate PASS; 152/152 tests; 243 words.
 Next: in_progress; Implementer fixes the gate, then a fresh verdict at the new head.
 ```
