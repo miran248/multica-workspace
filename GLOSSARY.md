@@ -91,13 +91,28 @@ nothing.
 **factory mode** — the epic-level choice of who implements and who merges, encoded by the
 `human-assigned` and `manual-merge` labels before the spec is approved. With neither label the
 epic is autonomous. `human-assigned` without `manual-merge` is human implementation with agent
-merge; `manual-merge` alone is agent implementation with a human merge; both are human
-implementation and merge.
+merge; `manual-merge` alone is agent implementation with a human merge of the spec approval and
+every pull request based on `main` — ticket PRs into an integration branch are Reviewer-merged;
+both are human implementation and merge.
 
 **spec child** — the epic's stage-1 child that carries the spec pull request, including the
-proposed breakdown and the published slice. Its merge approves the spec, the breakdown and the
-set: the workspace PR rule completes the child, which wakes the Planner to promote the slice.
-The spec PR is never linked to the epic.
+proposed breakdown and the published slice. The PR's base is the spec's integration branch, or
+`main` on a `direct-to-main` spec. Its merge approves the spec, the breakdown and the set: the
+workspace PR rule completes the child, which wakes the Planner to promote the slice. The spec
+PR is never linked to the epic.
+
+**integration branch** — `spec/<epic-key>`, forked from `main` at the spec sha, and the base of
+the spec PR and of every delivery PR in that spec. It is scratch: unprotected, it deploys
+nothing, and the release merge deletes it. A `direct-to-main` spec has none and records
+`integration: none`.
+
+**release child** — the final-stage child of an integration spec. Its pull request is
+`spec/<epic>` → `main` and merges as one squash commit on `main`; its `done` is the only proof
+the spec is released. It is linked to itself only, never to the epic.
+
+**branch-scoped `done`** — a child's `done` means delivered and reviewed on `spec/<epic>`; the
+epic's `done` means the release squash is on `main`, and only the Planner's acceptance grants
+it.
 
 **proposed breakdown** — the ticket list and blocking edges carried by the spec pull request.
 It is reviewed with the spec, and the merge that approves the spec approves the breakdown. The
