@@ -207,6 +207,56 @@ test('the slice is published in the spec run, before stage 1 closes', () => {
   assert.match(adr, /One barrier wake per epic/);
 });
 
+// The spec run is the only place the topology is chosen and published. A main-only spec
+// run, or a delivery body with no base, is a contract failure, not a wording preference.
+function specRunViolations({ planner, step, tickets, specSkill }) {
+  const violations = [];
+  for (const [name, text] of [['roles/planner.md', planner], ['spec_progress', step]]) {
+    if (!/forks? `spec\/<epic>` from `main`/i.test(text)) violations.push(`${name}: no fork from main`);
+    if (!/spec PR targets (it|that branch)/.test(text)) violations.push(`${name}: spec PR is not targeted at the branch`);
+    if (!/`Branch: spec\/<epic>`/.test(text)) violations.push(`${name}: no Branch line`);
+    if (!/final-stage release child/.test(text)) violations.push(`${name}: no final-stage release child`);
+    if (!/gh pr list --base main --state open/.test(text)) violations.push(`${name}: no release query`);
+    if (!/`spec\/\*`/.test(text)) violations.push(`${name}: release query does not filter spec/*`);
+    if (!/--until-issue <release>/.test(text)) violations.push(`${name}: release query does not park on the release`);
+    if (!/force-push/.test(text)) violations.push(`${name}: a rework does not force-push`);
+    if (!/epic-cancelled/.test(text)) violations.push(`${name}: no cancelled-epic sweep`);
+    if (!/direct-to-main/.test(text)) violations.push(`${name}: no direct-to-main escape hatch`);
+    if (!/never `main`/.test(text)) violations.push(`${name}: an integration spec may target main`);
+  }
+  if (!/records `integration: spec\/<epic>`/.test(step)) violations.push('spec_progress: no integration record');
+  if (!/`integration: none`/.test(step)) violations.push('spec_progress: no direct-to-main record');
+  if (!/single-ticket breakdown defaults to `direct-to-main`/.test(step)) violations.push('spec_progress: no single-ticket default');
+  if (!/integration: spec\/<epic/.test(specSkill)) violations.push('to-spec: no integration record');
+  if (!/integration: none/.test(specSkill)) violations.push('to-spec: no direct-to-main record');
+  if (!/single ticket defaults to `direct-to-main`/.test(specSkill)) violations.push('to-spec: no single-ticket default');
+  if (!/forks that branch from `main` at the spec sha/.test(specSkill) || !/targets its approval PR at `spec\/<epic-key>`/.test(specSkill))
+    violations.push('to-spec: approval PR is not targeted at the recorded branch');
+  const parent = /## Parent\n\n([\s\S]*?)## What to build/.exec(tickets)?.[1] ?? '';
+  if (!/Branch: spec\/<epic-key>/.test(parent)) violations.push('to-tickets: no Branch line under ## Parent');
+  if (!/absence means `main`/.test(tickets)) violations.push('to-tickets: no main default');
+  if (!/release child is the final publication: created last, in `backlog`, in the final stage/.test(tickets))
+    violations.push('to-tickets: release child is not last, backlog and final stage');
+  for (const clause of ['release procedure', 'base/source branch', 'included children', '`Touch:` union', 'Create no child after the spec PR opens'])
+    if (!tickets.includes(clause)) violations.push(`to-tickets: missing ${clause}`);
+  return violations;
+}
+
+test('the spec run forks, records and targets the integration branch', () => {
+  const contract = {
+    planner: readFileSync(join(ROOT, 'roles/planner.md'), 'utf8'),
+    step: steps.get('spec_progress').instructions,
+    tickets: readFileSync(join(ROOT, 'skills/to-tickets/SKILL.md'), 'utf8'),
+    specSkill: readFileSync(join(ROOT, 'skills/to-spec/SKILL.md'), 'utf8'),
+  };
+  assert.deepEqual(specRunViolations(contract), []);
+  // The two failures the matrix exists to catch: a spec PR on main, and a body with no base.
+  const mainOnly = { ...contract, step: contract.step.replace(/forks `spec\/<epic>`/, 'targets the spec PR at `main`') };
+  assert.notDeepEqual(specRunViolations(mainOnly), []);
+  const noBase = { ...contract, tickets: contract.tickets.replace(/^Branch: spec\/<epic-key>.*$/m, '') };
+  assert.notDeepEqual(specRunViolations(noBase), []);
+});
+
 test('approval is the merge, not an approval comment', () => {
   assert.doesNotMatch(spec, /approval comment/);
   assert.doesNotMatch(spec, /approves the spec and the ticket breakdown/);
