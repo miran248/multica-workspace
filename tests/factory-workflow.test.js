@@ -329,3 +329,58 @@ test('the usage guide names every column, the labels and the modes', () => {
   for (const label of ['human-assigned', 'manual-merge']) assert.ok(spec.includes(`\`${label}\``), `docs/factory.md does not name ${label}`);
   for (const mode of ['autonomous', 'human']) assert.ok(spec.toLowerCase().includes(mode), `docs/factory.md has no ${mode} mode`);
 });
+
+// The guide is what a human and a new repository read, and the trigger recipe is operator
+// state, so both are pinned with the routes. A guide that still describes main-only delivery,
+// a modes table that loses the two-merge cost, or an unfiltered trigger is the failure class
+// this matrix exists to catch.
+function guideViolations({ guide, apply, workflowFile }) {
+  const violations = [];
+  for (const [term, pattern] of [
+    ['the integration branch', /`spec\/<epic>`/],
+    ['the fork at the spec sha', /forks? `spec\/<epic>` from `main` at the spec sha/],
+    ['the spec PR base', /spec PR targets (it|that branch)/],
+    ['the delivery base', /`Branch: spec\/<epic>`/],
+    ['the release child', /release child/],
+    ['one squash', /one squash/],
+    ['spec scratch', /`spec\/\*`[^.]*scratch/],
+    ['branch-scoped done', /branch-scoped `done`/],
+    ['main-scoped epic acceptance', /`main`-scoped/],
+    ['the two-merge manual-merge', /two human merges/],
+    ['the direct-to-main N + 1', /N \+ 1/],
+    ['release serialization', /serializ/i],
+    ['the cancelled-epic sweep', /cancelled-epic sweep/],
+    ['direct-to-main', /direct-to-main/],
+    ['the single-ticket default', /single-ticket/],
+    ['the modes table two-merge row', /^\| `spec\/<epic>` \| 2 —/m],
+  ]) if (!pattern.test(guide)) violations.push(`docs/factory.md: no ${term}`);
+  for (const [term, pattern] of [
+    ['`spec/*` unprotected', /`spec\/\*`[^.\n]*unprotected/],
+    ['Automatically delete head branches', /Automatically delete head branches/],
+    ['Allow auto-merge off', /Allow auto-merge/],
+    ['Require branches to be up to date on main', /Require branches to be up to date[^.\n]*`main`/],
+    ['the push trigger', /push: branches: \[main\]/],
+    ['the pull_request trigger', /pull_request: branches: \[main\]/],
+  ]) if (!pattern.test(apply)) violations.push(`docs/apply.md: no ${term}`);
+  if (!/push:\s*\n\s*branches: \[main\]/.test(workflowFile)) violations.push('.github/workflows/validate.yml: no push filter');
+  if (!/pull_request:\s*\n\s*branches: \[main\]/.test(workflowFile)) violations.push('.github/workflows/validate.yml: no pull_request filter');
+  return violations;
+}
+
+test('the guide carries the integration topology and the narrowed routes', () => {
+  const contract = {
+    guide: spec,
+    apply: readFileSync(join(ROOT, 'docs/apply.md'), 'utf8'),
+    workflowFile: readFileSync(join(ROOT, '.github/workflows/validate.yml'), 'utf8'),
+  };
+  assert.deepEqual(guideViolations(contract), []);
+  // A guide that still describes main-only delivery is the graph the topology replaces.
+  const noTopology = { ...contract, guide: contract.guide.replace(/`spec\/<epic>`/g, '`main`') };
+  assert.notDeepEqual(guideViolations(noTopology), []);
+  // The modes table must keep the integration manual-merge cost: the spec and the release.
+  const noTwoMergeRow = { ...contract, guide: contract.guide.replace(/^\| `spec\/<epic>` \| 2 —.*$/m, '') };
+  assert.notDeepEqual(guideViolations(noTwoMergeRow), []);
+  // The reference trigger is the recipe a new repository copies.
+  const unfiltered = { ...contract, workflowFile: contract.workflowFile.replace(/\n\s*branches: \[main\]/g, '') };
+  assert.notDeepEqual(guideViolations(unfiltered), []);
+});
