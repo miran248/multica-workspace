@@ -67,13 +67,15 @@ The end-to-end behaviour this ticket makes work, from the user's perspective, no
 
 ## Acceptance criteria
 
-- [ ] Criterion 1
-- [ ] Criterion 2
+- Criterion 1
+- Criterion 2
 
 ## Blocked by
 
 - A reference to each blocking ticket, or "None (can start immediately)". Omit this section when blockers were set as native edges.
 
 </issue-template>
+
+Acceptance criteria are statements, not a checklist: the ticket closes on a merge or a status move, so nobody ticks boxes afterwards. The Reviewer records the evidence per criterion in the PASS verdict; a criterion that cannot be observed there is not acceptance.
 
 In the issue body, avoid specific file paths or code snippets: they go stale fast. Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo, just the important bits.

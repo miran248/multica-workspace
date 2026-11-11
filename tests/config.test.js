@@ -8,12 +8,14 @@ import { render } from '../scripts/deploy.js';
 import { fixture } from './support/helpers.js';
 import { id } from './support/platform.js';
 
-test('the shared contract reaches every role and the status move owns dispatch', t => {
+test('the shared contract reaches every role and the comment owns the handoff', t => {
   const f = fixture(t), resolved = resolve(f.binding, f.root);
   for (const role of ROLES) {
     assert.match(render(role, f.binding, f.root), /Use Conventional Commits/, role);
     assert.match(render(role, f.binding, f.root), /summary, TICKET/, role);
-    assert.match(render(role, f.binding, f.root), /The status move is the handoff/, role);
+    assert.match(render(role, f.binding, f.root), /The comment is the handoff/, role);
+    assert.match(render(role, f.binding, f.root), /last action/, role);
+    assert.doesNotMatch(render(role, f.binding, f.root), /[Aa]rm auto-merge/, role);
   }
   assert.match(render('reviewer', f.binding, f.root), /never approve your own implementation/);
   assert.match(render('planner', f.binding, f.root), /grilling to acceptance/);
@@ -85,6 +87,14 @@ test('offline validation resolves the catalog with a placeholder binding and exi
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Valid catalog: default; configured/);
   assert.equal(syntheticBinding().identity.workspace_slug, 'validation');
+});
+
+test('the ticket template writes acceptance criteria, not an unticked checklist', () => {
+  const template = readFileSync(join(ROOT, 'skills/to-tickets/SKILL.md'), 'utf8');
+  // Nothing ticks a box after creation: the ticket closes on a merge or a status move, and the
+  // Reviewer's PASS is the evidence record.
+  assert.doesNotMatch(template, /- \[[ xX]\]/);
+  assert.match(template, /Acceptance criteria are statements, not a checklist/);
 });
 
 test('duplicate label names and duplicate workflow names refuse offline', t => {

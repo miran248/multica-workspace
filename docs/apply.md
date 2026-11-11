@@ -38,8 +38,14 @@ just schedule           # optional: install the daily sync
   pauses, enables, deletes or reschedules a webhook: `just schedule` ensures exactly one
   enabled schedule trigger and refuses when it finds more than one.
 - Repository settings are operator state. Enable **Automatically delete head branches** on
-  every repository a Factory project uses: a deferred auto-merge and a merge from the GitHub
-  UI do not delete the head branch themselves, and the catalog cannot set repository settings.
+  every repository a Factory project uses: a merge from the GitHub UI does not delete the head
+  branch itself, and the catalog cannot set repository settings.
+- Leave **Allow auto-merge** off. Auto-merge is a pull-request setting, not a ticket status: an
+  armed pull request merges as soon as its checks pass, and the platform completes the linked
+  ticket on merge — including an `awaiting_merge` ticket and a spec child.
+  Arming therefore bypasses the human merge gate and can wake the Planner to slice an
+  unapproved breakdown. With the setting off, GitHub refuses the arm, which is the mechanical
+  guard behind the Reviewer instruction.
 - A workflow's declared statuses are presentation too: sync creates a missing one with the
   workflow write, repairs an existing one through `multica issue-status update`, and reads
   every declared `icon` and `color` back. Built-in statuses, names, categories, descriptions

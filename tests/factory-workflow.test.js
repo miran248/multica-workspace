@@ -60,9 +60,12 @@ test('each review column declares its own back status, so no instruction has to 
   assert.equal(steps.get('human_progress').next_status_key, 'human_review');
   assert.equal(steps.get('spec_review').next_status_key, 'awaiting_merge');
   // The merge completes the ticket: a manual "advance" or a wrong send-back default would
-  // close it without a merge, so the column declares no edge at all.
+  // close it without a merge, so the column declares no edge at all. The delivery review
+  // columns are the same: their PASS is the merge, never a move to done.
   assert.equal(steps.get('awaiting_merge').next_status_key ?? null, null);
   assert.equal(steps.get('awaiting_merge').back_status_key ?? null, null);
+  assert.equal(steps.get('in_review').next_status_key ?? null, null);
+  assert.equal(steps.get('human_review').next_status_key ?? null, null);
 });
 
 test('every custom status declares a known icon and a hex colour', () => {
@@ -123,6 +126,34 @@ test('the route table resolves: every named target is a column and every column 
   assert.match(merge, /merge completes this ticket/);
   assert.match(merge, /approves the spec and its proposed breakdown/);
   assert.doesNotMatch(merge, /move (it|this ticket) to done/);
+});
+
+test('the comment is the handoff and the move or merge comes last', () => {
+  for (const key of ['spec_progress', 'in_progress', 'human_progress']) {
+    assert.match(steps.get(key).instructions, /[Cc]omment[^.]*then move/, `${key} does not comment before moving`);
+  }
+  assert.match(steps.get('spec_review').instructions, /post the PASS at the exact head[^.]*then move/);
+  for (const key of ['in_review', 'human_review'])
+    assert.match(steps.get(key).instructions, /post the PASS verdict at the exact head, then merge/, `${key} does not post before merging`);
+  const handoff = readFileSync(join(ROOT, 'templates/handoff.md'), 'utf8');
+  assert.match(handoff, /## The comment is the handoff/);
+  assert.match(handoff, /comment first and make the change last/);
+  assert.doesNotMatch(handoff, /before the comment is posted/);
+});
+
+test('no column enables auto-merge; a PASS is the merge', () => {
+  for (const step of workflow.steps) {
+    const text = step.instructions ?? '';
+    assert.doesNotMatch(text, /gh pr merge --auto|[Aa]rm auto-merge/, `${step.status_key} arms auto-merge`);
+  }
+  for (const key of ['spec_review', 'in_review', 'human_review', 'awaiting_merge'])
+    assert.match(steps.get(key).instructions, /[Nn]ever (merge or )?enable auto-merge/, `${key} does not forbid auto-merge`);
+  assert.doesNotMatch(spec, /arms auto-merge|PASS: auto-merge|auto-merged|deferred auto-merge/);
+  assert.match(spec, /Auto-merge stays off/);
+  assert.match(readFileSync(join(ROOT, 'docs/apply.md'), 'utf8'), /Leave \*\*Allow auto-merge\*\* off/);
+  const adr = readFileSync(join(ROOT, 'docs/adr/0006-comment-first-merge-last.md'), 'utf8');
+  assert.match(adr, /The comment is the handoff/);
+  assert.match(adr, /allow_auto_merge/);
 });
 
 test('only a merge moves a ticket: no column handles a close', () => {
