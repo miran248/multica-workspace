@@ -257,6 +257,65 @@ test('the spec run forks, records and targets the integration branch', () => {
   assert.notDeepEqual(specRunViolations(noBase), []);
 });
 
+// The delivery side reads its base from the ticket body, merges it before review, and the
+// Reviewer closes a ticket PR on the branch in every mode. A main-only delivery and a
+// manual-merge gate on a branch PR are the two failures this matrix exists to catch.
+function deliveryViolations({ implementer, reviewer, inProgress, humanProgress, inReview, humanReview, awaitingMerge }) {
+  const violations = [];
+  const delivery = [
+    ['roles/implementer.md', implementer, 'in_review'],
+    ['in_progress', inProgress, 'in_review'],
+    ['human_progress', humanProgress, 'human_review'],
+  ];
+  for (const [name, text, next] of delivery) {
+    if (!/`Branch:` under `## Parent`/.test(text)) violations.push(`${name}: no body-derived branch`);
+    if (!/(`main` when absent|absen[ct]e? means `main`)/.test(text)) violations.push(`${name}: main is not the default base`);
+    if (!/(open the PR against it|PR into it)/.test(text)) violations.push(`${name}: the PR is not targeted at the base`);
+    if (!new RegExp(`[Mm]erge the base( branch)? in before \`${next}\``).test(text)) violations.push(`${name}: the base is not merged before ${next}`);
+  }
+  for (const [name, text] of [['roles/implementer.md', implementer], ['in_progress', inProgress]])
+    if (!/`Touch:`/.test(text)) violations.push(`${name}: does not keep to Touch:`);
+  for (const [name, text] of [['roles/reviewer.md', reviewer], ['in_review', inReview], ['human_review', humanReview]]) {
+    if (!/mergeStateStatus/.test(text)) violations.push(`${name}: no mergeStateStatus check`);
+    if (!/moved base invalidates/.test(text)) violations.push(`${name}: a moved base does not invalidate the verdict`);
+  }
+  if (!/`manual-merge`[^.]*only[^.]*for a `main` base[^.]*never for a ticket PR into `spec\/<epic>`/.test(reviewer))
+    violations.push('roles/reviewer.md: manual-merge is not narrowed to the main base');
+  for (const [name, text] of [['in_review', inReview], ['human_review', humanReview]]) {
+    if (!/(`main` when absent|absen[ct]e? means `main`)/.test(text)) violations.push(`${name}: main is not the default base`);
+    if (!/base is `main`[^.]*manual-merge/.test(text)) violations.push(`${name}: manual-merge is not scoped to the main base`);
+    if (!/every ticket PR into `spec\/<epic>`[^.]*merge/.test(text)) violations.push(`${name}: a branch PR is not routed to a PASS and merge`);
+  }
+  if (!/base is `main`[^.]*manual-merge/.test(awaitingMerge) || !/ticket PR into `spec\/<epic>`/.test(awaitingMerge))
+    violations.push('awaiting_merge: the human merge is not scoped to a main base');
+  return violations;
+}
+
+test('the delivery branch comes from the body and only a main-base merge waits', () => {
+  const contract = {
+    implementer: readFileSync(join(ROOT, 'roles/implementer.md'), 'utf8'),
+    reviewer: readFileSync(join(ROOT, 'roles/reviewer.md'), 'utf8'),
+    inProgress: steps.get('in_progress').instructions,
+    humanProgress: steps.get('human_progress').instructions,
+    inReview: steps.get('in_review').instructions,
+    humanReview: steps.get('human_review').instructions,
+    awaitingMerge: steps.get('awaiting_merge').instructions,
+  };
+  assert.deepEqual(deliveryViolations(contract), []);
+  // A delivery that never reads `Branch:` is the main-only graph the topology replaces.
+  const mainOnly = { ...contract, inProgress: contract.inProgress.replace(/Read `Branch:` under `## Parent`; absence means `main`\.\s*/, '') };
+  assert.notDeepEqual(deliveryViolations(mainOnly), []);
+  // A ticket PR into the branch that waits for a human under manual-merge is the second failure.
+  const gatedBranch = {
+    ...contract,
+    inReview: contract.inReview.replace(/If the PR's base is `main` and /, 'If '),
+  };
+  assert.notDeepEqual(deliveryViolations(gatedBranch), []);
+  // A release PASS without the freshness check can approve a stale tree.
+  const staleRelease = { ...contract, reviewer: contract.reviewer.replace(/`mergeStateStatus`[^.]*\.\s*/, '') };
+  assert.notDeepEqual(deliveryViolations(staleRelease), []);
+});
+
 test('approval is the merge, not an approval comment', () => {
   assert.doesNotMatch(spec, /approval comment/);
   assert.doesNotMatch(spec, /approves the spec and the ticket breakdown/);
