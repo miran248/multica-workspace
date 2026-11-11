@@ -1,6 +1,6 @@
 ---
 name: to-tickets
-description: Break a plan, spec, or the current conversation into a set of tracer-bullet tickets, each declaring its blocking edges, and publish them to Multica as child issues after the spec pull request carrying the breakdown merges.
+description: Break a plan, spec, or the current conversation into a set of tracer-bullet tickets, each declaring its blocking edges, and publish them as backlog child issues in the Factory spec run, before the spec pull request leaves the spec column.
 ---
 
 # To Tickets
@@ -38,20 +38,23 @@ Give each ticket its **blocking edges**: the other tickets that must complete be
 
 **Wide refactors are the exception to vertical slicing.** A **wide refactor** is one mechanical change (rename a column, retype a shared symbol) whose **blast radius** fans across the whole codebase, so a single edit breaks thousands of call sites at once and no vertical slice can land green. Don't force it into a tracer bullet; sequence it as **expand–contract**. First expand: add the new form beside the old so nothing breaks. Then migrate the call sites over in batches sized by blast radius (per package, per directory), each batch its own ticket blocked by the expand, keeping CI green batch to batch because the old form still exists. Finally contract: delete the old form once no caller remains, in a ticket blocked by every migrate batch. When even the batches can't stay green alone, keep the sequence but let them share an integration branch that all block a final integrate-and-verify ticket; green is promised only there.
 
-### 4. Read the approved breakdown
+### 4. Read the breakdown to publish
 
-The spec pull request carries the proposed breakdown, and its merge approved it. Use that list as written: for each ticket, the title, the blocking edges and the behaviour it delivers. A change to the ticket set is a new spec revision, not a decision to make here. If the merged spec has no breakdown, stop and report the gap rather than inventing a slice.
+The spec you are writing carries the proposed breakdown, and its PR merge will approve it. Use that list as written: for each ticket, the title, the blocking edges and the behaviour it delivers. For a Factory spec child, publish the set now, in this run and before the spec PR leaves `spec_progress`; otherwise publish once the plan is agreed. A change to the published set is a spec revision, not a promotion decision.
 
 ### 5. Publish the children to Multica
 
-After the spec child is done, publish one Multica child issue per ticket in dependency order (blockers first), so each child's blocking edges reference real identifiers. Create every child with `--parent` (the source issue, when there is one), `--stage` and `--assignee` (the role that will do the work). The CLI exposes no dependency object, so write each blocking edge into the child's `Blocked by` section. Apply the `ready-for-agent` triage label only now, after the merge. Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
+Publish one Multica child issue per ticket in dependency order (blockers first), so each child's blocking edges reference real identifiers. Create every child `--status backlog` with `--parent` the **epic** (the spec child's parent, never the spec child), `--stage` and `--assignee` (the role that will do the work). The CLI exposes no dependency object, so write each blocking edge into the child's `Blocked by` section. List the parent's children first and reconcile by title: a rerun creates only what is missing and updates the rest, never duplicates.
 
-**A stage is a parallel barrier group, not a position label.** The platform wakes the parent assignee when a stage closes while a later stage waits; that wake is the promotion trigger, so do not arm a per-ticket "X is done" wake for it. Two rules follow:
+**The merge is the approval, not the publish.** The whole set is visible in `backlog` before the human merges the spec PR. Nothing starts until the merge completes the spec child and the Planner's wake promotes the frontier. Apply `ready-for-agent` in that promotion, not here.
+
+**A stage is a parallel barrier group, not a position label.** The platform wakes the parent assignee when a stage closes while a later stage waits; that wake is the promotion trigger, so do not arm a per-ticket "X is done" wake for it. Three rules follow:
 
 - **Serial tickets get distinct stages.** A ticket blocked by another must never share its blocker's stage: the stage cannot close until both are terminal, the blocked ticket is never promoted, and the parent is never woken. A stage may hold several tickets only when they are genuinely parallel.
-- **Later stages are created `--status backlog`; only the frontier is `todo`.** A non-backlog status on an agent-assigned issue enqueues its assignee at create time, so creating a serial chain as `todo` starts the whole chain at once. Promote a parked stage with `multica issue status <id> todo` when the parent wake says the previous stage closed.
+- **Every child is created `--status backlog`; the promotion wake starts the frontier in its work column (`in_progress` for agent work, `human_progress` for human work).** A non-backlog status on an agent-assigned issue enqueues its assignee at create time, so a started child would begin work before the merge approved it. Never create a child `todo`, `in_progress` or `human_progress` in the spec run.
+- **Publish the whole set before the spec child closes.** The platform re-evaluates the stage barrier when the child set changes; a set that is final before stage 1 closes wakes the Planner once. Creating delivery children after the merge is what produces the duplicate wake.
 
-Check the staged layout with `multica issue children <parent-id>` before finishing: every `backlog` ticket must be in a later stage than the ticket that blocks it.
+Check the staged layout with `multica issue children <parent-id>` before opening the spec PR: every child must be `backlog`, and every later stage must be higher than the stage that blocks it.
 
 Do NOT close or modify any parent issue.
 

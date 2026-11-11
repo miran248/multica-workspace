@@ -23,7 +23,7 @@
         "role": "planner"
       },
       "next_status_key": "spec_review",
-      "instructions": "Rework the spec, ADR and any amended contracts to answer the review findings; keep the approved direction intact. One reviewable pull request at the exact head, carrying the proposed breakdown, linked to this ticket. Comment the spec link and what it decides, then move the ticket to spec_review: the comment is the handoff, the move is your last action. This ticket is the epic's stage-1 spec child: its merge approves the spec and the breakdown, so never close it yourself and never link the spec PR to the epic. An external blocker moves the ticket to blocked with the reason."
+      "instructions": "Rework the spec, ADR and any amended contracts to answer the review findings; keep the approved direction intact. Publish the whole slice first with to-tickets: every child under the epic, in backlog, blockers first, with its stage and the blocking identifiers in its body; on a rework reconcile the existing children, never duplicate. Then open one reviewable pull request at the exact head, carrying the proposed breakdown, linked to this ticket; the merge approves the set, so create nothing after it. Comment the spec link and what it decides, then move the ticket to spec_review: the comment is the handoff, the move is your last action. This ticket is the epic's stage-1 spec child: its merge approves the spec and the breakdown, so never close it yourself and never link the spec PR to the epic. An external blocker moves the ticket to blocked with the reason."
     },
     {
       "status_key": "spec_review",
@@ -101,7 +101,7 @@
         "type": "member",
         "role": "human"
       },
-      "instructions": "Merge the reviewed pull request at its exact head when you are satisfied; the merge completes this ticket, so do not move it. A spec child's merge approves the spec and its proposed breakdown and wakes the Planner to slice. If it should change first, move it to spec_progress for planner-owned spec text, in_progress for agent delivery, or human_progress for human delivery, with the reason. Delete the head branch when you merge. Never enable auto-merge: this column exists so the merge is an explicit human act, and an armed pull request would merge on its checks without one."
+      "instructions": "Merge the reviewed pull request at its exact head when you are satisfied; the merge completes this ticket, so do not move it. A spec child's merge approves the spec, its proposed breakdown and the published children, and wakes the Planner to promote the frontier. If it should change first, move it to spec_progress for planner-owned spec text, in_progress for agent delivery, or human_progress for human delivery, with the reason. Delete the head branch when you merge. Never enable auto-merge: this column exists so the merge is an explicit human act, and an armed pull request would merge on its checks without one."
     },
     {
       "status_key": "blocked",

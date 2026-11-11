@@ -9,7 +9,8 @@ contract the human and the seats read. `tests/factory-workflow.test.js` fails wh
 an edge or a mode is not described here. The route allocation behind the graph is
 [ADR-0004](adr/0004-columns-carry-agent-decided-routes.md); the approval artifact is
 [ADR-0005](adr/0005-the-merged-spec-pr-is-the-approval.md); [ADR-0006](adr/0006-comment-first-merge-last.md)
-records the handoff order and the auto-merge ban.
+records the handoff order and the auto-merge ban; [ADR-0007](adr/0007-publish-the-slice-in-the-spec-run.md)
+moves the slice publication into the spec run.
 
 ## Status graph
 
@@ -49,21 +50,25 @@ posts the verdict and merges; the column declares no advance of its own.
 
 ## The spec is a stage-1 child
 
-The Planner creates the spec as the epic's stage-1 child and keeps the epic at `todo`. The
-spec PR carries the proposed breakdown and links only that child — never the epic, and never
-after `Closes`, `Fixes` or `Resolves`. The Reviewer leaves the spec PR open on PASS and moves
+The Planner creates the spec as the epic's stage-1 child and keeps the epic at `todo`. In that
+child's run the Planner writes the spec, publishes the whole slice with `to-tickets` — every
+delivery child under the epic, in `backlog`, blockers first, stages assigned — then opens the
+spec PR carrying the proposed breakdown and links it only to the child, never the epic, and
+never after `Closes`, `Fixes` or `Resolves`. The Reviewer leaves the PR open on PASS and moves
 the child to `awaiting_merge`; the human merges it, the workspace PR rule completes the child
-to `done`, and that completion wakes the Planner to slice. So there is no approval column and
-no per-issue auto-complete override: the merge approves the spec and the breakdown, and the
-epic is accepted only after every child closes.
+to `done`, and that completion wakes the Planner to promote the frontier — not to slice. The
+merge still approves the spec and the set: the children exist, but all are `backlog` and none
+has started. No child is created after the merge: the set is final before the child closes.
+Publishing before the child closes is what keeps the barrier wake single: the platform
+re-evaluates the stage condition whenever the child set changes.
 
 ## Columns
 
 | Column | Handler | Entered by | Leaves to |
 | --- | --- | --- | --- |
-| `backlog` | none | planner parks a later stage | `todo` or the stage's start column |
+| `backlog` | none | the spec run parks every delivery child | `todo` or the stage's start column |
 | `todo` | none | human or planner | a work column; the epic waits here |
-| `spec_progress` | Planner | planner creates the spec child | `spec_review` |
+| `spec_progress` | Planner | planner creates the spec child; its run publishes the slice | `spec_review` |
 | `spec_review` | Reviewer | planner submits the spec PR | `spec_progress` (FAIL) or `awaiting_merge` (PASS) |
 | `in_progress` | Implementer | planner promotes agent work | `in_review` |
 | `human_progress` | human | planner promotes human work | `human_review` |
@@ -98,27 +103,28 @@ already in flight.
 | human implements | `human-assigned` | human at `human_progress` | Reviewer | Reviewer merges after PASS | the spec merge, implementation |
 | human implements and merges | `human-assigned` + `manual-merge` | human at `human_progress` | Reviewer | human at `awaiting_merge` | the spec merge, implementation, the delivery merge |
 
-The spec lane runs in every mode: the Planner writes the spec at `spec_progress`, the
-Reviewer verdicts it at `spec_review`, and a PASS always lands at `awaiting_merge`. The spec
-PR carries the proposed breakdown, and the human merge of that PR approves both, in every
-mode, including autonomous.
+The spec lane runs in every mode: the Planner writes the spec at `spec_progress`, publishes the
+slice, the Reviewer verdicts it at `spec_review`, and a PASS always lands at `awaiting_merge`.
+The spec PR carries the proposed breakdown, and the human merge of that PR approves the spec,
+the breakdown and the published children, in every mode, including autonomous.
 
 To route one ticket to a human, assign that member and move it to `human_progress`; assigning
 alone starts nothing. `todo` is a waiting room, not a handoff.
 
 ## Who moves what
 
-- **Human.** The spec PR is the approval: it carries the proposed breakdown, so merging it
-  approves both. Add `human-assigned` and/or `manual-merge` to the epic before the merge when
-  the mode needs them. Implement a `human-assigned` ticket at `human_progress`, open its PR,
-  and move it to `human_review`. At `awaiting_merge`, merge the reviewed PR: the merge
-  completes the ticket, so do not move it to `done` yourself. Never move human work into
-  `in_progress`.
-- **Planner.** Create the spec as the epic's stage-1 child at `spec_progress`; the spec carries
-  the proposed breakdown; link the spec PR to that child only. Slice only after the spec child
-  is done. Promote a stage by moving its agent work to `in_progress` and its human work to
-  `human_progress`; keep later stages in `backlog`. Triage `blocked` and accept the epic when
-  every child closes.
+- **Human.** The spec PR is the approval: it carries the proposed breakdown and the published
+  children, so merging it approves the spec and the set. Add `human-assigned` and/or
+  `manual-merge` to the epic before the merge when the mode needs them. Implement a
+  `human-assigned` ticket at `human_progress`, open its PR, and move it to `human_review`. At
+  `awaiting_merge`, merge the reviewed PR: the merge completes the ticket, so do not move it to
+  `done` yourself. Never move human work into `in_progress`.
+- **Planner.** Create the spec as the epic's stage-1 child at `spec_progress`. In that run,
+  write the spec, publish every delivery child in `backlog` with its stage and blockers, then
+  link the spec PR to the child only. The merge approves the set and wakes you to promote, not
+  to slice: create no child after it. Promote the frontier by moving agent work to
+  `in_progress` and human work to `human_progress`, applying `ready-for-agent`; keep later
+  stages in `backlog`. Triage `blocked` and accept the epic when every child closes.
 - **Reviewer.** Owns `spec_review`, `in_review` and `human_review`: one verdict at the exact
   head, evidence per criterion, then the move or the merge. Post the verdict first, at the
   reviewed head, before the status move or the merge: the move starts the next handler and the
@@ -162,8 +168,8 @@ nothing else.
   is a pull-request setting, not a ticket status: an armed PR merges as soon as its checks pass,
   and the platform completes the linked ticket on merge — including an
   `awaiting_merge` ticket and a spec child. An arm would therefore bypass the human gate, and
-  a spec merge would wake the Planner to slice an unapproved breakdown. The Reviewer merges
-  after a PASS instead, and GitHub refuses an arm while the setting is off.
+  a spec merge would approve an unreviewed set and wake the Planner to promote it. The Reviewer
+  merges after a PASS instead, and GitHub refuses an arm while the setting is off.
 - **A close is not a workflow event.** The platform completes a ticket on merge and does
   nothing on a close: a closed, unmerged PR changes no status, wakes nobody, and is not an
   automatic rejection — rejected, superseded, rebased and cancelled PRs all close the same
@@ -176,9 +182,15 @@ nothing else.
   the ticket to that column's back status. This is a precondition on entry, not a reaction to
   a close — nothing in the graph fires on one.
 - **Spec approval.** The spec child is approved by merging its PR, which completes the child
-  and wakes the Planner. The PR carries the proposed breakdown, so the merge approves both. A
-  spec PR is reviewed at `spec_review`, never at `in_review`, and the Reviewer never merges or
-  enables auto-merge on it.
+  and wakes the Planner. The PR carries the proposed breakdown and the published children, so
+  the merge approves both; the children already exist in `backlog`, and the wake promotes the
+  frontier. A spec PR is reviewed at `spec_review`, never at `in_review`, and the Reviewer never
+  merges or enables auto-merge on it.
+- **Publishing before approval.** The spec run publishes the children before the merge because
+  creating them after it is exactly the child-set change that fires the barrier twice. They are
+  a proposed set, not approved work: all `backlog`, none in a running status, no
+  `ready-for-agent` until the promotion wake. On a spec FAIL the spec run reconciles them to the
+  revised breakdown; if the epic is abandoned, cancel them with it.
 - **Blocked.** Any seat can move a ticket to `blocked`. The Planner triages it to a work
   column, or cancels it. A ticket waiting on another ticket names it in a `Blocked by` section
   in its body and stays in `blocked` until that ticket closes; a dependency is not triage.
@@ -191,8 +203,9 @@ nothing else.
 - **Manual override.** Any member can move a ticket to any column; the move is the handoff and
   the new handler takes over. A named workflow refuses a status it does not declare.
 - **Stage barriers.** A stage is a parallel barrier group, not a position label: serial
-  tickets get distinct stages, later stages are created in `backlog`, and the closing stage
-  wakes the parent. The slicing rules live in `roles/planner.md` and the `to-tickets` skill.
+  tickets get distinct stages, the spec run creates every later stage in `backlog`, and the
+  closing stage wakes the parent. The slicing rules live in `roles/planner.md` and the
+  `to-tickets` skill.
 
 ## Live acceptance
 
@@ -202,7 +215,8 @@ with a repository resource and the Factory workflow bound.
 
 | Scenario | Shape | Expected evidence |
 | --- | --- | --- |
-| autonomous | epic, spec child + three parallel children + one serial child | the spec PR is reviewed, left open, merged by the human, the child closes and the Planner slices; each PASS is posted before its delivery PR merges and closes the ticket |
+| autonomous | epic, spec child + three parallel children + one serial child | the whole slice already exists in `backlog` when the spec PR is reviewed; the human merge completes the child and a **single** Planner wake promotes the parallel stage (no child is created after the merge); each PASS is posted before its delivery PR merges and closes the ticket |
+| spec rework | a spec FAIL after the slice is published | the children stay `backlog`; the spec run reconciles them to the revised breakdown; no run starts |
 | human merge | `manual-merge` ticket | PASS lands at `awaiting_merge`; the human merges and the merge completes the ticket |
 | human implements | `human-assigned` ticket | the ticket sits in `human_progress` assigned to the human; its PR is reviewed at `human_review`, the PASS is posted, then merged |
 | human implements and merges | both labels | `human_progress` to `human_review` to `awaiting_merge`; the human merges |
