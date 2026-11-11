@@ -207,6 +207,115 @@ test('the slice is published in the spec run, before stage 1 closes', () => {
   assert.match(adr, /One barrier wake per epic/);
 });
 
+// The spec run is the only place the topology is chosen and published. A main-only spec
+// run, or a delivery body with no base, is a contract failure, not a wording preference.
+function specRunViolations({ planner, step, tickets, specSkill }) {
+  const violations = [];
+  for (const [name, text] of [['roles/planner.md', planner], ['spec_progress', step]]) {
+    if (!/forks? `spec\/<epic>` from `main`/i.test(text)) violations.push(`${name}: no fork from main`);
+    if (!/spec PR targets (it|that branch)/.test(text)) violations.push(`${name}: spec PR is not targeted at the branch`);
+    if (!/`Branch: spec\/<epic>`/.test(text)) violations.push(`${name}: no Branch line`);
+    if (!/final-stage release child/.test(text)) violations.push(`${name}: no final-stage release child`);
+    if (!/gh pr list --base main --state open/.test(text)) violations.push(`${name}: no release query`);
+    if (!/`spec\/\*`/.test(text)) violations.push(`${name}: release query does not filter spec/*`);
+    if (!/--until-issue <release>/.test(text)) violations.push(`${name}: release query does not park on the release`);
+    if (!/force-push/.test(text)) violations.push(`${name}: a rework does not force-push`);
+    if (!/epic-cancelled/.test(text)) violations.push(`${name}: no cancelled-epic sweep`);
+    if (!/direct-to-main/.test(text)) violations.push(`${name}: no direct-to-main escape hatch`);
+    if (!/never `main`/.test(text)) violations.push(`${name}: an integration spec may target main`);
+  }
+  if (!/records `integration: spec\/<epic>`/.test(step)) violations.push('spec_progress: no integration record');
+  if (!/`integration: none`/.test(step)) violations.push('spec_progress: no direct-to-main record');
+  if (!/single-ticket breakdown defaults to `direct-to-main`/.test(step)) violations.push('spec_progress: no single-ticket default');
+  if (!/integration: spec\/<epic/.test(specSkill)) violations.push('to-spec: no integration record');
+  if (!/integration: none/.test(specSkill)) violations.push('to-spec: no direct-to-main record');
+  if (!/single ticket defaults to `direct-to-main`/.test(specSkill)) violations.push('to-spec: no single-ticket default');
+  if (!/forks that branch from `main` at the spec sha/.test(specSkill) || !/targets its approval PR at `spec\/<epic-key>`/.test(specSkill))
+    violations.push('to-spec: approval PR is not targeted at the recorded branch');
+  const parent = /## Parent\n\n([\s\S]*?)## What to build/.exec(tickets)?.[1] ?? '';
+  if (!/Branch: spec\/<epic-key>/.test(parent)) violations.push('to-tickets: no Branch line under ## Parent');
+  if (!/absence means `main`/.test(tickets)) violations.push('to-tickets: no main default');
+  if (!/release child is the final publication: created last, in `backlog`, in the final stage/.test(tickets))
+    violations.push('to-tickets: release child is not last, backlog and final stage');
+  for (const clause of ['release procedure', 'base/source branch', 'included children', '`Touch:` union', 'Create no child after the spec PR opens'])
+    if (!tickets.includes(clause)) violations.push(`to-tickets: missing ${clause}`);
+  return violations;
+}
+
+test('the spec run forks, records and targets the integration branch', () => {
+  const contract = {
+    planner: readFileSync(join(ROOT, 'roles/planner.md'), 'utf8'),
+    step: steps.get('spec_progress').instructions,
+    tickets: readFileSync(join(ROOT, 'skills/to-tickets/SKILL.md'), 'utf8'),
+    specSkill: readFileSync(join(ROOT, 'skills/to-spec/SKILL.md'), 'utf8'),
+  };
+  assert.deepEqual(specRunViolations(contract), []);
+  // The two failures the matrix exists to catch: a spec PR on main, and a body with no base.
+  const mainOnly = { ...contract, step: contract.step.replace(/forks `spec\/<epic>`/, 'targets the spec PR at `main`') };
+  assert.notDeepEqual(specRunViolations(mainOnly), []);
+  const noBase = { ...contract, tickets: contract.tickets.replace(/^Branch: spec\/<epic-key>.*$/m, '') };
+  assert.notDeepEqual(specRunViolations(noBase), []);
+});
+
+// The delivery side reads its base from the ticket body, merges it before review, and the
+// Reviewer closes a ticket PR on the branch in every mode. A main-only delivery and a
+// manual-merge gate on a branch PR are the two failures this matrix exists to catch.
+function deliveryViolations({ implementer, reviewer, inProgress, humanProgress, inReview, humanReview, awaitingMerge }) {
+  const violations = [];
+  const delivery = [
+    ['roles/implementer.md', implementer, 'in_review'],
+    ['in_progress', inProgress, 'in_review'],
+    ['human_progress', humanProgress, 'human_review'],
+  ];
+  for (const [name, text, next] of delivery) {
+    if (!/`Branch:` under `## Parent`/.test(text)) violations.push(`${name}: no body-derived branch`);
+    if (!/(`main` when absent|absen[ct]e? means `main`)/.test(text)) violations.push(`${name}: main is not the default base`);
+    if (!/(open the PR against it|PR into it)/.test(text)) violations.push(`${name}: the PR is not targeted at the base`);
+    if (!new RegExp(`[Mm]erge the base( branch)? in before \`${next}\``).test(text)) violations.push(`${name}: the base is not merged before ${next}`);
+  }
+  for (const [name, text] of [['roles/implementer.md', implementer], ['in_progress', inProgress]])
+    if (!/`Touch:`/.test(text)) violations.push(`${name}: does not keep to Touch:`);
+  for (const [name, text] of [['roles/reviewer.md', reviewer], ['in_review', inReview], ['human_review', humanReview]]) {
+    if (!/mergeStateStatus/.test(text)) violations.push(`${name}: no mergeStateStatus check`);
+    if (!/moved base invalidates/.test(text)) violations.push(`${name}: a moved base does not invalidate the verdict`);
+  }
+  if (!/`manual-merge`[^.]*only[^.]*for a `main` base[^.]*never for a ticket PR into `spec\/<epic>`/.test(reviewer))
+    violations.push('roles/reviewer.md: manual-merge is not narrowed to the main base');
+  for (const [name, text] of [['in_review', inReview], ['human_review', humanReview]]) {
+    if (!/(`main` when absent|absen[ct]e? means `main`)/.test(text)) violations.push(`${name}: main is not the default base`);
+    if (!/base is `main`[^.]*manual-merge/.test(text)) violations.push(`${name}: manual-merge is not scoped to the main base`);
+    if (!/every ticket PR into `spec\/<epic>`[^.]*merge/.test(text)) violations.push(`${name}: a branch PR is not routed to a PASS and merge`);
+  }
+  if (!/base is `main`[^.]*manual-merge/.test(awaitingMerge) || !/ticket PR into `spec\/<epic>`/.test(awaitingMerge))
+    violations.push('awaiting_merge: the human merge is not scoped to a main base');
+  return violations;
+}
+
+test('the delivery branch comes from the body and only a main-base merge waits', () => {
+  const contract = {
+    implementer: readFileSync(join(ROOT, 'roles/implementer.md'), 'utf8'),
+    reviewer: readFileSync(join(ROOT, 'roles/reviewer.md'), 'utf8'),
+    inProgress: steps.get('in_progress').instructions,
+    humanProgress: steps.get('human_progress').instructions,
+    inReview: steps.get('in_review').instructions,
+    humanReview: steps.get('human_review').instructions,
+    awaitingMerge: steps.get('awaiting_merge').instructions,
+  };
+  assert.deepEqual(deliveryViolations(contract), []);
+  // A delivery that never reads `Branch:` is the main-only graph the topology replaces.
+  const mainOnly = { ...contract, inProgress: contract.inProgress.replace(/Read `Branch:` under `## Parent`; absence means `main`\.\s*/, '') };
+  assert.notDeepEqual(deliveryViolations(mainOnly), []);
+  // A ticket PR into the branch that waits for a human under manual-merge is the second failure.
+  const gatedBranch = {
+    ...contract,
+    inReview: contract.inReview.replace(/If the PR's base is `main` and /, 'If '),
+  };
+  assert.notDeepEqual(deliveryViolations(gatedBranch), []);
+  // A release PASS without the freshness check can approve a stale tree.
+  const staleRelease = { ...contract, reviewer: contract.reviewer.replace(/`mergeStateStatus`[^.]*\.\s*/, '') };
+  assert.notDeepEqual(deliveryViolations(staleRelease), []);
+});
+
 test('approval is the merge, not an approval comment', () => {
   assert.doesNotMatch(spec, /approval comment/);
   assert.doesNotMatch(spec, /approves the spec and the ticket breakdown/);
@@ -219,4 +328,59 @@ test('the usage guide names every column, the labels and the modes', () => {
   for (const key of steps.keys()) assert.ok(spec.includes(`\`${key}\``), `docs/factory.md does not name ${key}`);
   for (const label of ['human-assigned', 'manual-merge']) assert.ok(spec.includes(`\`${label}\``), `docs/factory.md does not name ${label}`);
   for (const mode of ['autonomous', 'human']) assert.ok(spec.toLowerCase().includes(mode), `docs/factory.md has no ${mode} mode`);
+});
+
+// The guide is what a human and a new repository read, and the trigger recipe is operator
+// state, so both are pinned with the routes. A guide that still describes main-only delivery,
+// a modes table that loses the two-merge cost, or an unfiltered trigger is the failure class
+// this matrix exists to catch.
+function guideViolations({ guide, apply, workflowFile }) {
+  const violations = [];
+  for (const [term, pattern] of [
+    ['the integration branch', /`spec\/<epic>`/],
+    ['the fork at the spec sha', /forks? `spec\/<epic>` from `main` at the spec sha/],
+    ['the spec PR base', /spec PR targets (it|that branch)/],
+    ['the delivery base', /`Branch: spec\/<epic>`/],
+    ['the release child', /release child/],
+    ['one squash', /one squash/],
+    ['spec scratch', /`spec\/\*`[^.]*scratch/],
+    ['branch-scoped done', /branch-scoped `done`/],
+    ['main-scoped epic acceptance', /`main`-scoped/],
+    ['the two-merge manual-merge', /two human merges/],
+    ['the direct-to-main N + 1', /N \+ 1/],
+    ['release serialization', /serializ/i],
+    ['the cancelled-epic sweep', /cancelled-epic sweep/],
+    ['direct-to-main', /direct-to-main/],
+    ['the single-ticket default', /single-ticket/],
+    ['the modes table two-merge row', /^\| `spec\/<epic>` \| 2 —/m],
+  ]) if (!pattern.test(guide)) violations.push(`docs/factory.md: no ${term}`);
+  for (const [term, pattern] of [
+    ['`spec/*` unprotected', /`spec\/\*`[^.\n]*unprotected/],
+    ['Automatically delete head branches', /Automatically delete head branches/],
+    ['Allow auto-merge off', /Allow auto-merge/],
+    ['Require branches to be up to date on main', /Require branches to be up to date[^.\n]*`main`/],
+    ['the push trigger', /push: branches: \[main\]/],
+    ['the pull_request trigger', /pull_request: branches: \[main\]/],
+  ]) if (!pattern.test(apply)) violations.push(`docs/apply.md: no ${term}`);
+  if (!/push:\s*\n\s*branches: \[main\]/.test(workflowFile)) violations.push('.github/workflows/validate.yml: no push filter');
+  if (!/pull_request:\s*\n\s*branches: \[main\]/.test(workflowFile)) violations.push('.github/workflows/validate.yml: no pull_request filter');
+  return violations;
+}
+
+test('the guide carries the integration topology and the narrowed routes', () => {
+  const contract = {
+    guide: spec,
+    apply: readFileSync(join(ROOT, 'docs/apply.md'), 'utf8'),
+    workflowFile: readFileSync(join(ROOT, '.github/workflows/validate.yml'), 'utf8'),
+  };
+  assert.deepEqual(guideViolations(contract), []);
+  // A guide that still describes main-only delivery is the graph the topology replaces.
+  const noTopology = { ...contract, guide: contract.guide.replace(/`spec\/<epic>`/g, '`main`') };
+  assert.notDeepEqual(guideViolations(noTopology), []);
+  // The modes table must keep the integration manual-merge cost: the spec and the release.
+  const noTwoMergeRow = { ...contract, guide: contract.guide.replace(/^\| `spec\/<epic>` \| 2 —.*$/m, '') };
+  assert.notDeepEqual(guideViolations(noTwoMergeRow), []);
+  // The reference trigger is the recipe a new repository copies.
+  const unfiltered = { ...contract, workflowFile: contract.workflowFile.replace(/\n\s*branches: \[main\]/g, '') };
+  assert.notDeepEqual(guideViolations(unfiltered), []);
 });

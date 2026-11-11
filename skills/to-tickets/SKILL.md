@@ -54,6 +54,8 @@ Publish one Multica child issue per ticket in dependency order (blockers first),
 - **Every child is created `--status backlog`; the promotion wake starts the frontier in its work column (`in_progress` for agent work, `human_progress` for human work).** A non-backlog status on an agent-assigned issue enqueues its assignee at create time, so a started child would begin work before the merge approved it. Never create a child `todo`, `in_progress` or `human_progress` in the spec run.
 - **Publish the whole set before the spec child closes.** The platform re-evaluates the stage barrier when the child set changes; a set that is final before stage 1 closes wakes the Planner once. Creating delivery children after the merge is what produces the duplicate wake.
 
+**Record the base in every delivery body.** Under `## Parent`, write `Branch: spec/<epic-key>` for an integration spec; omit the line for a `direct-to-main` spec, because absence means `main`. A branch name, never a sha: the tip moves as tickets merge, and the body is what a fresh Implementer run opens. In an integration spec the release child is the final publication: created last, in `backlog`, in the final stage, never in a started status. Its body carries the release procedure (merge the current `main` in, resolve, run the full suite), the base/source branch `spec/<epic-key>` → `main`, the included children with their keys and merged PRs, and the `Touch:` union. Create no child after the spec PR opens.
+
 Check the staged layout with `multica issue children <parent-id>` before opening the spec PR: every child must be `backlog`, and every later stage must be higher than the stage that blocks it.
 
 Do NOT close or modify any parent issue.
@@ -63,6 +65,8 @@ Do NOT close or modify any parent issue.
 ## Parent
 
 A reference to the parent issue on the tracker (if the source was an existing issue, otherwise omit this section).
+
+Branch: spec/<epic-key> — the base branch this ticket's PR targets; omit for a `direct-to-main` spec, where absence means `main`.
 
 ## What to build
 
