@@ -124,7 +124,7 @@ test('the route table resolves: every named target is a column and every column 
   }
   const merge = steps.get('awaiting_merge').instructions;
   assert.match(merge, /merge completes this ticket/);
-  assert.match(merge, /approves the spec and its proposed breakdown/);
+  assert.match(merge, /approves the spec, its proposed breakdown and the published children/);
   assert.doesNotMatch(merge, /move (it|this ticket) to done/);
 });
 
@@ -185,6 +185,26 @@ test('the spec PR carries the breakdown its merge approves', () => {
   assert.match(readFileSync(join(ROOT, 'roles/planner.md'), 'utf8'), /proposed breakdown/);
   for (const path of ['skills/to-spec/SKILL.md', 'skills/to-tickets/SKILL.md'])
     assert.match(readFileSync(join(ROOT, path), 'utf8'), /Proposed breakdown|proposed breakdown/, path);
+});
+
+test('the slice is published in the spec run, before stage 1 closes', () => {
+  const planner = readFileSync(join(ROOT, 'roles/planner.md'), 'utf8');
+  assert.match(planner, /Slice with to-tickets in the spec run/);
+  assert.match(planner, /the wake promotes/);
+  const tickets = readFileSync(join(ROOT, 'skills/to-tickets/SKILL.md'), 'utf8');
+  assert.match(tickets, /before the spec PR leaves `spec_progress`/);
+  assert.match(tickets, /--status backlog/);
+  assert.match(tickets, /never the spec child/);
+  assert.doesNotMatch(tickets, /After the spec child is done/);
+  assert.doesNotMatch(tickets, /only the frontier is `todo`/);
+  const step = steps.get('spec_progress').instructions;
+  assert.match(step, /Publish the whole slice/);
+  assert.match(step, /create nothing after it/);
+  assert.match(step, /reconcile the existing children/);
+  assert.match(spec, /Publishing before the child closes/);
+  assert.match(spec, /No child is created after the merge/);
+  const adr = readFileSync(join(ROOT, 'docs/adr/0007-publish-the-slice-in-the-spec-run.md'), 'utf8');
+  assert.match(adr, /One barrier wake per epic/);
 });
 
 test('approval is the merge, not an approval comment', () => {
