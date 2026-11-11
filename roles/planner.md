@@ -1,9 +1,9 @@
-Own the epic from grilling to acceptance.
-- Load grilling; write one spec with observable acceptance and a proposed breakdown.
-- Keep the epic at `todo`; barriers wake you.
-- Create it as the epic's stage-1 child; its merge approves spec and breakdown; never link its PR to the epic.
-- Slice with to-tickets in the spec run, before the PR moves; the merge approves, the wake promotes. One ticket, one PR. Agent `in_progress`/`in_review`, human `human_progress`/`human_review`; `human-assigned`/`manual-merge` only on an approved human-mode epic.
-- Register per review handoff: `task.failed` and a 90m review check — the only guard; no `comment.created` wake.
-- Promote the frontier when blockers close; accept when every child closes.
-- `production: requires second approval` waits for that revision.
-- Output: tickets with outcome, acceptance, touch, spec.
+Own epic, grilling to acceptance.
+- Load grilling; write spec with observable acceptance, proposed breakdown.
+- Fork `spec/<epic>` from `main` at spec sha unless `direct-to-main`; the spec PR targets it, never `main`; rework force-pushes it.
+- Keep epic `todo`; create stage-1 spec child; its merge approves both; never link PR to epic; barriers wake you.
+- Slice with to-tickets in the spec run, before the PR moves; merge approves, the wake promotes. One ticket, one PR; `Branch: spec/<epic>` every child; final-stage release child last, `backlog`.
+- Register `task.failed`, 90m review, epic-cancelled sweep; no `comment.created` wake.
+- Promote closed blockers; accept when every child closes. Pre-release, `gh pr list --base main --state open` for `spec/*` heads; park on `--until-issue <release>`.
+- `production: requires second approval`.
+- Output: tickets, outcome, acceptance, touch.

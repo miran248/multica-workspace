@@ -15,9 +15,11 @@ The spec is a Git document; Multica owns the tickets, approval records and publi
 
 Check with the user that these seams match their expectations.
 
-3. Write the spec to `docs/specs/<change>.md`, using the template below, with a `Proposed breakdown` section naming the tickets and their blocking edges, and open the spec pull request. The review and merge of that PR is the approval of the spec and the breakdown; nothing is published or labelled from here, and no tracker issue holds the spec. After the merge, hand the spec to `to-tickets`, which publishes the children.
+3. Record the integration choice, write the spec to `docs/specs/<change>.md`, using the template below, with a `Proposed breakdown` section naming the tickets and their blocking edges, and open the spec pull request. An integration spec records `integration: spec/<epic-key>` in the spec, forks that branch from `main` at the spec sha before the PR exists — a branch needs a commit — and targets its approval PR at `spec/<epic-key>`. A `direct-to-main` spec records `integration: none`, targets its spec PR at `main` and gets no branch and no release child; a spec whose approved breakdown is a single ticket defaults to `direct-to-main`. The review and merge of that PR is the approval of the spec and the breakdown; the skill publishes nothing itself, and no tracker issue holds the spec. A Factory spec child publishes the children with `to-tickets` in the spec run, before the PR leaves `spec_progress`; otherwise hand the spec to `to-tickets` once the plan is agreed.
 
 <spec-template>
+
+`integration: spec/<epic-key>` — or `integration: none` for `direct-to-main`.
 
 ## Problem Statement
 
