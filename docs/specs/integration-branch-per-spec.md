@@ -1,5 +1,8 @@
 # One integration branch per spec, released as one squash
 
+`integration: spec/MIR-162` — forked from `main` at `4ff1de2`. The spec itself is delivered
+under this topology, so the record is what a rework and a later reader check against.
+
 Accepted 2026-11-11. Approval is the merge of this spec's pull request into `spec/MIR-162`,
 which completes MIR-163 and approves the published set; MIR-162 is the epic and stays `todo`
 until the release lands and the Planner accepts it on evidence. The decisions below are the
@@ -269,9 +272,10 @@ reads — never the bytes of a spec or an internal helper.
 | 4 | MIR-166 | The guide, the per-repo prerequisites and this repository's filtered trigger | MIR-165 |
 | 5 | MIR-167 | Release `spec/MIR-162` → `main` as one squash; re-verify the spec at the integrated head | MIR-164, MIR-165, MIR-166 |
 
-All five children exist in `backlog`; the merge of this PR approves the set and the Planner's
-wake promotes stage 2. Stages 2–5 are serial because they edit the same contract files, and a
-stage is a barrier group rather than a position label.
+The four delivery children MIR-164 through MIR-167 exist in `backlog`, assigned to the
+Implementer; MIR-163 is this spec child, which carries the spec and the set. The merge of this
+PR approves the set and the Planner's wake promotes stage 2. Stages 2–5 are serial because they
+edit the same contract files, and a stage is a barrier group rather than a position label.
 
 ## Further Notes
 
