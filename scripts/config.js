@@ -24,6 +24,9 @@ export function loadTemplate(name = 'default', root = ROOT) {
 }
 
 export const ROLES = ['general', 'planner', 'implementer', 'reviewer', 'release'];
+/** Operator state, not catalog content: the app origin issue references point at. A self-hosted
+ *  consumer overrides it with --app-url / MULTICA_APP_URL; the slug is never committed. */
+export const DEFAULT_APP_URL = 'https://multica.ai';
 export const AUTOPILOTS = ['config-sync'];
 export const WORKFLOWS = ['factory'];
 export const DOCUMENTS = ['templates/handoff.md'];
@@ -211,9 +214,12 @@ function resolveChecked(catalog, binding, root) {
     assets[path] = { content, sha256: sha256(content) };
     return content;
   };
-  // The catalog commits no origin: the shared contract addresses the handoff template through
-  // {{repository}}, resolved from the workspace's git origin when the contract is rendered.
-  const instructions = substitute(asset(catalog.shared_instructions), { repository: binding.repository }, ['repository']).content;
+  // The catalog commits no origin or slug: the shared contract addresses the handoff template
+  // through {{repository}} and issue references through {{workspace_url}}, both resolved from
+  // the live binding when the contract is rendered.
+  const workspaceUrl = `${binding.app_url ?? DEFAULT_APP_URL}/${binding.identity.workspace_slug}`;
+  const instructions = substitute(asset(catalog.shared_instructions),
+    { repository: binding.repository, workspace_url: workspaceUrl }, ['repository', 'workspace_url']).content;
   const rolePrompts = Object.fromEntries(ROLES.map(role => [role, asset(`roles/${role}.md`)]));
   const skillManifest = parseJSON(asset(catalog.skill_manifest));
   validateSchema(skillManifest, 'skills', root);
@@ -347,7 +353,7 @@ function resolveChecked(catalog, binding, root) {
  *  the platform, and the anonymity test pins the all-zero prefix as the only allowed UUID. */
 export function syntheticBinding() {
   const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-  return { workspace_id: id(1), human_user_id: id(2), owner_ids: [id(2)],
+  return { workspace_id: id(1), human_user_id: id(2), owner_ids: [id(2)], app_url: DEFAULT_APP_URL,
     identity: { workspace_name: 'Validation', workspace_slug: 'validation', human_name: 'Owner' },
     agent_runtimes: Object.fromEntries(ROLES.map(role => [role, id(3)])), repository: 'https://github.com/OWNER/multica-workspace' };
 }

@@ -2,6 +2,7 @@
 - Multica owns tickets, dependencies; Git specs/history; GitHub PRs/CI. Link, never duplicate.
 - Read docs and spec; record outcome, checks, risks, owner.
 - Use Conventional Commits `type(scope): summary, TICKET`; squash-merge; preserve history.
+- Link every issue reference — `[MIR-123]({{workspace_url}}/issues/MIR-123)`; bare identifiers only in a commit subject, PR title or branch name.
 
 ## Scope and evidence
 - Act within scope; a bare `approve`/`proceed` clears only the gate it names, never a verified delivery; silence is not approval; scope change reopens it.

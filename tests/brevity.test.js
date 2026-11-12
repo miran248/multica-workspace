@@ -4,15 +4,15 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, readJSON } from '../scripts/config.js';
 
-// Caps: generic shared contract <=200 words; role contracts <=130; descriptions <=100 chars.
+// Caps: generic shared contract <=220 words; role contracts <=130; descriptions <=100 chars.
 const wordCount = path => readFileSync(join(ROOT, path), 'utf8').trim().split(/\s+/).filter(Boolean).length;
 const overCap = (cap, paths) => paths
   .map(path => ({ path, words: wordCount(path) }))
   .filter(({ words }) => words > cap)
   .map(({ path, words }) => `${path}: ${words} > ${cap}`);
 
-test('shared instructions stay within 200 words', () => {
-  assert.deepEqual(overCap(200, ['shared/instructions.md']), []);
+test('shared instructions stay within 220 words', () => {
+  assert.deepEqual(overCap(220, ['shared/instructions.md']), []);
 });
 
 test('every role stays within 130 words', () => {

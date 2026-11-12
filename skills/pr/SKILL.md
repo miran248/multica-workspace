@@ -171,11 +171,13 @@ The blast radius is the potential impact or scope of the changes introduced by t
 
 ## Multica handoff
 
-Link the originating ticket or spec and the exact PR head. Map each approved acceptance
-criterion to the evidence that satisfies it. State checks run and not run, unresolved
-risks, blockers and the next owner or action; keep implementation's own checks distinct
-from Reviewer acceptance. A review fix changes the head: name the new revision and request
-fresh independent acceptance rather than inheriting the old verdict. Deliver the requested
-handoff — including the parent epic — to its required destination. For a production
+Link the originating ticket or spec and the exact PR head. Every issue reference in the body,
+a review comment and the handoff is a link — `[MIR-123](<issue-url>)`, never the bare
+identifier; the shared contract renders the workspace base, so this skill defines none. Map
+each approved acceptance criterion to the evidence that satisfies it. State checks run and
+not run, unresolved risks, blockers and the next owner or action; keep implementation's own
+checks distinct from Reviewer acceptance. A review fix changes the head: name the new revision
+and request fresh independent acceptance rather than inheriting the old verdict. Deliver the
+requested handoff — including the parent epic — to its required destination. For a production
 decision give the exact revision and the approval packet; notification is not approval or
 deployment evidence. Routine short handoffs may be written directly without this skill.

@@ -19,6 +19,10 @@
         "format": "uuid"
       }
     },
+    "app_url": {
+      "type": "string",
+      "pattern": "^https://[^/?#@\\s{}]+$"
+    },
     "identity": {
       "type": "object",
       "properties": {

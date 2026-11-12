@@ -13,7 +13,7 @@ refuses anything but `default`.
 A role's behavior is `roles/<role>.md`; the shared rules are `shared/instructions.md`.
 
 **shared instructions** — `shared/instructions.md`, the contract every role renders. Capped
-at 200 words by the suite.
+at 220 words by the suite.
 
 **skill binding** — the single role a skill attaches to, declared only in
 `templates/default.json`. There is no second role field to drift.
@@ -40,7 +40,13 @@ applies unchanged to any number of them.
 
 **live binding** — what a run resolves at start and never stores: the workspace id, name,
 slug and owners (`multica workspace get`, `member list`), the single online Dsh runtime
-(`runtime list`) and the checkout's `origin`. An ambiguous binding refuses the run.
+(`runtime list`), the checkout's `origin` and the app origin. An ambiguous binding refuses the
+run.
+
+**workspace url** — `app_url` + `identity.workspace_slug`, rendered once at sync as
+`{{workspace_url}}` and the base of every issue reference an agent writes. `app_url` is
+operator state: it defaults to `https://multica.ai` and overrides with `--app-url` /
+`MULTICA_APP_URL`. Git holds the parameter, never the resolved value.
 
 **sync** — reconcile live objects to the catalog by name: match → update, archived agent →
 restore, absent → create. Read-only over Git.
