@@ -5,7 +5,7 @@ Both are one comment, five lines, no narration, at most eight rendered lines and
 commit, run and issue body; never restate them. A findings list or evidence table
 may reach 1 KB, and an over-cap handoff or verdict is a blocking review finding.
 A human-facing gate request stays prose and a decision packet keeps its 800-byte
-cap. See the caps table in `README.md`.
+cap. See the caps table in [README.md](../README.md#brevity-caps).
 
 ## Handoff
 

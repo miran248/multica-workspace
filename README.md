@@ -87,6 +87,19 @@ and ensures exactly one enabled schedule trigger.
 `just validate` resolves the whole catalog against a placeholder binding — no workspace,
 credentials or network needed. `just test` runs the suite.
 
+## Brevity caps
+
+Every contract is capped; a handoff or verdict over its cap is a blocking review finding.
+
+| Cap | Applies to | Checked by |
+| --- | --- | --- |
+| 200 words | `shared/instructions.md` | `tests/brevity.test.js` |
+| 130 words | each `roles/<role>.md` | `tests/brevity.test.js` |
+| 100 characters | a template description | `tests/brevity.test.js` |
+| 600 bytes, 5 lines, at most 8 rendered lines | a handoff or a verdict | review, per [templates/handoff.md](templates/handoff.md) |
+| 1 KB | a findings list or an evidence table | review, per [templates/handoff.md](templates/handoff.md) |
+| 800 bytes | a human-facing decision packet | review, per [templates/handoff.md](templates/handoff.md) |
+
 ## Skills and provenance
 
 `skills/manifest.json` records the upstream pin (`mattpocock/skills@4ae2317`, MIT) and each
