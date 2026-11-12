@@ -27,6 +27,14 @@ test('the shared contract reaches every role and the comment owns the handoff', 
   assert.equal(resolved.sync.timezone, 'UTC');
 });
 
+test('the shared contract links the handoff template at the workspace origin, never a stored one', t => {
+  const f = fixture(t);
+  for (const role of ROLES) {
+    assert.match(render(role, f.binding, f.root), /handoff: https:\/\/github\.com\/example\/multica-workspace\/blob\/main\/templates\/handoff\.md;/, role);
+  }
+  assert.doesNotMatch(readFileSync(join(ROOT, 'shared/instructions.md'), 'utf8'), /https?:\/\//);
+});
+
 test('no role launches foreground or focus-stealing work', t => {
   const f = fixture(t);
   for (const role of ROLES) {

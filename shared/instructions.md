@@ -19,5 +19,5 @@
 - Read bounded ranges, not whole files; batch calls; verify once, not per step.
 
 ## Handoffs
-- Five-line `templates/handoff.md`; link, never restate; over-cap blocks review.
+- Five-line handoff: {{repository}}/blob/main/templates/handoff.md; link, never restate; over-cap blocks review.
 - The comment is the handoff; the status move (or merge) is your last action: publish the note, then move. Never dispatch by mention.

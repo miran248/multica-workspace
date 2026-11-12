@@ -15,16 +15,27 @@ test('the knowledge layer exists and the routing file links to it', () => {
     assert.ok(routing.includes(link), `AGENTS.md does not link ${link}`);
 });
 
-test('every relative link in the knowledge index resolves', () => {
+test('every relative link in the catalog documentation resolves', () => {
+  const docs = readdirSync(join(ROOT, 'docs'), { recursive: true })
+    .filter(name => name.endsWith('.md')).map(name => `docs/${name}`);
+  const sources = ['AGENTS.md', 'README.md', 'GLOSSARY.md', 'templates/handoff.md', ...docs];
   const dangling = [];
-  for (const source of ['AGENTS.md', 'docs/README.md', 'README.md', 'docs/factory.md']) {
+  for (const source of sources) {
     for (const [, target] of read(source).matchAll(/\]\(([^)]+)\)/g)) {
-      if (/^(https?:|#|mailto:)/.test(target)) continue;
+      if (/^(https?:|#|mailto:)/.test(target) || target.startsWith('<')) continue;
       const path = join(ROOT, dirname(source), target.split('#')[0]);
       if (!existsSync(path)) dangling.push(`${source}: ${target}`);
     }
   }
   assert.deepEqual(dangling, []);
+});
+
+test('the handoff template points at a caps table that exists', () => {
+  assert.match(read('templates/handoff.md'), /\[README\.md\]\(\.\.\/README\.md#brevity-caps\)/);
+  const caps = read('README.md');
+  assert.match(caps, /^## Brevity caps$/m);
+  for (const cap of ['200 words', '130 words', '600 bytes', '1 KB', '800 bytes'])
+    assert.ok(caps.includes(cap), `README.md omits the ${cap} cap`);
 });
 
 test('every ADR is numbered and one decision long', () => {
