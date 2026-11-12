@@ -8,7 +8,7 @@ import { run } from './platform.js';
 import { resolveWorkspace } from './workspace.js';
 import { resolvedForDeployment, discover, idOf } from './deployment.js';
 
-const USAGE = 'schedule [--runtime-id ID]';
+const USAGE = 'schedule [--runtime-id ID] [--app-url URL]';
 
 export function schedule(options = {}) {
   const { root = ROOT, runner = run } = options;
@@ -53,11 +53,11 @@ export function schedule(options = {}) {
 
 export function main(args = process.argv.slice(2)) {
   const parsed = parseArgs({ args, allowPositionals: true, options: {
-    'runtime-id': { type: 'string' }, help: { type: 'boolean', short: 'h' },
+    'runtime-id': { type: 'string' }, 'app-url': { type: 'string' }, help: { type: 'boolean', short: 'h' },
   } });
   if (parsed.values.help) { console.log(USAGE); return; }
   if (parsed.positionals.length) throw new Error('schedule takes no positional arguments');
-  const result = schedule({ root: ROOT, runtimeId: parsed.values['runtime-id'] });
+  const result = schedule({ root: ROOT, runtimeId: parsed.values['runtime-id'], appUrl: parsed.values['app-url'] });
   console.log(JSON.stringify({ ...result, next: 'The schedule is live; `just sync` runs it once without touching the trigger.' }, null, 2));
 }
 

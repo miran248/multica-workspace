@@ -34,7 +34,7 @@ test('the handoff template points at a caps table that exists', () => {
   assert.match(read('templates/handoff.md'), /\[README\.md\]\(\.\.\/README\.md#brevity-caps\)/);
   const caps = read('README.md');
   assert.match(caps, /^## Brevity caps$/m);
-  for (const cap of ['200 words', '130 words', '600 bytes', '1 KB', '800 bytes'])
+  for (const cap of ['220 words', '130 words', '600 bytes', '1 KB', '800 bytes'])
     assert.ok(caps.includes(cap), `README.md omits the ${cap} cap`);
 });
 

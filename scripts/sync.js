@@ -8,10 +8,11 @@ import { resolveWorkspace } from './workspace.js';
 import { deploy, sourceIdentity } from './deploy.js';
 import { buildPlan } from './deployment.js';
 
-const USAGE = `sync [--runtime-id ID] [--keep-unmanaged] [--dry-run]
+const USAGE = `sync [--runtime-id ID] [--app-url URL] [--keep-unmanaged] [--dry-run]
 
-Resolves workspace identity, owners, the online Dsh runtime and this checkout's origin,
-then reconciles the catalog by name. --dry-run prints the plan without writing anything.`;
+Resolves workspace identity, owners, the online Dsh runtime, this checkout's origin and the
+issue-link base (--app-url or MULTICA_APP_URL, default https://multica.ai), then reconciles the
+catalog by name. --dry-run prints the plan without writing anything.`;
 
 export function sync(options = {}) {
   const resolved = resolveWorkspace(options);
@@ -22,12 +23,13 @@ export function sync(options = {}) {
 
 export function main(args = process.argv.slice(2)) {
   const parsed = parseArgs({ args, allowPositionals: true, options: {
-    'runtime-id': { type: 'string' }, 'keep-unmanaged': { type: 'boolean', default: false },
+    'runtime-id': { type: 'string' }, 'app-url': { type: 'string' },
+    'keep-unmanaged': { type: 'boolean', default: false },
     'dry-run': { type: 'boolean', default: false }, help: { type: 'boolean', short: 'h' },
   } });
   if (parsed.values.help) { console.log(USAGE); return; }
   if (parsed.positionals.length) throw new Error('sync takes no positional arguments');
-  const resolved = resolveWorkspace({ root: ROOT, runtimeId: parsed.values['runtime-id'] });
+  const resolved = resolveWorkspace({ root: ROOT, runtimeId: parsed.values['runtime-id'], appUrl: parsed.values['app-url'] });
   if (!resolved.repository) throw new Error("No GitHub origin: the rendered prompt must carry this catalog's own URL. Add one with `git remote add origin <url>`.");
   const { binding, runtime } = resolved;
   if (parsed.values['dry-run']) {

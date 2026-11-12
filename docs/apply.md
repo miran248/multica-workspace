@@ -23,6 +23,7 @@ just schedule           # optional: install the daily sync
 | no online Dsh runtime | start the Dsh runtime |
 | several online Dsh runtimes | `just sync --runtime-id <id>` or `RUNTIME=<id>` |
 | no `origin` | `git remote add origin <url>`; the rendered prompt uses it |
+| app not on `https://multica.ai` | `just sync --app-url <origin>` or `MULTICA_APP_URL=<origin>`; an https origin, no path, query, fragment or credentials |
 | uncommitted source | commit or stash the checkout |
 
 ## Repository prerequisites
@@ -57,6 +58,10 @@ those triggers reduces it from `2N + 2` runs to two — the release PR and the p
 - `--keep-unmanaged` skips retirement for one run. Everything the catalog no longer declares
   is archived or deleted otherwise, under the open-issue, label-use, project-workflow and
   autopilot-event guards.
+- The issue-link base is operator state, rendered once per sync into every role's contract as
+  `app_url` + the workspace slug. It defaults to `https://multica.ai`; a self-hosted operator
+  points `--app-url` / `MULTICA_APP_URL` at their own origin, and a value that is not an https
+  origin refuses the run before any write. Git stores the `{{workspace_url}}` parameter only.
 - Autopilot status and extra triggers are operator state. No sync and no `just schedule` run
   pauses, enables, deletes or reschedules a webhook: `just schedule` ensures exactly one
   enabled schedule trigger and refuses when it finds more than one.

@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, ROLES, readJSON, resolve, syntheticBinding } from '../scripts/config.js';
 import { render } from '../scripts/deploy.js';
+import { resolveWorkspace } from '../scripts/workspace.js';
 import { fixture } from './support/helpers.js';
 import { id } from './support/platform.js';
 
@@ -33,6 +34,32 @@ test('the shared contract links the handoff template at the workspace origin, ne
     assert.match(render(role, f.binding, f.root), /handoff: https:\/\/github\.com\/example\/multica-workspace\/blob\/main\/templates\/handoff\.md;/, role);
   }
   assert.doesNotMatch(readFileSync(join(ROOT, 'shared/instructions.md'), 'utf8'), /https?:\/\//);
+});
+
+test('the rendered shared contract links issue references to the workspace base', () => {
+  const binding = syntheticBinding();
+  for (const role of ROLES) {
+    const text = render(role, binding);
+    assert.match(text, /https:\/\/multica\.ai\/validation\/issues\/MIR-123/, role);
+    assert.match(text, /bare identifiers only in a commit subject, PR title or branch name/, role);
+    assert.doesNotMatch(text, /workspace get|workspace member/, role);
+  }
+  const selfHosted = render('general', { ...binding, app_url: 'https://app.example.test' });
+  assert.match(selfHosted, /https:\/\/app\.example\.test\/validation\/issues\/MIR-123/);
+  assert.doesNotMatch(selfHosted, /multica\.ai/);
+});
+
+test('the live binding takes the app origin from the flag, then the environment, then the default', t => {
+  const f = fixture(t);
+  const runner = (...args) => f.runner(...args);
+  const appUrlOf = options => resolveWorkspace({ root: f.root, runner, repository: 'https://github.com/acme/catalog', ...options }).binding.app_url;
+  assert.equal(appUrlOf({ appUrl: 'https://app.example.test' }), 'https://app.example.test');
+  process.env.MULTICA_APP_URL = 'https://env.example.test';
+  t.after(() => { delete process.env.MULTICA_APP_URL; });
+  assert.equal(appUrlOf({}), 'https://env.example.test');
+  assert.equal(appUrlOf({ appUrl: 'https://app.example.test' }), 'https://app.example.test');
+  delete process.env.MULTICA_APP_URL;
+  assert.equal(appUrlOf({}), 'https://multica.ai');
 });
 
 test('no role launches foreground or focus-stealing work', t => {
@@ -77,6 +104,10 @@ for (const [name, mutate] of Object.entries({
   'null runtime': binding => { binding.agent_runtimes.general = null; },
   'missing repository': binding => { binding.repository = null; },
   'missing role': binding => { delete binding.agent_runtimes.release; },
+  'non-https app url': binding => { binding.app_url = 'http://multica.ai'; },
+  'path-bearing app url': binding => { binding.app_url = 'https://multica.ai/validation'; },
+  'whitespace-bearing app url': binding => { binding.app_url = 'https://multica.ai /x'; },
+  'brace-bearing app url': binding => { binding.app_url = 'https://{slug}.multica.ai'; },
 })) test(`binding schema rejects ${name}`, t => {
   const f = fixture(t);
   mutate(f.binding);

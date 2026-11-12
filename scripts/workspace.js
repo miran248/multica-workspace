@@ -1,7 +1,7 @@
 /** Resolve one workspace binding from the live platform. Nothing here is persisted:
  *  workspace, owners, runtime and source repository are re-read on every run. */
 import { execFileSync } from 'node:child_process';
-import { ROLES } from './config.js';
+import { DEFAULT_APP_URL, ROLES } from './config.js';
 import { run, unpack } from './platform.js';
 
 /** Normalize an origin URL to its web form; a fork keeps its own address. */
@@ -42,23 +42,24 @@ export function resolveOwners(members) {
   return owners;
 }
 
-export function bindingFor({ workspace, owners, runtime, repository }) {
+export function bindingFor({ workspace, owners, runtime, repository, appUrl = process.env.MULTICA_APP_URL ?? DEFAULT_APP_URL }) {
   return {
     workspace_id: workspace.id,
     human_user_id: owners[0].user_id,
     owner_ids: owners.map(owner => owner.user_id),
+    app_url: appUrl,
     identity: { workspace_name: workspace.name ?? workspace.slug, workspace_slug: workspace.slug, human_name: owners[0].name },
     agent_runtimes: Object.fromEntries(ROLES.map(role => [role, runtime.id])),
     repository,
   };
 }
 
-export function resolveWorkspace({ root = process.cwd(), runner = run, runtimeId, repository = sourceRepository(root) } = {}) {
+export function resolveWorkspace({ root = process.cwd(), runner = run, runtimeId, appUrl, repository = sourceRepository(root) } = {}) {
   const workspace = runner('', 'workspace', 'get');
   if (!workspace?.id || !workspace?.slug) throw new Error('Workspace identity unavailable; run inside the target workspace runtime');
   const members = unpack(runner(workspace.id, 'workspace', 'member', 'list'), 'members');
   const owners = resolveOwners(members);
   const runtimes = unpack(runner(workspace.id, 'runtime', 'list'), 'runtimes');
   const runtime = selectRuntime(runtimes, workspace.id, runtimeId ?? process.env.RUNTIME);
-  return { workspace, owners, runtime, repository, binding: bindingFor({ workspace, owners, runtime, repository }) };
+  return { workspace, owners, runtime, repository, binding: bindingFor({ workspace, owners, runtime, repository, appUrl }) };
 }

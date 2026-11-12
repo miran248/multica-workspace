@@ -10,6 +10,10 @@ cap. See the caps table in [README.md](../README.md#brevity-caps).
 ## Handoff
 
 Post on the child when it is delivered, accepted or advanced.
+Every issue reference in a handoff or verdict is a link — `[MIR-62](<issue-url>)`,
+never the bare identifier. This template defines no URL base: the shared contract
+renders the workspace base, and a bare identifier survives only in a commit
+subject, a PR title or a branch name.
 Line 1 names the record, exact revision and links; line 2 the delivered behavior
 or verdict; line 3 actual checks; line 4 the limits of the claim; line 5 the next
 owner and action. Write `reviewed` in place of `at` for an acceptance verdict.
