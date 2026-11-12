@@ -211,7 +211,9 @@ function resolveChecked(catalog, binding, root) {
     assets[path] = { content, sha256: sha256(content) };
     return content;
   };
-  const instructions = asset(catalog.shared_instructions);
+  // The catalog commits no origin: the shared contract addresses the handoff template through
+  // {{repository}}, resolved from the workspace's git origin when the contract is rendered.
+  const instructions = substitute(asset(catalog.shared_instructions), { repository: binding.repository }, ['repository']).content;
   const rolePrompts = Object.fromEntries(ROLES.map(role => [role, asset(`roles/${role}.md`)]));
   const skillManifest = parseJSON(asset(catalog.skill_manifest));
   validateSchema(skillManifest, 'skills', root);
