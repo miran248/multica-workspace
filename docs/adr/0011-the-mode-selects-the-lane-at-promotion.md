@@ -21,24 +21,30 @@ The mode selects the lane when the Planner promotes a ticket, and a column then 
 behaviour with no label read. The graph grows three columns — `in_progress_gate`,
 `in_review_gate`, `human_review_gate` — and the Planner maps the epic's labels and the ticket's
 base to a lane in one table: neither label is Reviewer-merged; `human-assigned` starts in
-`human_progress`; `manual-merge` selects the gate lane for a pull request whose base is `main`;
-`production` selects the gate lane for the release child.
+`human_progress`; `human-merge` selects the gate lane for a pull request whose base is `main`.
 
 A gate review column's PASS lands at `awaiting_merge`; a normal review column's PASS merges the
 pull request into its base and declares no advance. `spec_review` keeps its one exit: PASS
 leaves the pull request open and always waits for the human merge, in every mode.
 
-`manual-merge` keeps its boundary scope: it gates the spec approval and every pull request
-whose base is `main`. A ticket PR into `spec/<epic>` is Reviewer-merged in every mode, because
-the human already approved the set and the branch is scratch.
+`human-merge` keeps the boundary scope `manual-merge` had: it gates the spec approval and every
+pull request whose base is `main`. A ticket PR into `spec/<epic>` is Reviewer-merged in every
+mode, because the human already approved the set and the branch is scratch.
+
+`manual-merge` is renamed `human-merge`: the old name described the act, the new one names the
+policy and pairs with `human-assigned`, while the columns name the state. The rename runs as a
+catalog migration-ledger event, so the live label keeps its id and its issues; the catalog, the
+review instructions, the guide and the tests carry `human-merge`.
 
 ## Consequences
 
 - Fifteen columns, six custom statuses beside the built-in ones. The gate statuses carry their
   own presentation and are read back like every other declared status.
-- No review instruction names `manual-merge`, `human-assigned` or `production`. The mode is
-  read once, by the seat that owns it, before work starts; a wrong lane is visible on the board
-  instead of silent in a merge.
+- No review instruction names `human-merge` or `human-assigned`. The mode is read once, by the
+  seat that owns it, before work starts; a wrong lane is visible on the board instead of silent
+  in a merge.
+- The label rename is pinned by the migration resolver: a ledger event that leaves both names
+  live fails.
 - The alternative — every ticket PR waits for the human — was rejected: it would add N human
   merges for no new decision on an integration spec.
 - Revisit if the platform ships conditional edges: the label could then select a transition

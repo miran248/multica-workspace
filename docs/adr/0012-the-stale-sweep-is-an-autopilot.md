@@ -15,13 +15,16 @@ remembered to create it on, and it is duplicated state on every child.
 
 ## Decision
 
-One catalog autopilot, `stale-sweep`, runs hourly in the Planner role, reading the review
-columns and `awaiting_merge`. It dates each ticket from `issue timeline`, and for a ticket older
-than the threshold it posts a `## What` / `## Evidence` / `## Next` comment with the age and
-the last actor, then moves the ticket to `blocked` for its normal triage. The threshold is two
-hours in a review column and 24 hours at `awaiting_merge`: the first is an agent's own step, the
-second is a human's. It never mentions anyone, never closes a ticket and never runs on
-`blocked`.
+One catalog autopilot, `stale-sweep`, runs hourly in the Planner role, reading the five
+reviewer-handled review columns — `spec_review`, `in_review`, `in_review_gate`, `human_review`,
+`human_review_gate`. It dates each ticket from `issue timeline`, and for a ticket older than two
+hours it posts a `## What` / `## Evidence` / `## Next` comment with the age and the last actor,
+then moves the ticket to `blocked` for triage. Human-handled columns (`human_progress`,
+`awaiting_merge`) are never swept: they wait indefinitely for the human, and no agent may
+un-gate a human step. Triage of a swept ticket restores the lane it held before `blocked` in its
+timeline, so a swept gate ticket is not demoted; a second sweep on the same ticket leaves it
+`blocked` for the human. It never mentions anyone, never closes or cancels a ticket and never
+runs on `blocked`.
 
 `task.failed` stays a per-issue event the Planner registers, because the platform knows that
 fact exactly and a sweep can only infer it. The per-issue 90m timer is deleted. The
@@ -35,7 +38,7 @@ cancelled-epic sweep stays as `--until-status cancelled` on the epic. No wake is
   the age and the last actor before the move.
 - A blocked ticket is triaged by the Planner like any other blocker; the sweep does not
   dispatch work.
-- The thresholds are policy, not platform facts; a reviewer reads them once from the contract
-  and the offline suite pins them against the prompt.
+- The one threshold is policy, not a platform fact; a reviewer reads it once from the contract
+  and the offline suite pins it against the prompt.
 - The first live run is the acceptance: the release records the autopilot's readback and its
   enabled hourly trigger, and the first blocking move is observable evidence.
