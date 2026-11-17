@@ -95,11 +95,35 @@ a ticket when a run ends; the handler makes the next move. A member handler is a
 nothing.
 
 **factory mode** — the epic-level choice of who implements and who merges, encoded by the
-`human-assigned` and `manual-merge` labels before the spec is approved. With neither label the
-epic is autonomous. `human-assigned` without `manual-merge` is human implementation with agent
-merge; `manual-merge` alone is agent implementation with a human merge of the spec approval and
-every pull request based on `main` — ticket PRs into an integration branch are Reviewer-merged;
-both are human implementation and merge.
+`human-assigned`, `manual-merge` and `production` labels. `human-assigned` and `manual-merge`
+are applied before the spec is approved; `production` is applied to the epic before the release
+child is promoted, because the lane it selects is read at that promotion (D16). With none of
+them the epic is autonomous. `human-assigned` without `manual-merge` is human implementation
+with agent merge; `manual-merge` alone is agent implementation with a human merge of the spec
+approval and every pull request based on `main` — ticket PRs into an integration branch are
+Reviewer-merged; both are human implementation and merge. `production` sends the release child
+through the human gate for its second approval. The mode is not read by a reviewer: the Planner
+resolves it to a lane at promotion.
+
+**carrier** — the one home of a rule: a **native carrier** the platform stores or acts on (a
+status, a handler, a stage, an issue link, a wakeup, an autopilot or a label), or exactly one
+prose copy in the seat that reads the rule. A second copy is a defect; a declared document that
+no sync deploys is not a carrier. The rule inventory in the accepted spec is the measured form.
+
+**gate lane** — a lane whose review PASS lands at `awaiting_merge` instead of merging the pull
+request: `in_progress_gate` to `in_review_gate`, and `human_progress` to `human_review_gate`.
+The Planner selects it at promotion from the epic's mode and the ticket's base; a Reviewer never
+reads a mode label. Orange, to read as the human gate.
+
+**stale sweep** — the hourly `stale-sweep` autopilot. It dates a ticket in a review column or at
+`awaiting_merge` from `issue timeline`, and past the threshold (two hours in a review column, 24
+hours at `awaiting_merge`) comments the age and moves it to `blocked` for triage. It replaces
+the per-issue 90m timer; `task.failed` stays a per-issue wake.
+
+**drill** — a throwaway project and a disposable repository bound to a copy of a workflow, used
+to prove a graph change on the platform before the catalog reaches a live project. One drill
+epic per mode, one ticket in each lane, a stale ticket and an in-flight move, each with its
+`issue timeline` evidence; the copy, the epics and the project are archived when it is green.
 
 **spec child** — the epic's stage-1 child that carries the spec pull request, including the
 proposed breakdown and the published slice. The PR's base is the spec's integration branch, or
