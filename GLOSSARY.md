@@ -94,12 +94,51 @@ move last, so the next run can read the record; the move is what dispatches it. 
 a ticket when a run ends; the handler makes the next move. A member handler is assigned and runs
 nothing.
 
+**handoff gate** — the one question that ends grilling and starts the factory. The Planner
+presents the destination, the shape (a single ticket, an epic + stage-1 spec child, or a
+wayfinder map when the frontier is not empty), the mode labels and the proposed slice outline,
+then waits. The epic opens in `todo` with its stage-1 spec child inert in `backlog`; the answer
+is the yes that starts the spec run, and the slice freezes when the spec PR opens. One prose copy
+in `skills/grilling`; the Planner contract names the route.
+
 **factory mode** — the epic-level choice of who implements and who merges, encoded by the
-`human-assigned` and `manual-merge` labels before the spec is approved. With neither label the
-epic is autonomous. `human-assigned` without `manual-merge` is human implementation with agent
-merge; `manual-merge` alone is agent implementation with a human merge of the spec approval and
-every pull request based on `main` — ticket PRs into an integration branch are Reviewer-merged;
-both are human implementation and merge.
+`has-human-implementer` and `has-human-release` labels before the spec is approved. With neither
+label the epic is autonomous. `has-human-implementer` without `has-human-release` is human
+implementation with agent merge; `has-human-release` alone is agent implementation with a human
+merge of every pull request based on `main` — the spec approval is the human merge in every mode
+(D4); ticket PRs into an integration branch are Reviewer-merged; both are human implementation
+and merge. The release child is always the release seat's, in both modes. The mode is not read by
+a reviewer: the Planner resolves it to a lane at promotion. `has-human-implementer` is the
+renamed `human-assigned` and `has-human-release` the renamed `manual-merge`; both are
+migration-ledger events, so existing epics keep their labels and their history.
+
+**carrier** — the one home of a rule: a **native carrier** the platform stores or acts on (a
+status, a handler, a stage, an issue link, a wakeup, an autopilot or a label), or exactly one
+prose copy in the seat that reads the rule. A second copy is a defect; a declared document that
+no sync deploys is not a carrier. The rule inventory in the accepted spec is the measured form.
+
+**gate lane** — a lane whose review PASS lands at `awaiting_merge` instead of merging the pull
+request: `in_progress_gate` to `in_review_gate`, `human_progress_gate` to `human_review_gate`,
+and `release_progress_gate` to `release_review_gate`. The Planner selects it at promotion from
+the epic's mode and the ticket's base; a Reviewer never reads a mode label. Orange, to read as
+the human gate.
+
+**release lane** — the `release` seat's columns: `release_progress` for the release PR and
+`release_review` for the Reviewer's verdict on it, each with a `_gate` twin when the epic has
+`has-human-release`. The procedure lives once in `roles/release.md`; the release ticket carries
+only its instance.
+
+**stale sweep** — the hourly `stale-sweep` autopilot. It dates a ticket in one of the seven
+reviewer-handled review columns from `issue timeline`, and past two hours comments the age and
+moves it to `blocked` for triage. Human-handled columns (`human_progress`,
+`human_progress_gate`, `awaiting_merge`) are never swept: a human merge waits indefinitely. It replaces the per-issue 90m timer;
+`task.failed` stays a per-issue wake.
+
+**drill** — a throwaway project and a disposable repository bound to a copy of a workflow, used
+to prove a graph change on the platform before the catalog reaches a live project. One drill
+epic per mode, one ticket in each lane, both release exits, the epic state, a stale ticket and an
+in-flight move, each with its `issue timeline` evidence; the copy, the epics and the project are
+archived when it is green.
 
 **spec child** — the epic's stage-1 child that carries the spec pull request, including the
 proposed breakdown and the published slice. The PR's base is the spec's integration branch, or
@@ -112,9 +151,20 @@ the spec PR and of every delivery PR in that spec. It is scratch: unprotected, i
 nothing, and the release merge deletes it. A `direct-to-main` spec has none and records
 `integration: none`.
 
-**release child** — the final-stage child of an integration spec. Its pull request is
-`spec/<epic>` → `main` and merges as one squash commit on `main`; its `done` is the only proof
-the spec is released. It is linked to itself only, never to the epic.
+**ticket kind** — delivery or release, the Planner's third promotion input beside the epic's
+mode and the ticket's base. It is a stage read, not a body marker: an integration spec's
+final-stage child is the release ticket and every other child is delivery; a `direct-to-main`
+spec publishes no release child; a drill epic's kinds are its own table's, since its diagnostic
+stage sits above the release.
+
+**release child** — the final-stage child of an integration spec, handled by the release seat in
+`release_progress` or `release_progress_gate`. Its pull request is `spec/<epic>` → `main` and
+merges as one squash commit on `main`; its `done` is the only proof the spec is released. It is
+linked to itself only, never to the epic.
+
+**epic state** — `epic_progress` marks an epic whose slice is approved and in flight; the
+Planner moves the epic there from `todo` when it promotes the first delivery stage, and to `done`
+on acceptance. It has no handler, so the move dispatches nobody.
 
 **branch-scoped `done`** — a child's `done` means delivered and reviewed on `spec/<epic>`; the
 epic's `done` means the release squash is on `main`, and only the Planner's acceptance grants
@@ -125,9 +175,11 @@ It is reviewed with the spec, and the merge that approves the spec approves the 
 spec run publishes the children in `backlog` before that merge, so the set is final when stage 1
 closes; the merge is what starts them.
 
-**human lane** — the human's columns: `human_progress` for implementation, `human_review` for
-the Reviewer's verdict on it, and `awaiting_merge` for the merge that approves a spec or
-completes a `manual-merge` delivery. Violet; `human_progress` and `awaiting_merge` are
+**human lane** — the human's columns: `human_progress` for implementation, with
+`human_progress_gate` as its twin when the epic also carries `has-human-release`; the Reviewer's
+verdict lands in `human_review` (or `human_review_gate`, whose PASS waits at `awaiting_merge`);
+and `awaiting_merge` for the merge that approves a spec or completes a `has-human-release`
+delivery. Violet; `human_progress`, `human_progress_gate` and `awaiting_merge` are
 member-handled, so entering them assigns the human and starts no run.
 
 **declared status** — a custom status a workflow step creates through `new_status`, including
