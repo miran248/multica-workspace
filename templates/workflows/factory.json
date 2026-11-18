@@ -49,7 +49,7 @@
       },
       "next_status_key": "awaiting_merge",
       "back_status_key": "spec_progress",
-      "instructions": "Review the spec pull request at its exact head against the ticket, the approved direction, the proposed breakdown and the repository standards. Do not rewrite the spec. FAIL: comment the findings, then move the ticket back to spec_progress. PASS: post the PASS at the exact head, leave the pull request open, then move the ticket to awaiting_merge: the human merge is the approval. Review only an open pull request: if the link is not open, there is nothing to review, so comment the state and move the ticket back to spec_progress. Never merge or enable auto-merge on a spec pull request. Never review or merge your own work."
+      "instructions": "Review the spec pull request at its exact head against the ticket, the approved direction, the proposed breakdown and the repository standards. Do not rewrite the spec. FAIL: comment the findings, then move the ticket back to spec_progress. PASS: post the PASS at the exact head, leave the pull request open, then move the ticket to awaiting_merge. Review only an open pull request: if the link is not open, there is nothing to review, so comment the state and move the ticket back to spec_progress. Never merge or enable auto-merge on a spec pull request. Never review or merge your own work."
     },
     {
       "status_key": "in_progress",
