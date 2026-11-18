@@ -15,11 +15,11 @@ The spec is a Git document; Multica owns the tickets, approval records and publi
 
 Check with the user that these seams match their expectations.
 
-3. Record the integration choice, write the spec to `docs/specs/<change>.md`, using the template below, with a `Proposed breakdown` section naming the tickets and their stages, and open the spec pull request. An integration spec records `integration: spec/<epic-key>` in the spec, forks that branch from `main` at the spec sha before the PR exists — a branch needs a commit — and targets its approval PR at `spec/<epic-key>`. A `direct-to-main` spec records `integration: none`, targets its spec PR at `main` and gets no branch and no release child; a spec whose approved breakdown is a single ticket defaults to `direct-to-main`. The review and merge of that PR is the approval of the spec and the breakdown; the skill publishes nothing itself, and no tracker issue holds the spec. A Factory spec child publishes the children with `to-tickets` in the spec run, before the PR leaves `spec_progress`; otherwise hand the spec to `to-tickets` once the plan is agreed. Every published ticket uses `to-tickets`' one template and records no ticket state of its own.
+3. Record the integration branch, write the spec to `docs/specs/<change>.md`, using the template below, with a `Proposed breakdown` section naming the tickets and their stages, and open the spec pull request. Every spec records `integration: spec/<epic-key>` in the spec, forks that branch from `main` at the spec sha before the PR exists — a branch needs a commit — and targets its approval PR at `spec/<epic-key>`, never `main`. A single-ticket breakdown is the smallest epic: one delivery child and the final-stage release child, published by `to-tickets` like every other slice. The review and merge of that PR is the approval of the spec and the breakdown; the skill publishes nothing itself, and no tracker issue holds the spec. A Factory spec child publishes the children with `to-tickets` in the spec run, before the PR leaves `spec_progress`; otherwise hand the spec to `to-tickets` once the plan is agreed. Every published ticket uses `to-tickets`' one template and records no ticket state of its own.
 
 <spec-template>
 
-`integration: spec/<epic-key>` — or `integration: none` for `direct-to-main`.
+`integration: spec/<epic-key>`
 
 ## Problem Statement
 
