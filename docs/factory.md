@@ -4,68 +4,66 @@ The Factory workflow turns a spec into merged code. It is bound to every live pr
 issue created in a project enters these columns; an issue outside a project uses the
 workspace Default workflow, whose columns hand off to nobody.
 
-The workflow file is the source: `templates/workflows/factory.json`. This guide is the
-contract the human and the seats read. `tests/factory-workflow.test.js` fails when a column,
-an edge or a mode is not described here. The route allocation behind the graph is
+The workflow file is the source: `templates/workflows/factory.json`. `just render-factory`
+writes this guide's column table and status graph from it, and `tests/render-factory.test.js`
+fails when the two differ. The prose around those blocks stays authored and is pinned by
+`tests/factory-workflow.test.js`. This guide is the contract the human and the seats read. The
+route allocation behind the graph is
 [ADR-0004](adr/0004-columns-carry-agent-decided-routes.md); the approval artifact is
 [ADR-0005](adr/0005-the-merged-spec-pr-is-the-approval.md); [ADR-0006](adr/0006-comment-first-merge-last.md)
 records the handoff order and the auto-merge ban; [ADR-0007](adr/0007-publish-the-slice-in-the-spec-run.md)
 moves the slice publication into the spec run; [ADR-0008](adr/0008-spec-approval-targets-the-integration-branch.md)
 retargets the approval merge at the integration branch,
 [ADR-0009](adr/0009-release-the-spec-as-one-squash.md) releases the spec as one squash on
-`main`, and [ADR-0014](adr/0014-the-merge-exit-is-read-at-the-pass.md) deletes the gate lanes
-and reads the merge exit once, at the PASS; [ADR-0016](adr/0016-every-grilled-slice-takes-the-integration-topology.md)
+`main`, and [ADR-0014](adr/0014-the-merge-exit-is-read-at-the-pass.md) reads the merge exit
+once, at the PASS; [ADR-0016](adr/0016-every-grilled-slice-takes-the-integration-topology.md)
 deletes the second topology and asks the labels at the kickoff.
 
 ## Status graph
 
+<!-- factory:graph:start (generated from templates/workflows/factory.json; do not edit) -->
 ```mermaid
 flowchart TD
-  backlog --> todo
-  todo -.->|"spec child, stage 1"| spec_progress
-  todo -.->|"agent delivery"| in_progress
-  todo -.->|"human delivery"| human_progress
-  todo -.->|"release"| release_progress
-  todo -.->|"slice starts"| epic_progress
-  epic_progress -.->|"acceptance"| done
-  spec_progress -->|"spec PR"| spec_review
-  spec_review -->|"FAIL"| spec_progress
-  spec_review -->|"PASS: PR left open"| awaiting_merge
-  in_progress -->|"delivery PR"| in_review
-  human_progress -->|"delivery PR"| human_review
-  release_progress -->|"release PR"| release_review
-  in_review -->|"FAIL"| in_progress
-  human_review -->|"FAIL"| human_progress
-  release_review -->|"FAIL"| release_progress
-  in_review -->|"PASS: exit rule"| awaiting_merge
-  human_review -->|"PASS: exit rule"| awaiting_merge
-  release_review -->|"PASS: exit rule"| awaiting_merge
-  in_review -->|"PASS: merge"| done
-  human_review -->|"PASS: merge"| done
-  release_review -->|"PASS: merge"| done
-  awaiting_merge -->|"merge completes the ticket"| done
-  awaiting_merge -->|"changes: spec"| spec_progress
-  awaiting_merge -->|"changes: agent"| in_progress
-  awaiting_merge -->|"changes: human"| human_progress
-  awaiting_merge -->|"changes: release"| release_progress
-  blocked --> spec_progress
-  blocked --> human_progress
-  blocked --> in_progress
-  blocked --> release_progress
-  blocked --> cancelled
-  todo -.->|"all children done"| done
-```
+  backlog
+  todo
+  epic_progress
+  spec_progress
+  spec_review
+  in_progress
+  human_progress
+  release_progress
+  in_review
+  human_review
+  release_review
+  awaiting_merge
+  blocked
+  done
+  cancelled
 
-Any ticket can enter `blocked`; it is a triage column, never a parking spot. `done` and
-`cancelled` are terminal and hand off to nobody. The arrow labelled "merge completes the
-ticket" is the platform's PR rule, not a status move: merging a linked pull request completes
-the ticket it is linked to. The three review PASS-to-merge edges are that same merge — the
-Reviewer posts the verdict and applies the exit rule, which either merges at the reviewed head
-or moves the ticket to `awaiting_merge`. Every review column declares `awaiting_merge` as its
-`next`, so the unattended advance is the human and the merge is the handled exception.
+  spec_progress --> spec_review
+  spec_review --> awaiting_merge
+  spec_review -.-> spec_progress
+  in_progress --> in_review
+  human_progress --> human_review
+  release_progress --> release_review
+  in_review --> awaiting_merge
+  in_review -.-> in_progress
+  human_review --> awaiting_merge
+  human_review -.-> human_progress
+  release_review --> awaiting_merge
+  release_review -.-> release_progress
+```
+<!-- factory:graph:end -->
+
+The graph is rendered from the workflow file: a solid arrow is the column's declared `next`, a
+dotted arrow its declared `back`. Routes the instructions take beyond those edges — the
+promotion into a work lane, the triage out of `blocked` — are rules in the prose, not a second
+drawing. Any ticket can enter `blocked`; it is a triage column, never a parking spot. `done` and
+`cancelled` are terminal and hand off to nobody. A merge completes the linked ticket: that is
+the platform's PR rule, not a status edge. The four review columns all declare `awaiting_merge`
+as their `next`, so the unattended advance is the human and the merge is the handled exception.
 `epic_progress` is the epic's state and handles nobody: the Planner moves the epic there from
 `todo` when it promotes the first delivery stage, and to `done` on acceptance.
-
 
 ## The kickoff labels step
 
@@ -177,45 +175,55 @@ or open a follow-up spec — a revert is a new epic.
 
 ## Columns
 
-| Column | Handler | Entered by | Leaves to |
-| --- | --- | --- | --- |
-| `backlog` | none | the spec run parks every delivery child | `todo` or the stage's start column |
-| `todo` | none | human or planner | a work column; the epic waits here |
-| `epic_progress` | none | the Planner starts the slice | `done` on acceptance; it dispatches nobody |
-| `spec_progress` | Planner | planner creates the spec child; its run publishes the slice | `spec_review` |
-| `spec_review` | Reviewer | planner submits the spec PR | `spec_progress` (FAIL) or `awaiting_merge` (PASS) |
-| `in_progress` | Implementer | planner promotes agent work | `in_review` |
-| `human_progress` | human | planner promotes human work | `human_review` |
-| `release_progress` | Release | planner promotes the release child | `release_review` |
-| `in_review` | Reviewer | the implementer delivers | `in_progress` (FAIL), `awaiting_merge` or a merge at the reviewed head (PASS, exit rule) |
-| `human_review` | Reviewer | the human delivers | `human_progress` (FAIL), `awaiting_merge` or a merge at the reviewed head (PASS, exit rule) |
-| `release_review` | Reviewer | the release seat delivers | `release_progress` (FAIL), `awaiting_merge` or a merge at the reviewed head (PASS, exit rule) |
-| `awaiting_merge` | human | a spec PASS, or a PASS the exit rule sent here | `done` after the merge; the owning lane on changes |
-| `blocked` | Planner | any seat that cannot proceed | triage route; a dependency wait stays |
-| `done` | none | a merge, or the last handler | terminal |
-| `cancelled` | none | any seat | terminal |
+The column table and the presentation it carries are generated from the workflow file:
 
-Custom statuses carry presentation that sync reconciles and reads back:
+<!-- factory:columns:start (generated from templates/workflows/factory.json; do not edit) -->
+| Column | Handler | Icon | Colour | Next | Back |
+| --- | --- | --- | --- | --- | --- |
+| `backlog` | none | — | — | — | — |
+| `todo` | none | — | — | — | — |
+| `epic_progress` | none | `half` | #0ea5e9 | — | — |
+| `spec_progress` | Planner | `half` | #3b82f6 | `spec_review` | — |
+| `spec_review` | Reviewer | `three_quarters` | #3b82f6 | `awaiting_merge` | `spec_progress` |
+| `in_progress` | Implementer | — | — | `in_review` | — |
+| `human_progress` | human | `half` | #8b5cf6 | `human_review` | — |
+| `release_progress` | Release | `half` | #f97316 | `release_review` | — |
+| `in_review` | Reviewer | — | — | `awaiting_merge` | `in_progress` |
+| `human_review` | Reviewer | `three_quarters` | #8b5cf6 | `awaiting_merge` | `human_progress` |
+| `release_review` | Reviewer | `three_quarters` | #f97316 | `awaiting_merge` | `release_progress` |
+| `awaiting_merge` | human | `three_quarters` | #8b5cf6 | — | — |
+| `blocked` | Planner | — | — | — | — |
+| `done` | none | — | — | — | — |
+| `cancelled` | none | — | — | — | — |
+<!-- factory:columns:end -->
 
-| Status | Icon | Colour |
-| --- | --- | --- |
-| `epic_progress` | `half` | `#0ea5e9` |
-| `spec_progress` | `half` | `#3b82f6` |
-| `spec_review` | `three_quarters` | `#3b82f6` |
-| `human_progress` | `half` | `#8b5cf6` |
-| `human_review` | `three_quarters` | `#8b5cf6` |
-| `release_progress` | `half` | `#f97316` |
-| `release_review` | `three_quarters` | `#f97316` |
-| `awaiting_merge` | `three_quarters` | `#8b5cf6` |
+`done` and `cancelled` hand off to nobody. Custom statuses carry the presentation that sync
+reconciles and reads back; a system status declares none. A column's declared `next` and `back`
+are the only edges the graph owns; the route its instruction takes beyond them — the promotion
+into a work lane, the triage out of `blocked` — is a rule in the prose.
 
 ## Promotion and the exit rule
 
 The two labels compose into four modes — autonomous, `has-human-release`,
-`has-human-implementer`, and both — but promotion selects only who implements. That four-row
-mapping is the table in `roles/planner.md`; the Planner reads the ticket's kind from its stage,
-not from a body marker. `has-human-release` is not a promotion input. Who merges is the exit
-rule in `skills/code-review/`, read at each PASS from the PR's base and the epic's label, and
-never cached in a lane.
+`has-human-implementer`, and both — but promotion selects only who implements:
+
+| Epic labels | Ticket | Lane |
+| --- | --- | --- |
+| any | spec child | `spec_progress` |
+| neither or `has-human-release` | delivery | `in_progress` |
+| `has-human-implementer` | delivery | `human_progress` |
+| any | release | `release_progress` |
+
+The Planner reads the ticket's kind from its stage, not from a body marker; the same four-row
+table is the one in `roles/planner.md`. `has-human-release` is not a promotion input. Who merges
+is the exit rule in `skills/code-review/`, read at each PASS from the PR's base and the epic's
+label and never cached in a lane:
+
+- `spec_review`: a PASS moves to `awaiting_merge` in every mode — the spec-approval exception
+  (D4), read before the base and the label.
+- `in_review`, `human_review`, `release_review`: a PASS merges at the reviewed head when the base
+  is `spec/<epic>`, or when the base is `main` and the epic carries no `has-human-release`; it
+  moves to `awaiting_merge` when the base is `main` and the epic carries `has-human-release`.
 
 A label added after the kickoff applies at the next PASS; a change to the slice's set still needs
 a spec re-approval. `has-human-release` is scoped to the boundaries, not to every ticket: it
@@ -223,10 +231,6 @@ gates every pull request whose base is `main`, while the spec approval is the hu
 every mode. A ticket PR into `spec/<epic>` is Reviewer-merged in every mode, because the branch
 is scratch and the human already approved the set that produces it. Under `has-human-release`,
 one topology costs two human merges — the spec approval and the release.
-
-| Topology | Human merges under `has-human-release` |
-| --- | --- |
-| `spec/<epic>` | 2 — the spec approval and the release |
 
 The smallest epic is the same topology: one delivery child and the release child.
 
@@ -386,5 +390,6 @@ project.
 
 ## Verification
 
-`just validate` resolves the catalog; `just test` runs the offline matrix. Both are offline
+`just render-factory` rewrites the generated column table and graph; `just validate` resolves the
+catalog; `just test` runs the offline matrix, including the render check. All three are offline
 and need no workspace.

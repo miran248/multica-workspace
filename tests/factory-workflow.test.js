@@ -579,7 +579,6 @@ function guideViolations({ guide: text, apply, workflowFile }) {
     ['the stale sweep', /### The stale sweep/],
     ['the one topology', /Every grilling produces an epic/],
     ['the kickoff labels step', /kickoff[^.]*labels|labels[^.]*kickoff/i],
-    ['the modes table two-merge row', /^\| `spec\/<epic>` \| 2 —/m],
     ['the epic state', /`epic_progress`/],
     ['the release lane', /`release_progress`/],
     ['the exit-rule pointer', /`skills\/code-review\/`/],
@@ -612,9 +611,9 @@ test('the guide carries the integration topology and the narrowed routes', () =>
   // A guide that still describes main-only delivery is the graph the topology replaces.
   const noTopology = { ...contract, guide: contract.guide.replace(/`spec\/<epic>`/g, '`main`') };
   assert.notDeepEqual(guideViolations(noTopology), []);
-  // The modes table must keep the integration human-merge cost: the spec and the release.
-  const noTwoMergeRow = { ...contract, guide: contract.guide.replace(/^\| `spec\/<epic>` \| 2 —.*$/m, '') };
-  assert.notDeepEqual(guideViolations(noTwoMergeRow), []);
+  // The integration topology must keep its human-merge cost: the spec and the release.
+  const noTwoMergeCost = { ...contract, guide: contract.guide.replace(/Under `has-human-release`,\s*one topology costs two human merges[^.]*\./, '') };
+  assert.notDeepEqual(guideViolations(noTwoMergeCost), []);
   // The reference trigger is the recipe a new repository copies.
   const unfiltered = { ...contract, workflowFile: contract.workflowFile.replace(/\n\s*branches: \[main\]/g, '') };
   assert.notDeepEqual(guideViolations(unfiltered), []);
