@@ -3,7 +3,10 @@
 - Status: Accepted, 2026-11-18 (approved in the MIR-227 grilling)
 - Supersedes: the `direct-to-main` clauses of ADR-0008 — the escape-hatch target, the branchless
   spec, its missing release child and its per-ticket CI. The approval act, the integration
-  default, the release child and the release serialization stand.
+  default, the release child and the release serialization stand. It also changes ADR-0013's
+  handoff packet: the shape field — the single-ticket / epic choice — is deleted and the packet
+  ends on the labels question; the gate, the freeze at the spec PR and the Planner's route
+  stand.
 
 ## Context
 

@@ -2,7 +2,10 @@
 
 - Status: Accepted, 2026-11-18 (supersedes the gate-lane decision of ADR-0011)
 - Supersedes: the lane-per-mode graph in ADR-0011; ADR-0011's label renames and its release
-  lane stand.
+  lane stand. It also narrows ADR-0012's seven reviewer-handled review columns to the four
+  without a gate twin — `spec_review`, `in_review`, `human_review`, `release_review` — because
+  three of the seven were gate columns this decision deletes; ADR-0012's hourly sweep, its
+  threshold and its `task.failed` clause stand.
 
 ## Context
 

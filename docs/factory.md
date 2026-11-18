@@ -84,7 +84,7 @@ The Planner creates the spec as the epic's stage-1 child and keeps the epic at `
 promotes the first delivery stage, when the epic moves to `epic_progress`. In that
 child's run the Planner writes the spec, forks `spec/<epic>` from `main` at the spec sha before
 the spec PR exists, publishes the whole slice with `to-tickets` — every delivery child under the
-epic, in `backlog`, blockers first, stages assigned, the final-stage release child last — then
+epic, in `backlog`, in stage order, the final-stage release child last — then
 opens the spec PR carrying the proposed breakdown, against `spec/<epic>`, and links it only to
 the child, never the epic, and never after `Closes`, `Fixes` or `Resolves`.
 The Reviewer leaves the PR open on PASS and moves the child to `awaiting_merge`; the human
@@ -99,9 +99,10 @@ re-evaluates the stage condition whenever the child set changes.
 
 Each spec forks `spec/<epic>` from `main` at the spec sha, before the spec PR exists: a branch
 needs a commit. The spec PR targets that branch, and its merge approves the spec, its proposed
-breakdown and the published children exactly as before. Every delivery child carries
-`Branch: spec/<epic>` under `## Parent`; that line, not a promotion comment, is the base the
-Implementer reads. A final-stage release child owns the only path from the branch to `main`.
+breakdown and the published children exactly as before. Every delivery child opens its body
+with `Branch: spec/<epic>`; that line, not a promotion comment, is the base the Implementer
+reads. The stage is the dependency edge and the body carries no blockers. A final-stage release
+child owns the only path from the branch to `main`.
 
 ```text
 main ──fork at the spec sha──> spec/<epic>
@@ -254,7 +255,7 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
 - **Planner.** Apply the chosen labels to the epic at the kickoff, before moving the stage-1 spec
   child to `spec_progress`. In that child's run, fork `spec/<epic>` from `main` at the spec sha,
   write the spec recording `integration:`, and publish every delivery child in `backlog` with its
-  stage, blockers and `Branch:` line, the final-stage release child last. Then link the spec PR,
+  stage and its `Branch:` base, the final-stage release child last. Then link the spec PR,
   targeted at `spec/<epic>`, to the child only. The merge approves the set and wakes you to
   promote, not to slice: create no child after it. Move the epic to `epic_progress` in the run
   that promotes the first delivery stage, and to `done` on acceptance. Promote the frontier by
@@ -275,9 +276,9 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
   column's back status. A review starts from an open pull request: with no open link, comment the
   state and send the ticket back rather than judging or completing it. The Reviewer never
   reviews its own work.
-- **Implementer.** Owns `in_progress`: read the ticket's `Branch:` under `## Parent`, branch
-  from that base (`main` when absent), open the PR against it, merge the base in before
-  `in_review`, then implement, validate and link the PR.
+- **Implementer.** Owns `in_progress`: read the ticket's `Branch:` line at the top of its
+  body, branch from that base (`main` when absent), open the PR against it, merge the base in
+  before `in_review`, then implement, validate and link the PR.
 - **Release.** Owns `release_progress` into `release_review`; the procedure and the deploy-time
   `production:` approval live in `roles/release.md`.
 

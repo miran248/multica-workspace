@@ -76,7 +76,7 @@ and ensures exactly one enabled schedule trigger.
 | `roles/` | five seats, each one job |
 | `skills/` | the fifteen bound methods; each attaches to exactly one role |
 | `templates/default.json` | the only deployable catalog: agents, labels, defaults, skills, autopilots and workflows |
-| `templates/autopilots/` | the `config-sync` control and its prompt |
+| `templates/autopilots/` | the `config-sync` control, the `stale-sweep` and their prompts |
 | `templates/workflows/` | the `Factory` project workflow |
 | `schemas/` | JSON Schema contracts for the catalog, binding, skills and ledger |
 | `migrations/` | optional ledger for renames and authorized retirements |
