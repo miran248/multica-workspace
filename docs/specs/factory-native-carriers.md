@@ -7,7 +7,7 @@ Accepted 2026-11-17. Approval is the merge of this spec's pull request into `spe
 which completes MIR-228 and approves the published set; MIR-227 is the epic — it stays `todo`
 until the spec merge, `epic_progress` until the release lands, and the Planner accepts it on
 evidence. The decisions below are the answers given in the grilling session that opened the
-epic; ADR-0010, ADR-0011, ADR-0012 and ADR-0013 are their durable records.
+epic and its later revisions; ADR-0010 to ADR-0015 are their durable records.
 
 ## Problem Statement
 
@@ -71,6 +71,9 @@ in Testing Decisions is how it is measured.
 - **One sweep.** One hourly catalog autopilot sweeps the four reviewer-handled review columns,
   comments the evidence and moves the ticket to `blocked`. `task.failed` stays per-issue; the
   per-issue 90m timer is deleted.
+- **One mergeable rule.** Every linked PR carries one continuous conflicts condition, armed by
+  the Reviewer at each review; the seat that owns the work column resolves it, judgement goes to
+  the human lane, and a fix voids the PASS so the reviewed head is the merged head.
 - **One renderer.** The guide's column table and graph are generated from the workflow file,
   and the suite fails when the document and the workflow differ.
 - **One entry rule.** Durable work starts from a ticket or an epic; chat may produce throwaway
@@ -117,6 +120,8 @@ in Testing Decisions is how it is measured.
 31. As the release agent, I want a lane and a contract in the workflow, so the release procedure has one home and the release ticket carries only its instance.
 32. As the approval owner, I want an approved epic to leave `todo` for `epic_progress`, so a slice in flight is not indistinguishable from one that is queued.
 33. As the approval owner, I want the grilling-to-factory handoff to be one explicit question, so an epic and a slice never start from a chat as a side effect.
+34. As the approval owner, I want a conflicting delivery PR fixed without me watching it, so `main` never sits unmergeable because nobody noticed.
+35. As the Reviewer, I want a conflict fix re-reviewed at the delta, so a void PASS is restored without repeating the whole review.
 
 ## Implementation Decisions
 
@@ -183,6 +188,12 @@ The epic also has a state. It leaves `todo` when the slice starts: the Planner m
 `epic_progress` in the run that promotes the first delivery stage, and to `done` on acceptance.
 `epic_progress` has no handler, so the move starts no run and cannot duplicate the barrier wake
 that already fires when a stage closes.
+
+The promotion run also arms the barrier that holds its stage: one
+`--until-children-done --stage N` condition on the epic, replaced rather than duplicated on the
+next promotion, so exactly one live barrier sits on the frontier stage. A stage that closes and
+wakes nobody is a defect of the run, not of the graph; the release reads the invariant back as
+one live barrier on the frontier.
 
 **D4 — The spec approval is always the human merge.** `spec_review` keeps one exit: PASS leaves
 the pull request open and moves the spec child to `awaiting_merge`; the human merge approves the
@@ -319,7 +330,8 @@ the sweep and the `manual-merge` → `has-human-release` and `human-assigned` �
 because the new lanes are a state and a seat, not a gate; a ticket already in `in_review` or
 `human_review` at the sync is gated by the exit rule at its next PASS, and a ticket already past
 review is completed by the human merge. It reads back fifteen columns, both labels, the sweep
-autopilot and its hourly trigger, the release seat's handler and the rendered guide. The epic is
+autopilot and its hourly trigger, the release seat's handler, the rendered guide and exactly one
+live barrier on the epic's frontier stage. The epic is
 accepted only after the release squash is on `main` at the merged sha and the readback agrees;
 the release child's `done` is branch-scoped until then.
 
@@ -347,9 +359,10 @@ slice's stage read.
 
 **D18 — Acceptance.** The epic closes when the inventory below has one home per rule, the
 offline matrix pins the fifteen columns and four review exits, the templates and the rendered
-guide are present, the sweep and `task.failed` are the only review-time guards, the drill is
-green on the epic, and the live workspace reads back the graph, both labels, the autopilot, the
-release seat and the guide.
+guide are present, the sweep and `task.failed` are the only review-time guards, the mergeable
+rule has fired once in the probe, the drill is green on the epic, and the live workspace reads
+back the graph, both labels, the autopilot, the release seat, the guide and one barrier on the
+frontier stage.
 
 **D19 — The factory start is an explicit gate.** Grilling creates nothing on its own: it may
 write a throwaway artifact, but the epic, spec and tickets come from the handoff, not from the
@@ -371,6 +384,32 @@ No platform construct can require the answer before an issue exists or a run sta
 one prose copy in `skills/grilling`, the seat that reads it; the Planner contract names the route
 and does not restate it. The mechanical half is the freeze: the merge approves the set, and the
 stage barrier re-evaluates whenever the child set changes.
+
+**D20 — A delivery PR is kept mergeable by one condition.** Every ticket whose PR is linked
+carries one continuous `--until-pr conflicts` condition (GitHub only), registered with
+`multica issue wakeup create` and `--mode continuous`; the command replaces the configuration, so
+re-arming does not duplicate it. The Reviewer arms it at every review — the only seat that runs
+in every lane between PR open and merge — and it survives the PASS into `awaiting_merge`. It is
+an agent condition: the Planner for a spec PR, the Implementer for a delivery PR, including one
+the human authored. The member is not a wakeup target, so the Implementer takes the mechanical
+part and the judgement part reaches the human by the status move.
+
+When it fires, that seat merges the base, resolves inside `## Touch`, reruns the check that
+covers the diff and pushes. The split is judgement, not lane: a base merge, a lockfile or
+disjoint hunks is mechanical and the Implementer resolves it; when both sides changed the
+meaning of the same lines, no agent resolves — it comments the conflict and moves the ticket to
+`human_progress`, on every lane, and the human resolves and moves it to the review column.
+Behind-but-clean is not a conflict and the condition never fires on it: the merge still works,
+and branch protection that requires an up-to-date head is one `gh pr update-branch`, left
+manual.
+
+A push changes the head, so it voids the PASS. The resolver moves the ticket to the review
+column that PASSed it — every review column's `next` is `awaiting_merge`, so the timeline names
+it — and the Reviewer re-reviews the delta `H...H'` plus the delivery facts at `H'`; a fresh PASS
+returns it to `awaiting_merge`, and a blocking finding sends it back to the work column. The
+resolution contract is one paragraph in shared `## Delivery`; the arming, the void PASS and the
+delta re-review are one copy in `code-review`. No column instruction restates either, and no new
+noun is introduced: `guard` stays the retirement refusal.
 
 ## Testing Decisions
 
@@ -401,6 +440,18 @@ at that seam, and the route table extends rather than duplicates it.
   and its prompt; the prompt names only the four reviewer-handled columns; the sync fixture
   creates it and reads back exactly one enabled hourly trigger; a drift fixture refuses a second
   trigger, matching the existing control's behaviour.
+- **The mergeable rule is pinned by copy, then proved once.** A scan finds the conflicts
+  condition once, in `skills/code-review/`, and the resolution contract once, in shared
+  `## Delivery`; no column instruction carries either. The platform mechanic — the condition
+  fires on a conflicting head, the fix voids the PASS, the re-review covers the delta — cannot be
+  proved offline: one live probe at the new ticket's stage links a PR in a disposable repository,
+  pushes a conflicting base, watches the condition fire, resolves, bounces and re-reviews, and
+  cleans up. It is not a release gate; the first real conflict after release is the live
+  acceptance.
+- **The barrier is a run fact.** The suite pins the promotion step in the Planner contract; the
+  live check is the release readback of exactly one live barrier on the frontier stage. A
+  promoted stage with no barrier is a review finding on the promotion run, not a documentation
+  gap.
 - **The deletions and the renames are complete.** The resolver fails on a declared document with
   no file, so the `documents` deletion, the role copies and the hand-written blocks each fail
   loudly if half done. The two label renames are pinned by the migration resolver: a ledger event
@@ -434,6 +485,7 @@ is the defect the review looks for.
 | release procedure | `roles/release.md`, read by the release seat |
 | when the factory starts | the handoff answer in the grilling skill, then the spec child's move to `spec_progress` |
 | order inside an epic | the child's stage |
+| the next stage's barrier | the promotion run, per D3 |
 | dependency between epics | `--until-issue` |
 | parent | `--parent`, `issue children` |
 | pull-request base | the ticket's `Branch:` line |
@@ -442,6 +494,8 @@ is the defect the review looks for.
 | delivery handoff | the linked pull request; checked by `code-review` |
 | verdict and finding shape | shared `## Handoffs` |
 | stale review | the `stale-sweep` autopilot |
+| keeping a linked PR mergeable | the continuous `--until-pr conflicts` condition, armed by `code-review` |
+| conflict resolution | shared `## Delivery`; judgement lands on the human lane |
 | failed run | the per-issue `task.failed` wake |
 | cancelled epic | `--until-status cancelled` |
 | column graph and its presentation | the workflow file; the guide is rendered from it |
@@ -475,13 +529,20 @@ is the defect the review looks for.
    ticket, the in-flight move and the epic state, each with its `issue timeline` evidence, and
    each drill epic shows one Planner wake per closing stage.
 9. The release squash is on `main` at the merged sha, and the live workspace reads back the
-   fifteen columns, both labels, the autopilot, the release seat's handler and the rendered
-   guide.
+   fifteen columns, both labels, the autopilot, the release seat's handler, the rendered guide
+   and exactly one live barrier on the epic's frontier stage.
 10. No product repository gained a CI check, and no live identifier, owner or consumer URL
     entered the catalog.
 11. The grilling skill carries the handoff packet and the answer-before-spec-run rule once; the
     Planner contract names the route; a Planner run with an empty frontier starts no spec run
     and writes no slice before the answer.
+12. The conflicts condition is declared once in `code-review` and the resolution contract once in
+    shared; a conflicting head wakes the seat that owns the work column, a fix voids the PASS,
+    the re-review covers `H...H'`, and a judgement conflict lands in `human_progress` on every
+    lane.
+13. The live probe has fired the condition once in a disposable repository — a linked PR, a
+    conflicting base push, a resolution, a void PASS and a clean re-review — and its evidence is
+    on the stage-5 ticket. The first real conflict after release is the live acceptance.
 
 ## Out of Scope
 
@@ -496,8 +557,10 @@ is the defect the review looks for.
 
 ## Proposed breakdown
 
-Published in `backlog` by the spec run, under the epic. Serial tickets have distinct stages;
-stage 2 is the only parallel stage, because the drill and the contracts have disjoint surfaces.
+Published in `backlog` by the spec run, under the epic, and revised on the same head when the
+conflict rule landed: stage 5 is new and the renderer and the release moved down one. Serial
+tickets have distinct stages; stage 2 is the only parallel stage, because the drill and the
+contracts have disjoint surfaces.
 
 | Stage | Ticket | Assignee | Blocked by | Delivers |
 | --- | --- | --- | --- | --- |
@@ -506,8 +569,9 @@ stage 2 is the only parallel stage, because the drill and the contracts have dis
 | 2 | One delivery and handoff contract in shared | Implementer | Stage 1 | The delivery rules and the three-heading handoff live once in shared; the grilling handoff gate lands once in the grilling skill with the Planner contract naming the route; the role copies, the undeployed handoff document and its declaration are deleted; `code-review` carries the checking method and the exit rule; the ticket template drops parent and blockers; the caps match. |
 | 3 | Declare the gate-free graph and the review exit rule | Implementer | Stage 2 | The three new columns, the four review exits, the one exit rule in `code-review`, the release seat, the epic state and the two label renames with their ledger events; the Planner's four-row mapping; the offline matrix pins all of it. |
 | 4 | Replace the per-issue timer with one hourly stale sweep | Implementer | Stage 3 | The `stale-sweep` autopilot with its hourly trigger, prompt and two-hour threshold over the four reviewer-handled columns; `human_progress` and `awaiting_merge` are never swept; lane-aware triage; `task.failed` stays; the 90m registration is deleted from the contract and the instructions. |
-| 5 | Render the Factory guide from the workflow | Implementer | Stages 3, 4 | The column table and graph generated between markers from the workflow file, the promotion table and the exit rule updated for the release lanes, and the test that fails when a hand edit drifts. |
-| 6 | Release `spec/MIR-227` to `main` | Release | Stages 2–5 | The release PR, the applied catalog, the readback of fifteen columns, both labels, the release seat and the sweep, and the evidence the Planner accepts the epic on. |
+| 5 | Keep delivery PRs mergeable | Implementer | Stage 4 | The continuous conflicts condition armed at every review; the mechanical/judgement split and the `human_progress` landing in shared `## Delivery`; the void PASS, the review-column bounce and the delta re-review in `code-review`; the human-lane route in `human_progress`; the offline pin and one live probe in a disposable repository. |
+| 6 | Render the Factory guide from the workflow | Implementer | Stages 3, 4 | The column table and graph generated between markers from the workflow file, the promotion table and the exit rule updated for the release lanes, and the test that fails when a hand edit drifts. |
+| 7 | Release `spec/MIR-227` to `main` | Release | Stages 2–6 | The release PR, the applied catalog, the readback of fifteen columns, both labels, the release seat, the sweep and the one live barrier, and the evidence the Planner accepts the epic on. |
 
 ## Further Notes
 
@@ -552,6 +616,15 @@ stage 2 is the only parallel stage, because the drill and the contracts have dis
   without a move. Human-handled columns are not swept at all: a merge the owner has not reached
   is not a stalled step, and no agent should un-gate it by moving it to `blocked`. One threshold
   means one rule for the reviewer and the autopilot, not two.
+- **Why a conflict is a condition and not a bot.** The platform already stores the fact — a
+  linked PR's head has conflicts — so the rule is one continuous condition on the ticket, not a
+  scan of every open PR. A scan would need a second autopilot, would re-derive the link every
+  hour and would duplicate the sweep's shape; the condition costs one registration per review and
+  fires when the fact changes.
+- **Why a void PASS goes back through review.** The PASS is head-scoped, so a fix at
+  `awaiting_merge` is a new head and merging it would put an unreviewed commit into `main` under
+  a PASS that never saw it. The review column is the only carrier that re-reads the delivery
+  facts at the new head; the delta bounds the re-review to what the fix changed.
 - **Why the drill is before the catalog edits.** A wrong assumption about a member handler or
   the barrier wake is cheap to fix in a throwaway project and expensive to discover after a
   live sync. The drill copies the graph from this spec, so it tests the design, not the file.
