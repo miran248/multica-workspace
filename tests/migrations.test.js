@@ -68,6 +68,27 @@ test('two chained renames apply in order and keep the object identity', t => {
   assert.equal(f.state.labels.find(label => label.name === 'agent-ready').id, id(820));
 });
 
+test('the two epic-label renames keep the live identity and their issues', t => {
+  const f = fixture(t);
+  f.state.labels.push({ id: id(830), name: 'human-assigned', color: '#d946ef', description: 'old', resource_type: 'issue', usage_count: 3 });
+  f.state.labels.push({ id: id(831), name: 'manual-merge', color: '#f97316', description: 'old', resource_type: 'issue', usage_count: 2 });
+  writeLedger(f, [
+    { kind: 'rename', entity: 'label', from: 'human-assigned', to: 'has-human-implementer' },
+    { kind: 'rename', entity: 'label', from: 'manual-merge', to: 'has-human-release' },
+  ]);
+  const result = sync({ ...options(f), repository: f.binding.repository });
+  assert.equal(result.result.status, 'verified');
+  const implements_ = f.state.labels.find(label => label.id === id(830));
+  const releases = f.state.labels.find(label => label.id === id(831));
+  assert.equal(implements_.name, 'has-human-implementer');
+  assert.equal(implements_.usage_count, 3);
+  assert.equal(releases.name, 'has-human-release');
+  assert.equal(releases.usage_count, 2);
+  assert.ok(!f.state.labels.some(label => ['human-assigned', 'manual-merge'].includes(label.name)));
+  assert.equal(f.state.labels.length, 14);
+  assert.deepEqual(result.result.migrations, ['human-assigned→has-human-implementer', 'manual-merge→has-human-release']);
+});
+
 test('purging a consumed rename leaves the catalog as the only declaration', t => {
   const f = fixture(t);
   const path = join(f.root, 'templates/default.json'), catalog = JSON.parse(readFileSync(path, 'utf8'));

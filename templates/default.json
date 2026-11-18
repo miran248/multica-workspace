@@ -71,17 +71,17 @@
       "resource_type": "issue",
       "triage": true
     },
-    "human-assigned": {
+    "has-human-implementer": {
       "color": "#d946ef",
-      "description": "Epic flag: every ticket is assigned to the human.",
-      "name": "human-assigned",
+      "description": "Epic flag: the human implements every delivery ticket.",
+      "name": "has-human-implementer",
       "resource_type": "issue",
       "triage": false
     },
-    "manual-merge": {
+    "has-human-release": {
       "color": "#f97316",
-      "description": "Epic flag: the human merges after review.",
-      "name": "manual-merge",
+      "description": "Epic flag: the human merges every PR into main after review.",
+      "name": "has-human-release",
       "resource_type": "issue",
       "triage": false
     },

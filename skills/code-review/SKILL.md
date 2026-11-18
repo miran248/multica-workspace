@@ -24,6 +24,23 @@ Every review also enforces the shared delivery contract, as five checks:
 
 A breach is a blocking finding on the Standards axis.
 
+## The exit rule
+
+Apply at every PASS, after the verdict and before the move or merge. Read the base with
+`gh pr view <pr> --json baseRefName`; read the epic's labels with
+`multica issue get <parent> --output json`. Do not rely on a remembered decision.
+
+- A spec PR — one reviewed at `spec_review` — always moves to `awaiting_merge`: the human merge
+  is the approval, in every mode.
+- A PR whose base is `spec/<epic>` is merged at the reviewed head.
+- A PR whose base is `main` and whose epic carries `has-human-release` moves to
+  `awaiting_merge`.
+- A PR whose base is `main` and whose epic carries no `has-human-release` is merged at the
+  reviewed head.
+
+A merge completes the ticket, so do not move it. Post the PASS at the exact head before the
+move or the merge. Never enable auto-merge.
+
 ## Process
 
 ### 1. Pin the fixed point

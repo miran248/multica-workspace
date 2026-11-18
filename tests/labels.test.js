@@ -22,8 +22,8 @@ test('the shared catalog declares seven triage labels and seven flags as workspa
   const names = {
     bug: 'bug',
     enhancement: 'enhancement',
-    'human-assigned': 'human-assigned',
-    'manual-merge': 'manual-merge',
+    'has-human-implementer': 'has-human-implementer',
+    'has-human-release': 'has-human-release',
     'needs-info': 'needs-info',
     'needs-triage': 'needs-triage',
     'ready-for-agent': 'ready-for-agent',
@@ -46,6 +46,8 @@ test('the shared catalog declares seven triage labels and seven flags as workspa
   }
   const liveNames = Object.values(labels).map(label => label.name);
   assert.equal(new Set(liveNames).size, liveNames.length);
+  assert.ok(!Object.keys(labels).includes('production'), 'a production label is declared');
+  for (const old of ['human-assigned', 'manual-merge']) assert.ok(!liveNames.includes(old), old);
 });
 
 test('every agent instruction carries the canonical-role-to-label mapping', t => {

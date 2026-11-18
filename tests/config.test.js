@@ -23,8 +23,11 @@ test('the shared contract reaches every role and the linked PR owns the handoff'
     assert.doesNotMatch(text, /[Aa]rm auto-merge/, role);
   }
   assert.match(render('reviewer', f.binding, f.root), /a moved head or a moved base invalidates the verdict/);
-  assert.match(render('planner', f.binding, f.root), /grilling to acceptance/);
+  assert.match(render('reviewer', f.binding, f.root), /exit rule/);
+  assert.doesNotMatch(render('reviewer', f.binding, f.root), /awaiting_merge/);
+  assert.match(render('planner', f.binding, f.root), /epic to acceptance/);
   assert.match(render('planner', f.binding, f.root), /move the stage-1 child to `spec_progress`/);
+  assert.match(render('planner', f.binding, f.root), /\| any \| spec child \| `spec_progress` \|/);
   assert.match(render('implementer', f.binding, f.root), /reviewable PR/);
   for (const role of ROLES) assert.doesNotMatch(readFileSync(join(ROOT, `roles/${role}.md`), 'utf8'), /Coordinator|squad/, role);
   assert.deepEqual(Object.keys(resolved.shared.workflows), ['factory']);
