@@ -182,6 +182,22 @@ test('the exit rule lives once and the promotion table lives once', () => {
   assert.match(read('skills/code-review/SKILL.md'), /has-human-release/);
 });
 
+test('no skill or glossary carries a gate twin or the deleted promotion lanes', () => {
+  const tickets = read('skills/to-tickets/SKILL.md');
+  assert.match(tickets, /four-row mapping in `roles\/planner\.md`/);
+  assert.doesNotMatch(tickets, /_gate|gate lane/);
+  assert.doesNotMatch(tickets, /`in_progress` for agent work/);
+  assert.doesNotMatch(tickets, /merge the current `main` in, resolve, run the full suite/);
+  assert.match(tickets, /release procedure lives once in `roles\/release\.md`/);
+  const glossary = read('GLOSSARY.md');
+  assert.doesNotMatch(glossary, /_gate|gate lane/);
+  assert.doesNotMatch(glossary, /seven reviewer-handled|column count/);
+  for (const term of ['release_progress', 'release_review', 'awaiting_merge', 'exit rule'])
+    assert.ok(glossary.includes(term), `GLOSSARY.md does not describe ${term}`);
+  assert.match(glossary, /final-stage child is the\s+release ticket/);
+  assert.match(glossary, /has-human-release/);
+});
+
 test('the linked PR is the handoff and the move or merge comes last', () => {
   for (const key of WORK) {
     assert.match(steps.get(key).instructions, /linked (spec )?PR is the handoff/, `${key} does not hand off the PR`);
