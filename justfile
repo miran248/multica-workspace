@@ -9,6 +9,10 @@ setup:
 validate:
     node scripts/config.js
 
+# Render docs/factory.md's graph and column table from the workflow file.
+render-factory:
+    node scripts/render-factory.js
+
 test:
     node --test
 
