@@ -428,6 +428,64 @@ test('the delivery contract, the base and the label read each have one home', ()
   assert.notDeepEqual(deliveryViolations(labelInColumn), []);
 });
 
+// D20: the conflicts condition is armed once, in code-review, and the mechanical/judgement
+// split is one paragraph in shared `## Delivery`. The platform mechanic is proved by one live
+// probe, never by this suite.
+const CONFLICT_HOMES = {
+  '--until-pr conflicts': 'skills/code-review/SKILL.md',
+  'no agent resolves': 'shared/instructions.md',
+  'disjoint hunks': 'shared/instructions.md',
+  'Behind-but-clean': 'shared/instructions.md',
+};
+
+function mergeableViolations({ shared, codeReview, catalog, columns }) {
+  const violations = [];
+  const review = codeReview.replace(/\s+/g, ' ');
+  const delivery = /^## Delivery\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
+  if (!/[Aa]t every review/.test(review)) violations.push('code-review: the condition is not armed at every review');
+  if (!review.includes('multica issue wakeup create <ticket> --until-pr conflicts --mode continuous --agent-id <seat>'))
+    violations.push('code-review: no arming command');
+  if (!/replaces the configuration/.test(review)) violations.push('code-review: re-arming does not replace');
+  if (!/survives the PASS into `awaiting_merge`/.test(review)) violations.push('code-review: no surviving condition');
+  for (const seat of ['Planner for a spec PR', 'Implementer for a delivery PR', 'Release seat for a release PR'])
+    if (!review.includes(seat)) violations.push(`code-review: no ${seat}`);
+  for (const phrase of ['A push after a PASS', "delta `H...H'`", 'fresh PASS', 'review column that PASSed it'])
+    if (!review.includes(phrase)) violations.push(`code-review: no ${phrase}`);
+  for (const phrase of ['merge the base', 'resolve inside `## Touch`', "rerun the diff's check", 'no agent resolves', 'disjoint hunks', 'Behind-but-clean', 'human_progress', 'human_review', 'release_review', 'spec_review'])
+    if (!delivery.includes(phrase)) violations.push(`shared Delivery: no ${phrase}`);
+  for (const [path, text] of Object.entries(catalog))
+    for (const [phrase, home] of Object.entries(CONFLICT_HOMES))
+      if (path !== home && text.includes(phrase)) violations.push(`${path}: second copy of ${phrase}`);
+  for (const [key, text] of Object.entries(columns))
+    for (const phrase of Object.keys(CONFLICT_HOMES))
+      if (text.includes(phrase)) violations.push(`${key}: column restates ${phrase}`);
+  return violations;
+}
+
+test('the conflicts condition and the resolution contract each have one home', () => {
+  const catalog = ['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
+    readdirSync(join(ROOT, directory), { recursive: true })
+      .filter(name => /\.(md|json)$/.test(name))
+      .map(name => `${directory}/${name}`));
+  const contract = {
+    shared: read('shared/instructions.md'),
+    codeReview: read('skills/code-review/SKILL.md'),
+    catalog: Object.fromEntries(catalog.map(path => [path, read(path)])),
+    columns: Object.fromEntries(workflow.steps.map(step => [step.status_key, step.instructions ?? ''])),
+  };
+  assert.deepEqual(mergeableViolations(contract), []);
+  // A column that arms the condition or restates the split is the second copy D20 removes.
+  const armedColumn = { ...contract, columns: { ...contract.columns, in_review: `${contract.columns.in_review} --until-pr conflicts` } };
+  assert.notDeepEqual(mergeableViolations(armedColumn), []);
+  const splitInRole = { ...contract, catalog: { ...contract.catalog, 'roles/implementer.md': `${contract.catalog['roles/implementer.md']} no agent resolves` } };
+  assert.notDeepEqual(mergeableViolations(splitInRole), []);
+  // Removing the one arming copy, or the delta re-review, breaks the contract.
+  const unarmed = { ...contract, codeReview: contract.codeReview.replace('--until-pr conflicts', '--until-pr checks') };
+  assert.notDeepEqual(mergeableViolations(unarmed), []);
+  const fullReReview = { ...contract, codeReview: contract.codeReview.replace('delta `H...H\'`', 'full diff') };
+  assert.notDeepEqual(mergeableViolations(fullReReview), []);
+});
+
 test('approval is the merge, not an approval comment', () => {
   assert.doesNotMatch(guide, /approval comment/);
   assert.doesNotMatch(guide, /approves the spec and the ticket breakdown/);
