@@ -7,7 +7,7 @@ Accepted 2026-11-17. Approval is the merge of this spec's pull request into `spe
 which completes MIR-228 and approves the published set; MIR-227 is the epic — it stays `todo`
 until the spec merge, `epic_progress` until the release lands, and the Planner accepts it on
 evidence. The decisions below are the answers given in the grilling session that opened the
-epic and its later revisions; ADR-0010 to ADR-0015 are their durable records.
+epic and its later revisions; ADR-0010 to ADR-0016 are their durable records.
 
 ## Problem Statement
 
@@ -74,6 +74,9 @@ in Testing Decisions is how it is measured.
 - **One mergeable rule.** Every linked PR carries one continuous conflicts condition, armed by
   the Reviewer at each review; the seat that owns the work column resolves it, judgement goes to
   the human lane, and a fix voids the PASS so the reviewed head is the merged head.
+- **One topology.** Every grilled slice is an epic on `spec/<epic>` with a final-stage release
+  child; the branchless `direct-to-main` shape is deleted, so the skills, the ticket template and
+  the guide carry one shape.
 - **One renderer.** The guide's column table and graph are generated from the workflow file,
   and the suite fails when the document and the workflow differ.
 - **One entry rule.** Durable work starts from a ticket or an epic; chat may produce throwaway
@@ -122,6 +125,7 @@ in Testing Decisions is how it is measured.
 33. As the approval owner, I want the grilling-to-factory handoff to be one explicit question, so an epic and a slice never start from a chat as a side effect.
 34. As the approval owner, I want a conflicting delivery PR fixed without me watching it, so `main` never sits unmergeable because nobody noticed.
 35. As the Reviewer, I want a conflict fix re-reviewed at the delta, so a void PASS is restored without repeating the whole review.
+36. As the approval owner, I want every grilled slice to take one topology, so I never have to remember whether this spec has a branch or a release child.
 
 ## Implementation Decisions
 
@@ -171,8 +175,8 @@ review that routes a `main` PR always evaluates the base and the label again.
 
 The ticket's kind is a stage read, never a body marker: on a published slice the release
 ticket is the epic's final-stage child — published last, and the only child in its highest
-stage — and every other child is a delivery ticket. A `direct-to-main` spec publishes no
-release child, so every child it publishes is delivery. A drill epic is not a published slice:
+stage — and every other child is a delivery ticket. A published slice always has that release
+child (D21), so a missing release is a defect, not a kind. A drill epic is not a published slice:
 its never-closing diagnostic stage sits above the release on purpose (D17), so the drill's own
 table assigns each drill child's kind.
 
@@ -181,8 +185,8 @@ base is `main`; the spec approval is the human merge in every mode (D4). A ticke
 `spec/<epic>` is Reviewer-merged in every mode, because the human already approved the set and
 the branch is scratch. The release child belongs to the release seat in every mode:
 `has-human-implementer` changes who implements delivery, not who releases. Because the label is
-read at each PASS, a label added after promotion applies at the next review; the epic's mode is
-still set before the spec merge when the whole slice is to share it.
+read at each PASS, a label added after promotion applies at the next review; the kickoff applies
+it before the spec run (D19), so the whole slice shares it.
 
 The epic also has a state. It leaves `todo` when the slice starts: the Planner moves it to
 `epic_progress` in the run that promotes the first delivery stage, and to `done` on acceptance.
@@ -219,10 +223,10 @@ instructions, the guide and the tests. The drill creates its own copies of both 
 deletes them before the release, so the ledger never sees two live labels with one meaning.
 
 **D6 — Two templates and no repeated state.** A ticket body is a `Branch:` line followed by
-`## What`, `## Acceptance` and `## Touch`; the line is present only for an integration spec and
-its absence means `main`. The delivery handoff is the linked pull request, not a comment: the
-platform already carries the link, the head, the checks and the merge state, so the body is
-optional and an empty body is not a finding. A verdict, finding or sweep note is one comment —
+`## What`, `## Acceptance` and `## Touch`; every spec child carries it, and only a regular
+ticket omits it, meaning `main` (D21). The delivery handoff is the linked pull request, not a
+comment: the platform already carries the link, the head, the checks and the merge state, so
+the body is optional and an empty body is not a finding. A verdict, finding or sweep note is one comment —
 `## What`, `## Evidence` and `## Next` — and a finding stays one `Evidence` bullet in the form
 `P2 — file:line: trigger; consequence; fix`. The parent is native (`--parent`,
 `issue children`) and leaves the body. `Blocked by` leaves the body too: an intra-epic
@@ -370,10 +374,14 @@ conversation. If the user asks for the epic before the graph is settled, the Pla
 the epic in `todo` and its stage-1 spec child inert in `backlog` once the destination is named —
 `todo` dispatches nobody, so the container is not the start, and the epic stays `todo` until the
 slice starts. No spec run begins and no slice is written until the user answers one
-handoff packet: the destination, the shape (a single ticket, an epic + spec child, or a wayfinder
-map when the frontier is not actually empty), the mode labels, and the proposed slice outline.
-The answer is the yes that starts the factory: the Planner then moves the spec child to
-`spec_progress` or, in the chat, begins the spec run. The spec run publishes the whole slice in
+handoff packet: the destination, the proposed slice outline, and — last — the labels question,
+which of `has-human-implementer` and `has-human-release` to apply to the epic before the kickoff,
+or neither. The shape is not a field: every grilling produces an epic with its stage-1 spec child
+(D21); a single ticket is the smallest epic, and a frontier that is not actually empty is a
+wayfinder map, not a factory shape, so no epic is opened for it.
+The answer is the yes that starts the factory: the Planner applies the chosen labels to the epic,
+then moves the spec child to `spec_progress` or, in the chat, begins the spec run — the mode is on
+the epic before the spec PR exists. The spec run publishes the whole slice in
 `backlog` and opens the PR; the set is frozen when the PR opens, and a later addition is a spec
 revision on the same head, never an incremental ticket on an approved set. An epic opened before
 the destination is settled is rejected: it is inert, and the durable container for unresolved
@@ -411,6 +419,17 @@ returns it to `awaiting_merge`, and a blocking finding sends it back to the work
 resolution contract is one paragraph in shared `## Delivery`; the arming, the void PASS and the
 delta re-review are one copy in `code-review`. No column instruction restates either, and no new
 noun is introduced: `guard` stays the retirement refusal.
+
+**D21 — One slice topology.** Every grilling produces a full epic: a stage-1 spec child, an
+integration branch `spec/<epic>`, staged delivery children, and a final-stage release child. The
+`direct-to-main` escape hatch is deleted: no spec records `integration: none`, no spec PR targets
+`main`, no published slice lacks a release child, and no ticket PR carries the per-ticket CI that
+path needed. The single-ticket case becomes the smallest epic — one delivery child and the
+release — and a small task that never grills stays a regular ticket (D9), the only PR into
+`main` with no slice behind it. The `Branch:` line is therefore present on every spec child and
+absent only on a regular ticket. One topology means the skills, the Planner's fork, the ticket
+template, the release arithmetic and the guide carry one shape instead of two; the cost is one
+extra merge for a one-line slice, which the small-task path keeps off a one-line change.
 
 ## Testing Decisions
 
@@ -453,6 +472,14 @@ at that seam, and the route table extends rather than duplicates it.
   live check is the release readback of exactly one live barrier on the frontier stage. A
   promoted stage with no barrier is a review finding on the promotion run, not a documentation
   gap.
+- **One topology is pinned by absence.** No catalog file, skill, guide or test names
+  `direct-to-main` or records `integration: none`; `to-spec` always forks and records
+  `integration: spec/<epic>`, `to-tickets` always writes `Branch: spec/<epic>` and publishes a
+  final-stage release child, and the Planner's fork names no exception. A reintroduction fails
+  the scan.
+- **The labels question is last, and the labels precede the move.** The grilling skill ends its
+  packet on the labels question and offers no shape; the Planner contract names applying the
+  answer before the `spec_progress` move and does not restate the packet.
 - **The deletions and the renames are complete.** The resolver fails on a declared document with
   no file, so the `documents` deletion, the role copies and the hand-written blocks each fail
   loudly if half done. The two label renames are pinned by the migration resolver: a ledger event
@@ -478,7 +505,8 @@ is the defect the review looks for.
 | Rule | One home |
 | --- | --- |
 | who implements a delivery | epic labels, resolved by the Planner at promotion |
-| ticket kind (delivery or release) | a published slice's stage: its final-stage child is the release; a `direct-to-main` spec has none; a drill's table names its kinds |
+| ticket kind (delivery or release) | a published slice's stage: its final-stage child is the release, always; a drill's table names its kinds |
+| the slice topology | one: `spec/<epic>` and a final-stage release child, recorded in the spec's `integration:` line |
 | who implements a release | the release seat's lane (`release_progress`) |
 | who merges a delivery PR | the exit rule in `code-review`, read at the PASS from the PR's base and the epic's label |
 | who merges the spec PR | `spec_review` to `awaiting_merge` |
@@ -544,12 +572,20 @@ is the defect the review looks for.
 13. The live probe has fired the condition once in a disposable repository — a linked PR, a
     conflicting base push, a resolution, a void PASS and a clean re-review — and its evidence is
     on the stage-5 ticket. The first real conflict after release is the live acceptance.
+14. No catalog file, skill, guide or test names `direct-to-main` or records `integration: none`;
+    every spec child carries `Branch: spec/<epic>`, every published slice ends in a final-stage
+    release child, and the spec PR always targets `spec/<epic>`.
+15. The grilling packet ends on the labels question and offers no shape; the Planner applies the
+    chosen labels to the epic before the kickoff move, and no column instruction reads a mode
+    label from a ticket body.
 
 ## Out of Scope
 
 - **Product-repository CI.** No check is added to any consumer repository; the delivery rules stay Reviewer-enforced (D2). The release topology's spec-level CI is unchanged.
 - **Platform constructs the platform cannot read.** Custom properties, issue metadata, saved views and MCP servers are not used to carry any rule here; the grilling rejected the codegraph MCP on cost and the rest as decoration. The mode stays a label, the base stays a body line, and the dependency stays a stage or a condition.
-- **The `direct-to-main` topology itself.** Its escape hatch, its single-ticket default and its per-ticket CI are unchanged; this spec only changes who merges its PRs, through the exit rule.
+- **Historical branchless specs.** The escape hatch is deleted (D21). No spec in this catalog
+  records `integration: none`, so nothing is migrated; a workspace that has one keeps its history
+  and gets the one topology for the next slice.
 - **Production promotion approval.** The `production:` body phrase in `roles/release.md` and its deploy-time second approval are unchanged; the release lane this spec adds is the PR into `main`, not the deployment. A label-selected production approval, if wanted, is a separate spec with its own carrier.
 - **The sandbox project and the `msbx` epic.** MIR-178's work is unaffected: there is no in-flight move, and a ticket in a review column is gated by the exit rule at its next PASS.
 - **Status rollback.** No status is deleted or renamed; the change is additive.
@@ -558,10 +594,10 @@ is the defect the review looks for.
 
 ## Proposed breakdown
 
-Published in `backlog` by the spec run, under the epic, and revised on the same head when the
-conflict rule landed: stage 5 is new and the renderer and the release moved down one. Serial
-tickets have distinct stages; stage 2 is the only parallel stage, because the drill and the
-contracts have disjoint surfaces.
+Published in `backlog` by the spec run, under the epic, and revised twice on the same head: stage
+5 added the conflict rule and stage 6 the one topology, and the renderer and the release moved
+down with each. Serial tickets have distinct stages; stage 2 is the only parallel stage, because
+the drill and the contracts have disjoint surfaces.
 
 | Stage | Ticket | Assignee | Blocked by | Delivers |
 | --- | --- | --- | --- | --- |
@@ -571,8 +607,9 @@ contracts have disjoint surfaces.
 | 3 | Declare the gate-free graph and the review exit rule | Implementer | Stage 2 | The three new columns, the four review exits, the one exit rule in `code-review`, the release seat, the epic state and the two label renames with their ledger events; the Planner's four-row mapping; the offline matrix pins all of it. |
 | 4 | Replace the per-issue timer with one hourly stale sweep | Implementer | Stage 3 | The `stale-sweep` autopilot with its hourly trigger, prompt and two-hour threshold over the four reviewer-handled columns; `human_progress` and `awaiting_merge` are never swept; lane-aware triage; `task.failed` stays; the 90m registration is deleted from the contract and the instructions. |
 | 5 | Keep delivery PRs mergeable | Implementer | Stage 4 | The continuous conflicts condition armed at every review; the mechanical/judgement split and the `human_progress` landing in shared `## Delivery`; the void PASS, the review-column bounce and the delta re-review in `code-review`; the human-lane route in `human_progress`; the offline pin and one live probe in a disposable repository. |
-| 6 | Render the Factory guide from the workflow | Implementer | Stages 3, 4 | The column table and graph generated between markers from the workflow file, the promotion table and the exit rule updated for the release lanes, and the test that fails when a hand edit drifts. |
-| 7 | Release `spec/MIR-227` to `main` | Release | Stages 2–6 | The release PR, the applied catalog, the readback of fifteen columns, both labels, the release seat, the sweep and the one live barrier, and the evidence the Planner accepts the epic on. |
+| 6 | One slice topology: every grilling is a full epic | Implementer | Stage 5 | The `direct-to-main` escape hatch is deleted from to-spec, to-tickets, the Planner's fork, the spec_progress instruction, the guide, the glossary and the tests; every spec forks `spec/<epic>` and every published slice ends in a release child; the grilling packet fixes the shape and ends on the labels question, and the Planner applies the labels before the kickoff move. |
+| 7 | Render the Factory guide from the workflow | Implementer | Stages 3, 4, 6 | The column table and graph generated between markers from the workflow file, the promotion table and the exit rule updated for the release lanes, and the test that fails when a hand edit drifts. |
+| 8 | Release `spec/MIR-227` to `main` | Release | Stages 2–7 | The release PR, the applied catalog, the readback of fifteen columns, both labels, the release seat, the sweep and the one live barrier, and the evidence the Planner accepts the epic on. |
 
 ## Further Notes
 
@@ -626,6 +663,15 @@ contracts have disjoint surfaces.
   `awaiting_merge` is a new head and merging it would put an unreviewed commit into `main` under
   a PASS that never saw it. The review column is the only carrier that re-reads the delivery
   facts at the new head; the delta bounds the re-review to what the fix changed.
+- **Why the second topology is deleted.** `direct-to-main` bought one merge on a one-line slice
+  and cost a second shape in every place: the spec's `integration:` line, the Planner's fork,
+  every ticket template, the release arithmetic, the ticket-kind read and a per-ticket CI the
+  rest of the factory has no use for. A branch is cheap; remembering which branch this spec uses
+  is not, and the small-task path already keeps the ceremony off a one-line change.
+- **Why the labels are asked at the end.** They are read at the PASS, not at promotion, so a
+  mode set after the spec merge lands mid-slice. Asking at the kickoff is the last moment the
+  answer is cheap, and it is the point where the epic exists and the answer can be applied
+  before the run starts.
 - **Why the drill is before the catalog edits.** A wrong assumption about a member handler or
   the barrier wake is cheap to fix in a throwaway project and expensive to discover after a
   live sync. The drill copies the graph from this spec, so it tests the design, not the file.
