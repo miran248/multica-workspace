@@ -95,11 +95,13 @@ body is optional, and an empty body is not a finding. Nothing advances a ticket 
 the handler makes the next move. A member handler is assigned and runs nothing.
 
 **handoff gate** — the one question that ends grilling and starts the factory. The Planner
-presents the destination, the shape (a single ticket, an epic + stage-1 spec child, or a
-wayfinder map when the frontier is not empty), the mode labels and the proposed slice outline,
-then waits. The epic opens in `todo` with its stage-1 spec child inert in `backlog`; the answer
-is the yes that starts the spec run, and the slice freezes when the spec PR opens. One prose copy
-in `skills/grilling`; the Planner contract names the route.
+presents the destination, the proposed slice outline, and — last — the labels question: which of
+`has-human-implementer` and `has-human-release` to apply to the epic before the kickoff, or
+neither. Every grilling produces an epic, so there is no shape field: a single ticket is the
+smallest epic, and a non-empty frontier is a wayfinder map rather than a factory shape. The epic
+opens in `todo` with its stage-1 spec child inert in `backlog`; the answer is the yes that starts
+the spec run, and the slice freezes when the spec PR opens. One prose copy in `skills/grilling`;
+the Planner contract names the route.
 
 **factory mode** — the epic-level choice of who implements, encoded by the
 `has-human-implementer` label before the spec run. With neither label the epic is autonomous;
@@ -133,23 +135,21 @@ in-flight move, each with its `issue timeline` evidence; the copy, the epics and
 archived when it is green.
 
 **spec child** — the epic's stage-1 child that carries the spec pull request, including the
-proposed breakdown and the published slice. The PR's base is the spec's integration branch, or
-`main` on a `direct-to-main` spec. Its merge approves the spec, the breakdown and the set: the
+proposed breakdown and the published slice. The PR's base is the spec's integration branch.
+Its merge approves the spec, the breakdown and the set: the
 workspace PR rule completes the child, which wakes the Planner to promote the slice. The spec
 PR is never linked to the epic.
 
 **integration branch** — `spec/<epic-key>`, forked from `main` at the spec sha, and the base of
 the spec PR and of every delivery PR in that spec. It is scratch: unprotected, it deploys
-nothing, and the release merge deletes it. A `direct-to-main` spec has none and records
-`integration: none`.
+nothing, and the release merge deletes it.
 
 **ticket kind** — delivery or release, the Planner's second promotion input beside the epic's
-labels. It is a stage read, not a body marker: an integration spec's final-stage child is the
-release ticket and every other child is delivery; a `direct-to-main` spec publishes no release
-child; a drill epic's kinds are its own table's, since its diagnostic stage sits above the
-release.
+labels. It is a stage read, not a body marker: the final-stage child is the release ticket and
+every other child is delivery; a drill epic's kinds are its own table's, since its diagnostic
+stage sits above the release.
 
-**release child** — the final-stage child of an integration spec, handled by the release seat in
+**release child** — the final-stage child of a published slice, handled by the release seat in
 `release_progress` and reviewed at `release_review`. Its pull request is `spec/<epic>` → `main`
 and merges as one squash commit on `main`; its `done` is the only proof the spec is released. It
 is linked to itself only, never to the epic.

@@ -41,7 +41,10 @@ test('code-review names the five delivery checks', () => {
 
 test('grilling ends on one handoff packet and creates nothing first', () => {
   const grilling = read('skills/grilling/SKILL.md');
-  for (const field of ['Destination', 'Shape', 'Mode labels', 'Slice outline']) assert.ok(grilling.includes(`**${field}**`), field);
+  const fields = [...grilling.matchAll(/^- \*\*(.+?)\*\*/gm)].map(([, field]) => field);
+  assert.deepEqual(fields, ['Destination', 'Slice outline', 'Mode labels']);
+  assert.doesNotMatch(grilling, /\*\*Shape\*\*/);
+  assert.match(grilling, /The packet ends on the labels question/);
   assert.match(grilling, /no epic, spec or ticket is a side effect/);
   assert.match(grilling, /No spec run starts and no slice is written before the user answers/);
   assert.match(grilling, /The slice freezes when the spec PR opens/);

@@ -17,6 +17,9 @@ const WORK = ['spec_progress', 'in_progress', 'human_progress', 'release_progres
 const PRESENTED = ['epic_progress', 'spec_progress', 'spec_review', 'human_progress', 'release_progress', 'human_review', 'release_review', 'awaiting_merge'];
 const COLUMNS = ['backlog', 'todo', 'epic_progress', 'spec_progress', 'spec_review', 'in_progress', 'human_progress', 'release_progress', 'in_review', 'human_review', 'release_review', 'awaiting_merge', 'blocked', 'done', 'cancelled'];
 const LABELS = /has-human-release|has-human-implementer|manual-merge|human-assigned/;
+// The deleted branchless topology lives only in the record that supersedes it. Build the
+// needles from parts so this suite never reintroduces the strings it forbids.
+const DELETED_TOPOLOGY = [['direct', 'to', 'main'].join('-'), ['integration: ', 'none'].join('')];
 const guide = readFileSync(join(ROOT, 'docs/factory.md'), 'utf8');
 const read = path => readFileSync(join(ROOT, path), 'utf8');
 
@@ -310,8 +313,9 @@ test('the slice is published in the spec run, before stage 1 closes', () => {
   assert.match(adr, /One barrier wake per epic/);
 });
 
-// The spec run is the only place the topology is chosen and published. A main-only spec
-// run, or a delivery body with no base, is a contract failure, not a wording preference.
+// One topology: the spec run always forks, records and targets `spec/<epic>`, and the body
+// always carries the base and the final-stage release child. A main-only spec, a body with no
+// base, or a branchless escape hatch is a contract failure, not a wording preference.
 function specRunViolations({ planner, step, tickets, specSkill }) {
   const violations = [];
   for (const [name, text] of [['roles/planner.md', planner], ['spec_progress', step]]) {
@@ -320,7 +324,8 @@ function specRunViolations({ planner, step, tickets, specSkill }) {
     if (!/gh pr list --base main --state open/.test(text)) violations.push(`${name}: no release query`);
     if (!/`spec\/\*`/.test(text)) violations.push(`${name}: release query does not filter spec/*`);
     if (!/--until-issue <release>/.test(text)) violations.push(`${name}: release query does not park on the release`);
-    if (!/direct-to-main/.test(text)) violations.push(`${name}: no direct-to-main escape hatch`);
+    for (const term of DELETED_TOPOLOGY)
+      if (text.includes(term)) violations.push(`${name}: reintroduces the deleted topology`);
   }
   if (!/force-push/.test(step)) violations.push('spec_progress: a rework does not force-push');
   if (!/epic-cancelled/.test(step)) violations.push('spec_progress: no cancelled-epic sweep');
@@ -328,22 +333,28 @@ function specRunViolations({ planner, step, tickets, specSkill }) {
   if (!/never `main`/.test(step)) violations.push('spec_progress: an integration spec may target main');
   if (!/`Branch: spec\/<epic>`/.test(step)) violations.push('spec_progress: no Branch line');
   if (!/final-stage release child/.test(step)) violations.push('spec_progress: no final-stage release child');
+  if (!/single-ticket breakdown is one delivery child plus the final-stage release/.test(step))
+    violations.push('spec_progress: a single-ticket breakdown is not one delivery child and the release');
   if (!/final-stage child is release/.test(planner)) violations.push('roles/planner.md: no release-kind read');
   if (!/records `integration: spec\/<epic>`/.test(step)) violations.push('spec_progress: no integration record');
-  if (!/`integration: none`/.test(step)) violations.push('spec_progress: no direct-to-main record');
-  if (!/single-ticket breakdown defaults to `direct-to-main`/.test(step)) violations.push('spec_progress: no single-ticket default');
+  if (!/kickoff[^.]*labels[^.]*before this move/i.test(step)) violations.push('spec_progress: the kickoff labels are not applied before the move');
   if (!/integration: spec\/<epic/.test(specSkill)) violations.push('to-spec: no integration record');
-  if (!/integration: none/.test(specSkill)) violations.push('to-spec: no direct-to-main record');
-  if (!/single ticket defaults to `direct-to-main`/.test(specSkill)) violations.push('to-spec: no single-ticket default');
+  if (!/never `main`/.test(specSkill)) violations.push('to-spec: the approval PR may target main');
+  if (!/single-ticket breakdown is the smallest epic/.test(specSkill)) violations.push('to-spec: no single-ticket epic');
   if (!/forks that branch from `main` at the spec sha/.test(specSkill) || !/targets its approval PR at `spec\/<epic-key>`/.test(specSkill))
     violations.push('to-spec: approval PR is not targeted at the recorded branch');
+  for (const term of DELETED_TOPOLOGY)
+    if (specSkill.includes(term)) violations.push('to-spec: reintroduces the deleted topology');
   const body = /<issue-template>([\s\S]*?)<\/issue-template>/.exec(tickets)?.[1] ?? '';
   if (!/^Branch: spec\/<epic-key>/m.test(body)) violations.push('to-tickets: no Branch line in the ticket template');
-  if (!/absence means `main`/.test(tickets)) violations.push('to-tickets: no main default');
+  if (!/always present/.test(body)) violations.push('to-tickets: the Branch line is conditional');
+  if (!/single-ticket breakdown is the smallest epic/.test(tickets)) violations.push('to-tickets: a single-ticket breakdown has no release');
   if (!/release child is the final publication: created last, in `backlog`, in the final stage/.test(tickets))
     violations.push('to-tickets: release child is not last, backlog and final stage');
   for (const clause of ['release procedure', 'base/source branch', 'included children', '`Touch:` union', 'Create no child after the spec PR opens'])
     if (!tickets.includes(clause)) violations.push(`to-tickets: missing ${clause}`);
+  for (const term of DELETED_TOPOLOGY)
+    if (tickets.includes(term)) violations.push('to-tickets: reintroduces the deleted topology');
   return violations;
 }
 
@@ -355,11 +366,54 @@ test('the spec run forks, records and targets the integration branch', () => {
     specSkill: read('skills/to-spec/SKILL.md'),
   };
   assert.deepEqual(specRunViolations(contract), []);
-  // The two failures the matrix exists to catch: a spec PR on main, and a body with no base.
+  // The failures the matrix exists to catch: a spec PR on main, a body with no base, and a
+  // branchless spec reintroduced into the seat that writes the spec.
   const mainOnly = { ...contract, step: contract.step.replace(/forks `spec\/<epic>`/, 'targets the spec PR at `main`') };
   assert.notDeepEqual(specRunViolations(mainOnly), []);
   const noBase = { ...contract, tickets: contract.tickets.replace(/^Branch: spec\/<epic-key>.*$/m, '') };
   assert.notDeepEqual(specRunViolations(noBase), []);
+  const branchless = { ...contract, specSkill: `${contract.specSkill} A ${DELETED_TOPOLOGY[0]} spec records \`${DELETED_TOPOLOGY[1]}\`.` };
+  assert.notDeepEqual(specRunViolations(branchless), []);
+});
+
+// One topology, one kickoff: the packet ends on the labels, the Planner applies them before
+// the stage-1 move, and no surface keeps the deleted branchless shape alive.
+test('the grilling packet ends on the labels and the Planner applies them before the move', () => {
+  const grilling = read('skills/grilling/SKILL.md');
+  const packet = /The packet names:\n\n([\s\S]*?)\n\n/.exec(grilling)?.[1] ?? '';
+  const fields = [...packet.matchAll(/^- \*\*(.+?)\*\*/gm)].map(([, field]) => field);
+  assert.deepEqual(fields, ['Destination', 'Slice outline', 'Mode labels']);
+  assert.match(packet, /which of `has-human-implementer` and `has-human-release` to apply to the epic before the kickoff, or neither/);
+  assert.doesNotMatch(grilling, /\*\*Shape\*\*/);
+  assert.match(grilling, /Every grilling produces an epic with its stage-1 spec child/);
+  assert.match(grilling, /a single ticket is the smallest epic/);
+  assert.match(grilling, /wayfinder map, not a factory shape/);
+  const planner = read('roles/planner.md');
+  assert.match(planner, /apply the epic labels[^.]*move the stage-1 child to `spec_progress`/);
+  const step = steps.get('spec_progress').instructions;
+  assert.match(step, /kickoff[^.]*labels[^.]*before this move/i);
+  assert.doesNotMatch(planner, new RegExp(DELETED_TOPOLOGY[0]));
+  assert.doesNotMatch(step, new RegExp(DELETED_TOPOLOGY[0]));
+});
+
+test('no catalog surface names the deleted topology', () => {
+  const surfaces = [
+    ...['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
+      readdirSync(join(ROOT, directory), { recursive: true })
+        .filter(name => /\.(md|json)$/.test(name))
+        .map(name => `${directory}/${name}`)),
+    'docs/factory.md',
+    'docs/apply.md',
+    'docs/README.md',
+    'README.md',
+    'AGENTS.md',
+    'GLOSSARY.md',
+    ...readdirSync(join(ROOT, 'tests')).filter(name => name.endsWith('.js')).map(name => `tests/${name}`),
+  ];
+  for (const path of surfaces) {
+    const text = read(path);
+    for (const term of DELETED_TOPOLOGY) assert.ok(!text.includes(term), `${path} names the deleted topology`);
+  }
 });
 
 // The delivery contract lives once in shared; the columns carry only their own route and the
@@ -520,18 +574,21 @@ function guideViolations({ guide: text, apply, workflowFile }) {
     ['branch-scoped done', /branch-scoped `done`/],
     ['main-scoped epic acceptance', /`main`-scoped/],
     ['the two-merge has-human-release', /two human merges/],
-    ['the direct-to-main N + 1', /N \+ 1/],
     ['release serialization', /serializ/i],
     ['the cancelled-epic sweep', /cancelled-epic sweep/],
     ['the stale sweep', /### The stale sweep/],
-    ['direct-to-main', /direct-to-main/],
-    ['the single-ticket default', /single-ticket/],
+    ['the one topology', /Every grilling produces an epic/],
+    ['the kickoff labels step', /kickoff[^.]*labels|labels[^.]*kickoff/i],
     ['the modes table two-merge row', /^\| `spec\/<epic>` \| 2 —/m],
     ['the epic state', /`epic_progress`/],
     ['the release lane', /`release_progress`/],
     ['the exit-rule pointer', /`skills\/code-review\/`/],
     ['the promotion pointer', /four-row/],
   ]) if (!pattern.test(text)) violations.push(`docs/factory.md: no ${term}`);
+  for (const term of DELETED_TOPOLOGY)
+    if (text.includes(term)) violations.push('docs/factory.md: keeps the deleted topology');
+  if (/N \+ 1/.test(text)) violations.push('docs/factory.md: keeps the N + 1 arithmetic');
+  if (/single ticket defaults to/.test(text)) violations.push('docs/factory.md: keeps the single-ticket default');
   for (const [term, pattern] of [
     ['`spec/*` unprotected', /`spec\/\*`[^.\n]*unprotected/],
     ['Automatically delete head branches', /Automatically delete head branches/],
