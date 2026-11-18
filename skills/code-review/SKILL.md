@@ -12,6 +12,54 @@ Both axes run as **parallel sub-agents** so they don't pollute each other's cont
 
 The issue tracker and labels come from the workspace agent contract; work lives in Multica.
 
+## Delivery checks
+
+Every review also enforces the shared delivery contract, as five checks:
+
+1. **One pull request, one ticket.** The change is one PR, linked to the ticket, at the reviewed head.
+2. **The base.** The PR targets the ticket's `Branch:` line, or `main` when the line is absent.
+3. **The scope.** Every changed path is inside the ticket's `## Touch`; an unlisted path is a finding.
+4. **The subject.** The PR title is `type(scope): summary, TICKET`, and the squash subject keeps that shape.
+5. **The merge.** The merge is one squash; nobody merges their own work and auto-merge is never enabled.
+
+A breach is a blocking finding on the Standards axis.
+
+## The exit rule
+
+Apply at every PASS, after the verdict and before the move or merge. Read the base with
+`gh pr view <pr> --json baseRefName`; read the epic's labels with
+`multica issue get <parent> --output json`. Do not rely on a remembered decision.
+
+- A spec PR — one reviewed at `spec_review` — always moves to `awaiting_merge`: the human merge
+  is the approval, in every mode.
+- A PR whose base is `spec/<epic>` is merged at the reviewed head.
+- A PR whose base is `main` and whose epic carries `has-human-release` moves to
+  `awaiting_merge`.
+- A PR whose base is `main` and whose epic carries no `has-human-release` is merged at the
+  reviewed head.
+
+A merge completes the ticket, so do not move it. Post the PASS at the exact head before the
+move or the merge. Never enable auto-merge.
+
+## The conflicts condition
+
+At every review, before the verdict, arm one continuous condition on the ticket:
+
+    multica issue wakeup create <ticket> --until-pr conflicts --mode continuous --agent-id <seat>
+
+The command replaces the configuration, so re-arming is idempotent, and the condition survives
+the PASS into `awaiting_merge`. The seat is the one that owns the work column: the Planner for a
+spec PR, the Implementer for a delivery PR — including a human-authored one, since a member is
+not a wakeup target — and the Release seat for a release PR.
+
+## The void PASS
+
+A push after a PASS is a new head, so the PASS is void. The resolver follows the resolution
+contract in shared `## Delivery`, then moves the ticket to the review column that PASSed it —
+every review column's `next` is `awaiting_merge`, so the timeline names it. The re-review covers
+the delta `H...H'` plus the delivery facts at `H'`; a fresh PASS returns the ticket to
+`awaiting_merge`, and a blocking finding sends it back to the work column.
+
 ## Process
 
 ### 1. Pin the fixed point

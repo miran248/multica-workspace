@@ -32,3 +32,15 @@ Keep a **decision ledger** across rounds: for each question, its prerequisites, 
 The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
 
 A completed interview is not approval: the decisions are settled, while the spec and its proposed breakdown still wait for the spec pull request to merge. When a decision changes the project's vocabulary or leaves a durable architectural choice, load `domain-modeling` alongside this skill so the glossary and ADRs capture it in the same pass.
+
+## The handoff gate
+
+End the session on one packet and the user's answer. The packet names:
+
+- **Destination** — the repository, and the project when it matters.
+- **Slice outline** — the proposed stages and what each ticket delivers.
+- **Mode labels** — which of `has-human-implementer` and `has-human-release` to apply to the epic before the kickoff, or neither.
+
+The packet ends on the labels question. Every grilling produces an epic with its stage-1 spec child, so the shape is not a field: a single ticket is the smallest epic — one delivery child and the release — and a non-empty frontier is a wayfinder map, not a factory shape, so no epic is opened for it.
+
+Grilling creates nothing itself: no epic, spec or ticket is a side effect of the conversation. If the epic already exists, it opens in `todo` with its stage-1 spec child inert in `backlog`. No spec run starts and no slice is written before the user answers; the answer is the yes that starts the factory. The slice freezes when the spec PR opens, so a later addition is a spec revision on the same head.

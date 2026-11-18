@@ -25,7 +25,7 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
   const f = fixture(t); withProject(f); apply(f);
   assert.equal(f.state.agents.length, 5);
   assert.equal(f.state.workflows.length, 1);
-  assert.equal(f.state.autopilots.length, 0);
+  assert.equal(f.state.autopilots.length, 1);
   assert.equal(f.state.projectWorkflows[project], f.state.workflows[0].id);
   for (const agent of f.state.agents) {
     assert.equal(agent.runtime_id, id(2));
@@ -35,7 +35,7 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
     assert.match(agent.instructions, /github\.com\/example\/multica-workspace/);
   }
   const workflow = f.state.workflows[0];
-  assert.deepEqual(workflow.steps.map(step => step.status_key), ['backlog', 'todo', 'spec_progress', 'spec_review', 'in_progress', 'human_progress', 'in_review', 'human_review', 'awaiting_merge', 'blocked', 'done', 'cancelled']);
+  assert.deepEqual(workflow.steps.map(step => step.status_key), ['backlog', 'todo', 'epic_progress', 'spec_progress', 'spec_review', 'in_progress', 'human_progress', 'release_progress', 'in_review', 'human_review', 'release_review', 'awaiting_merge', 'blocked', 'done', 'cancelled']);
   const planner = f.state.agents.find(agent => agent.name === 'planner').id;
   const reviewer = f.state.agents.find(agent => agent.name === 'reviewer').id;
   assert.equal(workflow.steps.find(step => step.status_key === 'spec_progress').handler.id, planner);
@@ -43,6 +43,10 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
   assert.equal(workflow.steps.find(step => step.status_key === 'spec_review').back_status_key, 'spec_progress');
   assert.equal(workflow.steps.find(step => step.status_key === 'in_progress').handler.id, f.state.agents.find(agent => agent.name === 'implementer').id);
   assert.equal(workflow.steps.find(step => step.status_key === 'human_progress').handler.id, f.state.human);
+  assert.equal(workflow.steps.find(step => step.status_key === 'epic_progress').handler.type, 'none');
+  assert.equal(workflow.steps.find(step => step.status_key === 'release_progress').handler.id, f.state.agents.find(agent => agent.name === 'release').id);
+  assert.equal(workflow.steps.find(step => step.status_key === 'release_review').handler.id, reviewer);
+  assert.equal(workflow.steps.find(step => step.status_key === 'release_review').back_status_key, 'release_progress');
   assert.equal(workflow.steps.find(step => step.status_key === 'in_review').handler.id, reviewer);
   assert.equal(workflow.steps.find(step => step.status_key === 'human_review').handler.id, reviewer);
   assert.equal(workflow.steps.find(step => step.status_key === 'human_review').back_status_key, 'human_progress');
@@ -50,9 +54,10 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
   assert.equal(workflow.steps.find(step => step.status_key === 'awaiting_merge').next_status_key, undefined);
   assert.equal(workflow.steps.find(step => step.status_key === 'blocked').handler.id, planner);
   assert.deepEqual(f.state.statuses.map(status => [status.key, status.icon, status.color]), [
-    ['spec_progress', 'half', '#3b82f6'], ['spec_review', 'three_quarters', '#3b82f6'],
-    ['human_progress', 'half', '#8b5cf6'], ['human_review', 'three_quarters', '#8b5cf6'],
-    ['awaiting_merge', 'three_quarters', '#8b5cf6']]);
+    ['epic_progress', 'half', '#0ea5e9'], ['spec_progress', 'half', '#3b82f6'],
+    ['spec_review', 'three_quarters', '#3b82f6'], ['human_progress', 'half', '#8b5cf6'],
+    ['release_progress', 'half', '#f97316'], ['human_review', 'three_quarters', '#8b5cf6'],
+    ['release_review', 'three_quarters', '#f97316'], ['awaiting_merge', 'three_quarters', '#8b5cf6']]);
   assert.equal(f.state.labels.length, 14);
   assert.equal(journal(f).status, 'verified');
   f.state.calls = [];
@@ -241,12 +246,29 @@ test('the sync control is refreshed by title but its status and triggers stay op
   assert.match(live.description, /Synchronize this workspace/);
   assert.equal(live.status, 'paused');
   assert.deepEqual(live.triggers, [{ id: id(911), kind: 'webhook', enabled: true }]);
-  assert.equal(f.state.autopilots.length, 1);
+  assert.equal(f.state.autopilots.length, 2);
+});
+
+test('the sweep is created with one enabled hourly trigger and a second trigger refuses', t => {
+  const f = fixture(t); apply(f);
+  const sweep = f.state.autopilots.find(pilot => pilot.title === 'Stale sweep');
+  assert.ok(sweep, 'a sync does not create the stale-sweep autopilot');
+  assert.equal(sweep.execution_mode, 'run_only');
+  assert.equal(sweep.assignee_id, f.state.agents.find(agent => agent.name === 'planner').id);
+  assert.match(sweep.description, /spec_review/);
+  assert.deepEqual(sweep.triggers.map(trigger => [trigger.kind, trigger.enabled, trigger.cron_expression, trigger.timezone]),
+    [['schedule', true, '0 * * * *', 'UTC']]);
+  assert.equal(buildPlan(f.binding, f).operations.length, 0);
+  sweep.triggers.push({ id: id(888), kind: 'schedule', enabled: true, cron_expression: '0 * * * *', timezone: 'UTC' });
+  f.state.calls = [];
+  assert.throws(() => apply(f), /Schedule drift: stale-sweep/);
+  assert.equal(writes(f.state).length, 0);
 });
 
 test('an absent sync control is reported, never created by a sync', t => {
   const f = fixture(t);
   const result = apply(f);
   assert.equal(result.sync_control, 'absent');
-  assert.equal(f.state.autopilots.length, 0);
+  assert.ok(!f.state.autopilots.some(pilot => pilot.title === 'Daily catalog sync'));
+  assert.equal(f.state.autopilots.length, 1);
 });

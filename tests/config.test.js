@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, ROLES, readJSON, resolve, syntheticBinding } from '../scripts/config.js';
 import { render } from '../scripts/deploy.js';
@@ -9,29 +9,39 @@ import { resolveWorkspace } from '../scripts/workspace.js';
 import { fixture } from './support/helpers.js';
 import { id } from './support/platform.js';
 
-test('the shared contract reaches every role and the comment owns the handoff', t => {
+test('the shared contract reaches every role and the linked PR owns the handoff', t => {
   const f = fixture(t), resolved = resolve(f.binding, f.root);
   for (const role of ROLES) {
-    assert.match(render(role, f.binding, f.root), /Use Conventional Commits/, role);
-    assert.match(render(role, f.binding, f.root), /summary, TICKET/, role);
-    assert.match(render(role, f.binding, f.root), /The comment is the handoff/, role);
-    assert.match(render(role, f.binding, f.root), /last action/, role);
-    assert.doesNotMatch(render(role, f.binding, f.root), /[Aa]rm auto-merge/, role);
+    const text = render(role, f.binding, f.root);
+    assert.match(text, /^## Delivery$/m, role);
+    assert.match(text, /^## Handoffs$/m, role);
+    assert.match(text, /Use Conventional Commits/, role);
+    assert.match(text, /summary, TICKET/, role);
+    assert.match(text, /The linked PR is the delivery handoff/, role);
+    assert.match(text, /empty body is not a finding/, role);
+    assert.match(text, /last action/, role);
+    assert.doesNotMatch(text, /[Aa]rm auto-merge/, role);
   }
-  assert.match(render('reviewer', f.binding, f.root), /never approve your own implementation/);
-  assert.match(render('planner', f.binding, f.root), /grilling to acceptance/);
-  assert.match(render('implementer', f.binding, f.root), /Title the PR/);
-  assert.match(render('implementer', f.binding, f.root), /move it to `in_review`/);
+  assert.match(render('reviewer', f.binding, f.root), /a moved head or a moved base invalidates the verdict/);
+  assert.match(render('reviewer', f.binding, f.root), /exit rule/);
+  assert.doesNotMatch(render('reviewer', f.binding, f.root), /awaiting_merge/);
+  assert.match(render('planner', f.binding, f.root), /epic to acceptance/);
+  assert.match(render('planner', f.binding, f.root), /move the stage-1 child to `spec_progress`/);
+  assert.match(render('planner', f.binding, f.root), /\| any \| spec child \| `spec_progress` \|/);
+  assert.match(render('implementer', f.binding, f.root), /reviewable PR/);
   for (const role of ROLES) assert.doesNotMatch(readFileSync(join(ROOT, `roles/${role}.md`), 'utf8'), /Coordinator|squad/, role);
   assert.deepEqual(Object.keys(resolved.shared.workflows), ['factory']);
   assert.equal(resolved.shared.catalog.timezone, 'UTC');
   assert.equal(resolved.sync.timezone, 'UTC');
 });
 
-test('the shared contract links the handoff template at the workspace origin, never a stored one', t => {
+test('the catalog declares no document and no contract stores a link', t => {
   const f = fixture(t);
+  assert.deepEqual(readJSON(join(f.root, 'templates/default.json')).documents, {});
+  assert.equal(existsSync(join(f.root, 'templates/handoff.md')), false);
   for (const role of ROLES) {
-    assert.match(render(role, f.binding, f.root), /handoff: https:\/\/github\.com\/example\/multica-workspace\/blob\/main\/templates\/handoff\.md;/, role);
+    const text = render(role, f.binding, f.root);
+    assert.doesNotMatch(text, /templates\/handoff\.md/, role);
   }
   assert.doesNotMatch(readFileSync(join(ROOT, 'shared/instructions.md'), 'utf8'), /https?:\/\//);
 });
@@ -83,12 +93,36 @@ test('shared autopilot templates carry no catalog identity and no stale reposito
   const catalog = readJSON(join(ROOT, 'templates/default.json'));
   const uuid = /[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/i;
   for (const [key, path] of Object.entries(catalog.autopilots)) {
-    const prompt = readFileSync(join(ROOT, readJSON(join(ROOT, path)).prompt), 'utf8');
+    const definition = readJSON(join(ROOT, path));
+    const prompt = readFileSync(join(ROOT, definition.prompt), 'utf8');
     assert.doesNotMatch(prompt, uuid, `${key} embeds a workspace ID`);
     assert.doesNotMatch(prompt, /https?:\/\/github\.com\//, `${key} hardcodes a repository URL`);
-    assert.match(prompt, /\{\{repository\}\}/, `${key} asks the run for its own origin`);
-    assert.match(prompt, /just sync/);
+    // The sync control reconciles this catalog, so it needs the live origin; a sweep is
+    // workspace-local and must not acquire one.
+    if (definition.parameters.includes('repository')) {
+      assert.match(prompt, /\{\{repository\}\}/, `${key} asks the run for its own origin`);
+      assert.match(prompt, /just sync/);
+    } else {
+      assert.deepEqual(definition.parameters, [], `${key} carries no parameters`);
+      assert.doesNotMatch(prompt, /\{\{/, `${key} leaves an unapproved parameter`);
+    }
   }
+});
+
+test('the catalog resolves the hourly stale sweep with its role and prompt', () => {
+  const resolved = resolve(syntheticBinding());
+  const sweep = resolved.autopilots.find(item => item.key === 'stale-sweep');
+  assert.ok(sweep, 'the catalog does not deploy a stale-sweep autopilot');
+  assert.equal(sweep.cron, '0 * * * *');
+  assert.equal(sweep.role, 'planner');
+  assert.equal(sweep.execution_mode, 'run_only');
+  assert.equal(sweep.issue_title_template, null);
+  assert.equal(sweep.timezone, 'UTC');
+  for (const column of ['spec_review', 'in_review', 'human_review', 'release_review'])
+    assert.ok(sweep.prompt.includes(`\`${column}\``), `the sweep prompt does not read ${column}`);
+  assert.match(sweep.prompt, /two hours/);
+  assert.match(sweep.prompt, /issue timeline/);
+  assert.doesNotMatch(sweep.prompt, /human_progress|awaiting_merge/);
 });
 
 for (const [name, mutate] of Object.entries({

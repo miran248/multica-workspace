@@ -1,0 +1,10 @@
+{
+  "cron": "0 * * * *",
+  "execution_mode": "run_only",
+  "key": "stale-sweep",
+  "parameters": [],
+  "prompt": "templates/autopilots/stale-sweep.md",
+  "role": "planner",
+  "schema_version": 2,
+  "title": "Stale sweep"
+}

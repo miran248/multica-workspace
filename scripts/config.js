@@ -27,9 +27,8 @@ export const ROLES = ['general', 'planner', 'implementer', 'reviewer', 'release'
 /** Operator state, not catalog content: the app origin issue references point at. A self-hosted
  *  consumer overrides it with --app-url / MULTICA_APP_URL; the slug is never committed. */
 export const DEFAULT_APP_URL = 'https://multica.ai';
-export const AUTOPILOTS = ['config-sync'];
+export const AUTOPILOTS = ['config-sync', 'stale-sweep'];
 export const WORKFLOWS = ['factory'];
-export const DOCUMENTS = ['templates/handoff.md'];
 const keyPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ajv = new Ajv2020({ coerceTypes: false, useDefaults: false, removeAdditional: false });
 addFormats(ajv);
@@ -202,8 +201,6 @@ function resolveChecked(catalog, binding, root) {
   sameKeys(Object.keys(catalog.agents), ROLES, 'agents');
   sameKeys(Object.keys(catalog.autopilots), AUTOPILOTS, 'catalog autopilots');
   sameKeys(Object.keys(catalog.workflows), WORKFLOWS, 'catalog workflows');
-  const documents = Object.fromEntries(DOCUMENTS.map(path => [path.split('/').at(-1).split('.')[0], path]));
-  if (canonical(catalog.documents) !== canonical(documents)) throw new Error('Catalog documents: missing or noncanonical logical key/path');
   if (catalog.shared_instructions !== 'shared/instructions.md' || catalog.skill_manifest !== 'skills/manifest.json') throw new Error('Canonical shared instructions/skill manifest required');
   validateTimezone(catalog.timezone);
   const timezone = catalog.timezone;
@@ -214,9 +211,8 @@ function resolveChecked(catalog, binding, root) {
     assets[path] = { content, sha256: sha256(content) };
     return content;
   };
-  // The catalog commits no origin or slug: the shared contract addresses the handoff template
-  // through {{repository}} and issue references through {{workspace_url}}, both resolved from
-  // the live binding when the contract is rendered.
+  // The catalog commits no origin or slug: issue references are rendered from the live
+  // binding's app_url and workspace slug when the contract is rendered.
   const workspaceUrl = `${binding.app_url ?? DEFAULT_APP_URL}/${binding.identity.workspace_slug}`;
   const instructions = substitute(asset(catalog.shared_instructions),
     { repository: binding.repository, workspace_url: workspaceUrl }, ['repository', 'workspace_url']).content;
@@ -328,7 +324,10 @@ function resolveChecked(catalog, binding, root) {
   const blocked = [];
   for (const role of ROLES) if (!binding.agent_runtimes?.[role]) blocked.push(`agent_runtimes.${role}: pending`);
   if (!owners.length) blocked.push('owner: no approval owner resolved');
-  const autopilots = [];
+  // Every declared autopilot except the sync control is deployed and scheduled by a sync.
+  const autopilots = Object.entries(definitions)
+    .filter(([key]) => key !== 'config-sync')
+    .map(([, definition]) => workflow(definition, false));
   const sync = workflow(definitions['config-sync'], true);
   // The ledger is the only place a rename or an explicit retirement is declared. It is
   // validated against this workspace's resolved names, so a stale or ambiguous event fails
