@@ -148,8 +148,8 @@ ticket is the epic's final-stage child — published last, and the only child in
 stage — and every other child is a delivery ticket. A `direct-to-main` spec publishes no
 release child, so every child it publishes is delivery. A drill epic is not a published slice:
 its never-closing diagnostic stage sits above the release on purpose (D17), so the drill's own
-table assigns each drill child's kind and the drill is hand-driven, never routed through the
-Planner's mapping.
+table assigns each drill child's kind. Its lanes are resolved by this same table at every
+promotion: the drill proves the Planner's mapping rather than bypassing it.
 
 `has-human-release` keeps the scope `manual-merge` has today: it gates every pull request whose
 base is `main`; the spec approval is the human merge in every mode (D4). A ticket PR into
@@ -311,8 +311,11 @@ mode: a single drill epic cannot promote its children into four lanes, so the dr
 drill epics on the one throwaway project and the one copy workflow — autonomous,
 `has-human-release`, `has-human-implementer`, and `has-human-implementer` + `has-human-release` —
 each carrying its mode's labels (none for autonomous) before its child is promoted, and each
-child landing in the lane its mode selects. The autonomous epic also carries the stale ticket in
-a final stage that never closes, the in-flight ticket beside its first delivery, and a release
+child landing in the lane its mode selects. The Planner drives the drill — it builds the copy,
+binds the throwaway project, and promotes every stage through the table above — so the mapping is
+exercised, not bypassed; the human lanes and their merges are the only steps the human owns. The
+autonomous epic also carries the stale ticket in a final stage that never closes, the in-flight
+ticket beside its first delivery, and a release
 child so the normal release exit is exercised; the `has-human-release` epic carries a release
 child so the gated release exit is exercised. Each epic moves `todo` → `epic_progress` at its
 first promotion, so the state column is exercised too. The drill creates `has-human-implementer`
@@ -474,7 +477,7 @@ stage 2 is the only parallel stage, because the drill and the contracts have dis
 | Stage | Ticket | Assignee | Blocked by | Delivers |
 | --- | --- | --- | --- | --- |
 | 1 | Spec: factory native carriers and one copy per rule | Planner | — | This document, the published set, and the spec PR into `spec/MIR-227`; its merge approves both. |
-| 2 | Drill the twenty-one-column graph on a throwaway project | Human | Stage 1 | The graph proved on the platform: one drill epic per mode (D17), the three gate lanes, both release exits, the epic state, the stale ticket and the in-flight move, with `issue timeline` evidence, on a copy workflow and a disposable project; archived when green. Gates the release. |
+| 2 | Drill the twenty-one-column graph on a throwaway project | Planner | Stage 1 | The graph proved on the platform: one drill epic per mode (D17), the three gate lanes, both release exits, the epic state, the stale ticket and the in-flight move, with `issue timeline` evidence, on a copy workflow and a disposable project; archived when green. The Planner builds the copy, binds the project and promotes every stage through the D3 table; only the human lanes and merges are the human's. Gates the release. |
 | 2 | One delivery and handoff contract in shared | Implementer | Stage 1 | The delivery rules and the three-heading handoff live once in shared; the grilling handoff gate lands once in the grilling skill with the Planner contract naming the route; the role copies, the undeployed handoff document and its declaration are deleted; `code-review` carries the checking method; the ticket template drops parent and blockers; the caps match. |
 | 3 | Declare the twenty-one-column graph and the Planner's lane mapping | Implementer | Stage 2 | The nine new columns, the seven review exits, the label-free review instructions, the release seat, the epic state and the two label renames with their ledger events; the Planner's eight-row mapping; the offline matrix pins all of it. |
 | 4 | Replace the per-issue timer with one hourly stale sweep | Implementer | Stage 3 | The `stale-sweep` autopilot with its hourly trigger, prompt and two-hour threshold over the seven reviewer-handled columns; `human_progress`, `human_progress_gate` and `awaiting_merge` are never swept; lane-aware triage; `task.failed` stays; the 90m registration is deleted from the contract and the instructions. |
