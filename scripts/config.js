@@ -27,7 +27,7 @@ export const ROLES = ['general', 'planner', 'implementer', 'reviewer', 'release'
 /** Operator state, not catalog content: the app origin issue references point at. A self-hosted
  *  consumer overrides it with --app-url / MULTICA_APP_URL; the slug is never committed. */
 export const DEFAULT_APP_URL = 'https://multica.ai';
-export const AUTOPILOTS = ['config-sync'];
+export const AUTOPILOTS = ['config-sync', 'stale-sweep'];
 export const WORKFLOWS = ['factory'];
 const keyPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ajv = new Ajv2020({ coerceTypes: false, useDefaults: false, removeAdditional: false });
@@ -324,7 +324,10 @@ function resolveChecked(catalog, binding, root) {
   const blocked = [];
   for (const role of ROLES) if (!binding.agent_runtimes?.[role]) blocked.push(`agent_runtimes.${role}: pending`);
   if (!owners.length) blocked.push('owner: no approval owner resolved');
-  const autopilots = [];
+  // Every declared autopilot except the sync control is deployed and scheduled by a sync.
+  const autopilots = Object.entries(definitions)
+    .filter(([key]) => key !== 'config-sync')
+    .map(([, definition]) => workflow(definition, false));
   const sync = workflow(definitions['config-sync'], true);
   // The ledger is the only place a rename or an explicit retirement is declared. It is
   // validated against this workspace's resolved names, so a stale or ambiguous event fails

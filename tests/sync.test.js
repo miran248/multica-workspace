@@ -25,7 +25,7 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
   const f = fixture(t); withProject(f); apply(f);
   assert.equal(f.state.agents.length, 5);
   assert.equal(f.state.workflows.length, 1);
-  assert.equal(f.state.autopilots.length, 0);
+  assert.equal(f.state.autopilots.length, 1);
   assert.equal(f.state.projectWorkflows[project], f.state.workflows[0].id);
   for (const agent of f.state.agents) {
     assert.equal(agent.runtime_id, id(2));
@@ -246,12 +246,29 @@ test('the sync control is refreshed by title but its status and triggers stay op
   assert.match(live.description, /Synchronize this workspace/);
   assert.equal(live.status, 'paused');
   assert.deepEqual(live.triggers, [{ id: id(911), kind: 'webhook', enabled: true }]);
-  assert.equal(f.state.autopilots.length, 1);
+  assert.equal(f.state.autopilots.length, 2);
+});
+
+test('the sweep is created with one enabled hourly trigger and a second trigger refuses', t => {
+  const f = fixture(t); apply(f);
+  const sweep = f.state.autopilots.find(pilot => pilot.title === 'Stale sweep');
+  assert.ok(sweep, 'a sync does not create the stale-sweep autopilot');
+  assert.equal(sweep.execution_mode, 'run_only');
+  assert.equal(sweep.assignee_id, f.state.agents.find(agent => agent.name === 'planner').id);
+  assert.match(sweep.description, /spec_review/);
+  assert.deepEqual(sweep.triggers.map(trigger => [trigger.kind, trigger.enabled, trigger.cron_expression, trigger.timezone]),
+    [['schedule', true, '0 * * * *', 'UTC']]);
+  assert.equal(buildPlan(f.binding, f).operations.length, 0);
+  sweep.triggers.push({ id: id(888), kind: 'schedule', enabled: true, cron_expression: '0 * * * *', timezone: 'UTC' });
+  f.state.calls = [];
+  assert.throws(() => apply(f), /Schedule drift: stale-sweep/);
+  assert.equal(writes(f.state).length, 0);
 });
 
 test('an absent sync control is reported, never created by a sync', t => {
   const f = fixture(t);
   const result = apply(f);
   assert.equal(result.sync_control, 'absent');
-  assert.equal(f.state.autopilots.length, 0);
+  assert.ok(!f.state.autopilots.some(pilot => pilot.title === 'Daily catalog sync'));
+  assert.equal(f.state.autopilots.length, 1);
 });

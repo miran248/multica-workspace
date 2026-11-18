@@ -47,7 +47,8 @@
     }
   },
   "autopilots": {
-    "config-sync": "templates/autopilots/config-sync.json"
+    "config-sync": "templates/autopilots/config-sync.json",
+    "stale-sweep": "templates/autopilots/stale-sweep.json"
   },
   "defaults": {
     "model": "deepseek-official/deepseek-flash",

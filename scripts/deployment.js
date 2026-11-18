@@ -189,7 +189,7 @@ export function buildPlan(binding, { root = ROOT, runner, keepUnmanaged = false 
       issue_title_template: item.issue_title_template, subscribers: [{ user_id: binding.human_user_id, user_type: 'member' }] };
     const before = detail ? { title: detail.autopilot.title, description: (detail.autopilot.description ?? '').trim(),
       assignee_role: roleOf(live, detail.autopilot.assignee_id),
-      execution_mode: detail.autopilot.execution_mode, issue_title_template: detail.autopilot.issue_title_template,
+      execution_mode: detail.autopilot.execution_mode, issue_title_template: detail.autopilot.issue_title_template ?? null,
       subscribers: subscribers(detail.autopilot) } : null;
     if (before && (before.execution_mode !== after.execution_mode || !same(before.subscribers, after.subscribers)))
       throw new Error('Workflow scope/mode/subscriber migration requires explicit operator reconciliation');
@@ -382,7 +382,7 @@ export function executePlan(binding, plan, { root = ROOT, runner, assets = {}, p
       if (!record) return null;
       return { title: record.title, description: (record.description ?? '').trim(), assignee_role: roleOf(live, record.assignee_id),
         execution_mode: record.execution_mode,
-        issue_title_template: record.issue_title_template, subscribers: subscribers(record) };
+        issue_title_template: record.issue_title_template ?? null, subscribers: subscribers(record) };
     }
     const record = findRecord(op.entity, op);
     if (!record) return null;
