@@ -154,7 +154,8 @@ nothing, and the release merge deletes it. A `direct-to-main` spec has none and 
 **ticket kind** — delivery or release, the Planner's third promotion input beside the epic's
 mode and the ticket's base. It is a stage read, not a body marker: an integration spec's
 final-stage child is the release ticket and every other child is delivery; a `direct-to-main`
-spec publishes no release child.
+spec publishes no release child; a drill epic's kinds are its own table's, since its diagnostic
+stage sits above the release.
 
 **release child** — the final-stage child of an integration spec, handled by the release seat in
 `release_progress` or `release_progress_gate`. Its pull request is `spec/<epic>` → `main` and

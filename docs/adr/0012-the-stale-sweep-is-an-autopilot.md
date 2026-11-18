@@ -1,7 +1,8 @@
 # 0012 — The stale sweep is an autopilot, not a timer
 
 - Status: Accepted, 2026-11-17 (approved in the MIR-227 grilling)
-- Supersedes: nothing
+- Supersedes: the 90m review-check clauses of ADR-0005 and ADR-0006, which made the per-issue
+  timer the stall guard; `task.failed` stays and the sweep replaces the timer.
 
 ## Context
 

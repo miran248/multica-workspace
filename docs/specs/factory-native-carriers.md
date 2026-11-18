@@ -143,10 +143,13 @@ ticket. A Reviewer never reads a label. The mapping is one table in the Planner'
 | neither, or `has-human-implementer` alone | release | `main` | `release_progress` | `release_review` | merged by the Reviewer |
 | `has-human-release` | release | `main` | `release_progress_gate` | `release_review_gate` | `awaiting_merge` |
 
-The ticket's kind is a stage read, never a body marker: on an integration spec the release
+The ticket's kind is a stage read, never a body marker: on a published slice the release
 ticket is the epic's final-stage child — published last, and the only child in its highest
 stage — and every other child is a delivery ticket. A `direct-to-main` spec publishes no
-release child, so every child it publishes is delivery.
+release child, so every child it publishes is delivery. A drill epic is not a published slice:
+its never-closing diagnostic stage sits above the release on purpose (D17), so the drill's own
+table assigns each drill child's kind and the drill is hand-driven, never routed through the
+Planner's mapping.
 
 `has-human-release` keeps the scope `manual-merge` has today: it gates the spec approval and
 every pull request whose base is `main`. A ticket PR into `spec/<epic>` is Reviewer-merged in
@@ -244,13 +247,12 @@ dating each ticket from `issue timeline`, and for a ticket older than two hours 
 `blocked` for triage. Human-handled columns (`human_progress`, `human_progress_gate`,
 `awaiting_merge`) are never swept: they wait indefinitely for the human, and no agent may
 un-gate a human step. Triage of a swept ticket restores the lane it held before `blocked` in its
-timeline, so a swept gate ticket
-cannot be demoted to a normal review; a second sweep on the same ticket leaves it `blocked` for
-the human rather than re-entering the loop. The sweep never mentions anyone, never closes or
-cancels a ticket and never runs on `blocked`. `task.failed` stays a per-issue event the Planner
-registers, because the platform knows that fact exactly; the per-issue 90m timer is deleted, and
-the cancelled-epic sweep stays as `--until-status cancelled` on the epic. No wake is registered
-on `comment.created`.
+timeline, so a swept gate ticket cannot be demoted to a normal review; a second sweep on the
+same ticket leaves it `blocked` for the human rather than re-entering the loop. The sweep never
+mentions anyone, never closes or cancels a ticket and never runs on `blocked`. `task.failed`
+stays a per-issue event the Planner registers, because the platform knows that fact exactly; the
+per-issue 90m timer is deleted, and the cancelled-epic sweep stays as `--until-status cancelled`
+on the epic. No wake is registered on `comment.created`.
 
 **D13 — The guide renders from the workflow.** A renderer writes the column table and the
 Mermaid graph in `docs/factory.md` between markers from the workflow file, and the existing
@@ -271,8 +273,9 @@ instruction stops naming a label — the column is a spec approval or a gate-lan
 its timeline records, and any other ticket uses the stage or the `--until-issue` condition. The
 release seat's contract gains the release procedure once the release lane owns it; the
 `production:` body phrase and its deploy-time second approval in `roles/release.md` are left as
-they are, and production promotion stays out of scope. ADR-0005, ADR-0008 and ADR-0009 are not
-edited: where this spec changes their consequence it does so through a new ADR.
+they are, and production promotion stays out of scope. ADR-0005, ADR-0006, ADR-0008 and
+ADR-0009 are not edited: where this spec changes their consequence it does so through a new ADR
+— ADR-0012 supersedes the 90m-check clauses of ADR-0005 and ADR-0006.
 
 **D15 — The drill.** Before any catalog change reaches a live project, a throwaway Multica
 project and a disposable repository are bound to a copy of the new workflow — a separately
@@ -314,7 +317,9 @@ child so the normal release exit is exercised; the `has-human-release` epic carr
 child so the gated release exit is exercised. Each epic moves `todo` → `epic_progress` at its
 first promotion, so the state column is exercised too. The drill creates `has-human-implementer`
 and `has-human-release` for its epics and deletes both when the drill is archived, before the
-release renames, so the ledger never sees both names live.
+release renames, so the ledger never sees both names live. Because the drill's diagnostic stage
+is above the release, the drill's table is what names each drill child's kind: a release child
+there is a fixture fact, not the published slice's stage read.
 
 **D18 — Acceptance.** The epic closes when the inventory below has one home per rule, the
 offline matrix pins the twenty-one columns and seven review exits, the templates and the rendered
@@ -325,17 +330,18 @@ release seat and the guide.
 **D19 — The factory start is an explicit gate.** Grilling creates nothing on its own: it may
 write a throwaway artifact, but the epic, spec and tickets come from the handoff, not from the
 conversation. If the user asks for the epic before the graph is settled, the Planner may open
-the epic and its stage-1 spec child inert in `backlog` once the destination is named — the
-container is not the start. No spec run begins and no slice is written until the user answers one
+the epic in `todo` and its stage-1 spec child inert in `backlog` once the destination is named —
+`todo` dispatches nobody, so the container is not the start, and the epic stays `todo` until the
+slice starts. No spec run begins and no slice is written until the user answers one
 handoff packet: the destination, the shape (a single ticket, an epic + spec child, or a wayfinder
 map when the frontier is not actually empty), the mode labels, and the proposed slice outline.
-The answer is the yes that starts the factory: the Planner then moves the spec child to `spec_progress` or, in
-the chat, begins the spec run. The spec run publishes the whole slice in `backlog` and opens the
-PR; the set is frozen when the PR opens, and a later addition is a spec revision on the same
-head, never an incremental ticket on an approved set. An epic opened before the destination is
-settled is rejected: it is inert, and the durable container for unresolved decisions is a
-wayfinder map. A small task is a regular ticket and skips the gate (D9); a pure question stays in
-chat.
+The answer is the yes that starts the factory: the Planner then moves the spec child to
+`spec_progress` or, in the chat, begins the spec run. The spec run publishes the whole slice in
+`backlog` and opens the PR; the set is frozen when the PR opens, and a later addition is a spec
+revision on the same head, never an incremental ticket on an approved set. An epic opened before
+the destination is settled is rejected: it is inert, and the durable container for unresolved
+decisions is a wayfinder map. A small task is a regular ticket and skips the gate (D9); a pure
+question stays in chat.
 
 No platform construct can require the answer before an issue exists or a run starts. The gate is
 one prose copy in `skills/grilling`, the seat that reads it; the Planner contract names the route
@@ -395,7 +401,7 @@ is the defect the review looks for.
 | Rule | One home |
 | --- | --- |
 | who implements a delivery | epic labels, resolved by the Planner at promotion |
-| ticket kind (delivery or release) | the epic's stage: its final-stage child is the release; a `direct-to-main` spec has none |
+| ticket kind (delivery or release) | a published slice's stage: its final-stage child is the release; a `direct-to-main` spec has none; a drill's table names its kinds |
 | who implements a release | the release seat's lane (`release_progress` / `release_progress_gate`) |
 | who merges a delivery PR | the ticket's lane (four delivery review columns) |
 | who merges the spec PR | `spec_review` to `awaiting_merge` |
@@ -432,9 +438,8 @@ is the defect the review looks for.
    the cap table states 340 words, 130 words, 10 lines and 1 KB.
 6. The `stale-sweep` autopilot is declared, hourly, planner-owned, and the sync fixture reads
    back exactly one enabled trigger; it reads only the seven reviewer-handled columns,
-   `human_progress`, `human_progress_gate` and `awaiting_merge` are untouched, no per-issue
-   90m timer remains and
-   `task.failed` does.
+   `human_progress`, `human_progress_gate` and `awaiting_merge` are untouched, no per-issue 90m
+   timer remains and `task.failed` does.
 7. `templates/handoff.md`, its `documents` declaration, the hand-written column table and graph,
    `## Parent` and `Blocked by` are gone from the catalog, and both `manual-merge` and
    `human-assigned` are renamed with their live issues still attached.
@@ -472,7 +477,7 @@ stage 2 is the only parallel stage, because the drill and the contracts have dis
 | 2 | Drill the twenty-one-column graph on a throwaway project | Human | Stage 1 | The graph proved on the platform: one drill epic per mode (D17), the three gate lanes, both release exits, the epic state, the stale ticket and the in-flight move, with `issue timeline` evidence, on a copy workflow and a disposable project; archived when green. Gates the release. |
 | 2 | One delivery and handoff contract in shared | Implementer | Stage 1 | The delivery rules and the three-heading handoff live once in shared; the grilling handoff gate lands once in the grilling skill with the Planner contract naming the route; the role copies, the undeployed handoff document and its declaration are deleted; `code-review` carries the checking method; the ticket template drops parent and blockers; the caps match. |
 | 3 | Declare the twenty-one-column graph and the Planner's lane mapping | Implementer | Stage 2 | The nine new columns, the seven review exits, the label-free review instructions, the release seat, the epic state and the two label renames with their ledger events; the Planner's eight-row mapping; the offline matrix pins all of it. |
-| 4 | Replace the per-issue timer with one hourly stale sweep | Implementer | Stage 3 | The `stale-sweep` autopilot with its hourly trigger, prompt and two-hour threshold over the seven reviewer-handled columns; `human_progress` and `awaiting_merge` are never swept; lane-aware triage; `task.failed` stays; the 90m registration is deleted from the contract and the instructions. |
+| 4 | Replace the per-issue timer with one hourly stale sweep | Implementer | Stage 3 | The `stale-sweep` autopilot with its hourly trigger, prompt and two-hour threshold over the seven reviewer-handled columns; `human_progress`, `human_progress_gate` and `awaiting_merge` are never swept; lane-aware triage; `task.failed` stays; the 90m registration is deleted from the contract and the instructions. |
 | 5 | Render the Factory guide from the workflow | Implementer | Stages 3, 4 | The column table and graph generated between markers from the workflow file, the mode matrix updated for the gate and release lanes, and the test that fails when a hand edit drifts. |
 | 6 | Release `spec/MIR-227` to `main` | Release | Stages 2–5 | The release PR, the applied catalog, the post-sync in-flight move, the readback of twenty-one columns, both labels, the release seat and the sweep, and the evidence the Planner accepts the epic on. |
 

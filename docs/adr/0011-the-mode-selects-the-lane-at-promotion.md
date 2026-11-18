@@ -31,9 +31,11 @@ table: neither label is Reviewer-merged; `has-human-implementer` starts a delive
 `human_progress`; `has-human-release` selects the gate lane for a pull request whose base is
 `main`; the release child starts in `release_progress` or `release_progress_gate` and is reviewed
 in its own twin. The ticket's kind is a stage read: an integration spec's final-stage child is
-the release, every other child is delivery, and a `direct-to-main` spec has no release child. The
-epic itself moves `todo` → `epic_progress` at the first delivery promotion and `epic_progress` →
-`done` on acceptance; `epic_progress` has no handler, so the move dispatches nothing.
+the release, every other child is delivery, and a `direct-to-main` spec has no release child; a
+drill epic's kinds are its table's, because its never-closing diagnostic stage sits above the
+release. The epic itself moves `todo` → `epic_progress` at the first delivery promotion and
+`epic_progress` → `done` on acceptance; `epic_progress` has no handler, so the move dispatches
+nothing.
 
 A gate lane needs its own entry column or it is unreachable. `human_progress` advances to
 `human_review`, so the human implementer whose epic also has `has-human-release` starts in
