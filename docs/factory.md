@@ -11,9 +11,10 @@ an edge or a mode is not described here. The route allocation behind the graph i
 [ADR-0005](adr/0005-the-merged-spec-pr-is-the-approval.md); [ADR-0006](adr/0006-comment-first-merge-last.md)
 records the handoff order and the auto-merge ban; [ADR-0007](adr/0007-publish-the-slice-in-the-spec-run.md)
 moves the slice publication into the spec run; [ADR-0008](adr/0008-spec-approval-targets-the-integration-branch.md)
-retargets the approval merge at the integration branch and
+retargets the approval merge at the integration branch,
 [ADR-0009](adr/0009-release-the-spec-as-one-squash.md) releases the spec as one squash on
-`main`.
+`main`, and [ADR-0014](adr/0014-the-merge-exit-is-read-at-the-pass.md) deletes the gate lanes
+and reads the merge exit once, at the PASS.
 
 ## Status graph
 
@@ -23,24 +24,33 @@ flowchart TD
   todo -.->|"spec child, stage 1"| spec_progress
   todo -.->|"agent delivery"| in_progress
   todo -.->|"human delivery"| human_progress
+  todo -.->|"release"| release_progress
+  todo -.->|"slice starts"| epic_progress
+  epic_progress -.->|"acceptance"| done
   spec_progress -->|"spec PR"| spec_review
   spec_review -->|"FAIL"| spec_progress
   spec_review -->|"PASS: PR left open"| awaiting_merge
   in_progress -->|"delivery PR"| in_review
   human_progress -->|"delivery PR"| human_review
+  release_progress -->|"release PR"| release_review
   in_review -->|"FAIL"| in_progress
   human_review -->|"FAIL"| human_progress
-  in_review -->|"PASS + manual-merge, main base"| awaiting_merge
-  human_review -->|"PASS + manual-merge, main base"| awaiting_merge
+  release_review -->|"FAIL"| release_progress
+  in_review -->|"PASS: exit rule"| awaiting_merge
+  human_review -->|"PASS: exit rule"| awaiting_merge
+  release_review -->|"PASS: exit rule"| awaiting_merge
   in_review -->|"PASS: merge"| done
   human_review -->|"PASS: merge"| done
+  release_review -->|"PASS: merge"| done
   awaiting_merge -->|"merge completes the ticket"| done
   awaiting_merge -->|"changes: spec"| spec_progress
   awaiting_merge -->|"changes: agent"| in_progress
   awaiting_merge -->|"changes: human"| human_progress
+  awaiting_merge -->|"changes: release"| release_progress
   blocked --> spec_progress
   blocked --> human_progress
   blocked --> in_progress
+  blocked --> release_progress
   blocked --> cancelled
   todo -.->|"all children done"| done
 ```
@@ -48,12 +58,18 @@ flowchart TD
 Any ticket can enter `blocked`; it is a triage column, never a parking spot. `done` and
 `cancelled` are terminal and hand off to nobody. The arrow labelled "merge completes the
 ticket" is the platform's PR rule, not a status move: merging a linked pull request completes
-the ticket it is linked to. The two delivery PASS edges are that same merge — the Reviewer
-posts the verdict and merges; the column declares no advance of its own.
+the ticket it is linked to. The three review PASS-to-merge edges are that same merge — the
+Reviewer posts the verdict and applies the exit rule, which either merges at the reviewed head
+or moves the ticket to `awaiting_merge`. Every review column declares `awaiting_merge` as its
+`next`, so the unattended advance is the human and the merge is the handled exception.
+`epic_progress` is the epic's state and handles nobody: the Planner moves the epic there from
+`todo` when it promotes the first delivery stage, and to `done` on acceptance.
+
 
 ## The spec is a stage-1 child
 
-The Planner creates the spec as the epic's stage-1 child and keeps the epic at `todo`. In that
+The Planner creates the spec as the epic's stage-1 child and keeps the epic at `todo` until it
+promotes the first delivery stage, when the epic moves to `epic_progress`. In that
 child's run the Planner writes the spec, forks `spec/<epic>` from `main` at the spec sha before
 the spec PR exists, publishes the whole slice with `to-tickets` — every delivery child under the
 epic, in `backlog`, blockers first, stages assigned, the final-stage release child last — then
@@ -90,17 +106,18 @@ half-finished work off `main`.
 ### The release child
 
 The release child is published in the spec run, last, in `backlog`, in the final stage. Its
-body carries the release procedure, base/source branch, included children and `Touch:` union.
-Its PR is `spec/<epic>` → `main`: merge the current `main` in, resolve, run the full suite and
-open at that head. That merge is one squash commit on `main` whose subject carries the release
-ticket's key — no merge commit, no direct push — and it deletes the branch because
-**Automatically delete head branches** is on.
+body carries its instance — base/source branch, included children and `Touch:` union; the
+procedure itself lives in `roles/release.md`. It runs in `release_progress` and is reviewed at
+`release_review`. Its PR is `spec/<epic>` → `main`: merge the current `main` in, resolve, run
+the full suite and open at that head. That merge is one squash commit on `main` whose subject
+carries the release ticket's key — no merge commit, no direct push — and it deletes the branch
+because **Automatically delete head branches** is on.
 
 CI runs at spec level: the release PR and the post-merge `main` push, two runs per spec
 independent of N. Ticket PRs into `spec/<epic>` run no check, which is why the per-ticket gate
 is the Implementer's local run of the check that covers the diff. A red release reworks on the
-release ticket, on the branch, and re-runs at the refreshed head; children that are already
-`done` stay `done`.
+release ticket at `release_progress`, on the branch, and re-runs at the refreshed head; children
+that are already `done` stay `done`.
 
 ### `done` has two scopes
 
@@ -142,13 +159,16 @@ without anyone remembering a label. Every spec records `integration: spec/<epic>
 | --- | --- | --- | --- |
 | `backlog` | none | the spec run parks every delivery child | `todo` or the stage's start column |
 | `todo` | none | human or planner | a work column; the epic waits here |
+| `epic_progress` | none | the Planner starts the slice | `done` on acceptance; it dispatches nobody |
 | `spec_progress` | Planner | planner creates the spec child; its run publishes the slice | `spec_review` |
 | `spec_review` | Reviewer | planner submits the spec PR | `spec_progress` (FAIL) or `awaiting_merge` (PASS) |
 | `in_progress` | Implementer | planner promotes agent work | `in_review` |
 | `human_progress` | human | planner promotes human work | `human_review` |
-| `in_review` | Reviewer | the implementer delivers | `in_progress` (FAIL), `awaiting_merge` (PASS + `manual-merge` on a `main` base); otherwise the PASS merges into the recorded branch and completes it |
-| `human_review` | Reviewer | the human delivers | `human_progress` (FAIL), `awaiting_merge` (PASS + `manual-merge` on a `main` base); otherwise the PASS merges into the recorded branch and completes it |
-| `awaiting_merge` | human | reviewer PASS with `manual-merge` on a `main` base, or a spec PASS | `done` after the merge; the owning lane on changes |
+| `release_progress` | Release | planner promotes the release child | `release_review` |
+| `in_review` | Reviewer | the implementer delivers | `in_progress` (FAIL), `awaiting_merge` or a merge at the reviewed head (PASS, exit rule) |
+| `human_review` | Reviewer | the human delivers | `human_progress` (FAIL), `awaiting_merge` or a merge at the reviewed head (PASS, exit rule) |
+| `release_review` | Reviewer | the release seat delivers | `release_progress` (FAIL), `awaiting_merge` or a merge at the reviewed head (PASS, exit rule) |
+| `awaiting_merge` | human | a spec PASS, or a PASS the exit rule sent here | `done` after the merge; the owning lane on changes |
 | `blocked` | Planner | any seat that cannot proceed | triage route; a dependency wait stays |
 | `done` | none | a merge, or the last handler | terminal |
 | `cancelled` | none | any seat | terminal |
@@ -157,33 +177,32 @@ Custom statuses carry presentation that sync reconciles and reads back:
 
 | Status | Icon | Colour |
 | --- | --- | --- |
+| `epic_progress` | `half` | `#0ea5e9` |
 | `spec_progress` | `half` | `#3b82f6` |
 | `spec_review` | `three_quarters` | `#3b82f6` |
 | `human_progress` | `half` | `#8b5cf6` |
 | `human_review` | `three_quarters` | `#8b5cf6` |
+| `release_progress` | `half` | `#f97316` |
+| `release_review` | `three_quarters` | `#f97316` |
 | `awaiting_merge` | `three_quarters` | `#8b5cf6` |
 
-## Modes
+## Promotion and the exit rule
 
-A mode is chosen by the human before the spec is approved. The human adds the labels to the
-epic, or states the mode for the Planner to apply: with neither label the epic is autonomous.
-Changing a label after approval is a mode change: stop, re-approve, and re-route any ticket
-already in flight.
+The two labels compose into four modes — autonomous, `has-human-release`,
+`has-human-implementer`, and both — but promotion selects only who implements. That four-row
+mapping is the table in `roles/planner.md`; the Planner reads the ticket's kind from its stage,
+not from a body marker. `has-human-release` is not a promotion input. Who merges is the exit
+rule in `skills/code-review/`, read at each PASS from the PR's base and the epic's label, and
+never cached in a lane.
 
-| Mode | Epic labels | Implements | Reviews | Merges | Human work |
-| --- | --- | --- | --- | --- | --- |
-| autonomous | neither | Implementer | Reviewer | Reviewer merges after PASS | the spec merge |
-| human merge | `manual-merge` | Implementer | Reviewer | human at `awaiting_merge`, only where the base is `main` | the spec merge and the merges onto `main` |
-| human implements | `human-assigned` | human at `human_progress` | Reviewer | Reviewer merges after PASS | the spec merge, implementation |
-| human implements and merges | `human-assigned` + `manual-merge` | human at `human_progress` | Reviewer | human at `awaiting_merge`, only where the base is `main` | the spec merge, implementation and the merges onto `main` |
+A label added after approval applies at the next PASS; a change to the slice's set still needs
+a spec re-approval. `has-human-release` is scoped to the boundaries, not to every ticket: it
+gates every pull request whose base is `main`, while the spec approval is the human merge in
+every mode. A ticket PR into `spec/<epic>` is Reviewer-merged in every mode, because the branch
+is scratch and the human already approved the set that produces it. Integration otherwise costs
+two human merges — the spec and the release — while `direct-to-main` keeps N + 1.
 
-`manual-merge` is scoped to the boundaries, not to every ticket: it gates the spec approval,
-whatever its base, and every pull request whose base is `main`. A ticket PR into `spec/<epic>`
-is Reviewer-merged in every mode, because the branch is scratch and the human already approved
-the set that produces it. Integration otherwise costs two human merges — the spec and the
-release — while `direct-to-main` keeps N + 1.
-
-| Topology | Human merges under `manual-merge` |
+| Topology | Human merges under `has-human-release` |
 | --- | --- |
 | `spec/<epic>` | 2 — the spec approval and the release |
 | `direct-to-main` | N + 1 — the spec approval and each of the N ticket PRs |
@@ -199,40 +218,43 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
 ## Who moves what
 
 - **Human.** The spec PR is the approval: it carries the proposed breakdown and the published
-  children, so merging it approves the spec and the set. Add `human-assigned` and/or
-  `manual-merge` to the epic before the merge when the mode needs them. Implement a
-  `human-assigned` ticket at `human_progress`, open its PR against the ticket's `Branch:` base,
-  and move it to `human_review`. At `awaiting_merge`, merge the reviewed PR: the merge
-  completes the ticket, so do not move it to `done` yourself. Only a spec approval or a PR
-  whose base is `main` reaches you there; a ticket PR into `spec/<epic>` is Reviewer-merged.
-  Never move human work into `in_progress`.
+  children, so merging it approves the spec and the set. Add `has-human-implementer` and/or
+  `has-human-release` to the epic before the merge when the mode needs them. Implement a
+  `has-human-implementer` ticket at `human_progress`, open its PR against the ticket's
+  `Branch:` base, and move it to `human_review`. At `awaiting_merge`, merge the reviewed PR:
+  the merge completes the ticket, so do not move it to `done` yourself. Only a spec approval or
+  a review the exit rule sent there reaches you; a ticket PR into `spec/<epic>` is
+  Reviewer-merged. Never move human work into `in_progress`.
 - **Planner.** Create the spec as the epic's stage-1 child at `spec_progress`. In that run,
   fork `spec/<epic>` from `main` at the spec sha, write the spec recording `integration:`, and
   publish every delivery child in `backlog` with its stage, blockers and `Branch:` line, the
   final-stage release child last. Then link the spec PR, targeted at `spec/<epic>` or at `main`
   for a `direct-to-main` spec, to the child only. The merge approves the set and wakes you to
-  promote, not to slice: create no child after it. Promote the frontier by moving agent work to
-  `in_progress` and human work to `human_progress`, applying `ready-for-agent`; keep later
-  stages in `backlog`. Before promoting a release, query open `spec/*` heads against `main` and
-  park the next release while another is in flight. Triage `blocked`, run the cancelled-epic
-  sweep, and accept the epic on evidence after the release merge.
-- **Reviewer.** Owns `spec_review`, `in_review` and `human_review`: one verdict at the exact
-  head, evidence per criterion, then the move or the merge. Post the verdict first, at the
-  reviewed head, before the status move or the merge: the move starts the next handler and the
-  merge completes the ticket, so anything written afterwards arrives too late for both. A spec
-  PASS reviews the spec and its proposed breakdown, leaves the PR open and then moves to
-  `awaiting_merge`; never merge or enable auto-merge on a spec PR. A delivery PASS posts the
-  verdict at the exact head and then merges the PR into its base (squash, delete branch); the
-  merge completes the ticket, so no status move follows. `manual-merge` moves only a PR whose
-  base is `main` to `awaiting_merge`; a ticket PR into `spec/<epic>` merges in every mode. A
-  release PASS checks `mergeStateStatus` against the current `main` first. FAIL comments the
-  evidence and moves the ticket to the review column's back status. A review starts from an
-  open pull request: with no open link, comment the state and send the ticket back rather than
-  judging or completing it. The Reviewer never reviews its own work.
+  promote, not to slice: create no child after it. Move the epic to `epic_progress` in the run
+  that promotes the first delivery stage, and to `done` on acceptance. Promote the frontier by
+  the four-row table in `roles/planner.md`, applying `ready-for-agent`; keep later stages in
+  `backlog`. Before promoting a release, query open `spec/*` heads against `main` and park the
+  next release while another is in flight. Triage `blocked`, run the cancelled-epic sweep, and
+  accept the epic on evidence after the release merge.
+- **Reviewer.** Owns `spec_review`, `in_review`, `human_review` and `release_review`: one
+  verdict at the exact head, evidence per criterion, then the move or the merge. Post the
+  verdict first, at the reviewed head, before the status move or the merge: the move starts the
+  next handler and the merge completes the ticket, so anything written afterwards arrives too
+  late for both. A spec PASS reviews the spec and its proposed breakdown, leaves the PR open and
+  then moves to `awaiting_merge`; never merge or enable auto-merge on a spec PR. A delivery or
+  release PASS posts the verdict at the exact head and then applies the exit rule in
+  `skills/code-review/`: merge at the reviewed head, or move to `awaiting_merge` when the base is
+  `main` and the epic carries `has-human-release`. A release PASS checks `mergeStateStatus`
+  against the current `main` first. FAIL comments the evidence and moves the ticket to the review
+  column's back status. A review starts from an open pull request: with no open link, comment the
+  state and send the ticket back rather than judging or completing it. The Reviewer never
+  reviews its own work.
 - **Implementer.** Owns `in_progress`: read the ticket's `Branch:` under `## Parent`, branch
   from that base (`main` when absent), open the PR against it, merge the base in before
   `in_review`, then implement, validate and link the PR.
-- **Release.** Owns production only; see `roles/release.md`.
+- **Release.** Owns `release_progress` into `release_review`; the procedure and the deploy-time
+  `production:` approval live in `roles/release.md`.
+
 
 The linked pull request is the delivery handoff: entering a column reassigns the issue to that
 column's handler and starts their run; a member handler is assigned and runs nothing. Nothing
@@ -252,19 +274,18 @@ nothing else.
 ## Edge cases
 
 - **Review send-back.** Each review column declares its own back status: `spec_review` to
-  `spec_progress`, `in_review` to `in_progress`, `human_review` to `human_progress`. The
-  platform's needs-changes control uses that declared status, so a send-back cannot hand a
-  ticket to the wrong seat.
-- **Merge is the transition.** No review column declares `done`: `in_review` and `human_review`
-  have no next status, and `spec_review` advances only to `awaiting_merge`. A delivery PASS
-  merges the PR into its base and the platform completes the ticket; moving it to `done` by
-  hand would close it without a merge, so don't. A change request moves it to the lane that
-  owns the work.
+  `spec_progress`, `in_review` to `in_progress`, `human_review` to `human_progress`,
+  `release_review` to `release_progress`. The platform's needs-changes control uses that
+  declared status, so a send-back cannot hand a ticket to the wrong seat.
+- **Merge is the transition.** No review column declares `done`: every review column declares
+  `awaiting_merge` as its `next`, and a PASS either merges at the reviewed head or moves the
+  ticket there. A merge completes the ticket; moving it to `done` by hand would close it without
+  a merge, so don't. A change request moves it to the lane that owns the work.
 - **The release is a delivery PR with a `main` base.** The release child is reviewed at
-  `in_review` like any other ticket: a PASS merges it in autonomous mode, and `manual-merge`
-  sends it to `awaiting_merge` because its base is `main`. It is not a second approval — the
+  `release_review`: a PASS applies the exit rule, merging in autonomous mode and landing at
+  `awaiting_merge` when the epic carries `has-human-release`. It is not a second approval — the
   spec merge approved the set, and the release adds no criteria of its own. A red release
-  reworks on the release ticket at `in_progress`; its `done` children stay `done`.
+  reworks on the release ticket at `release_progress`; its `done` children stay `done`.
 - **A cancelled epic is swept once.** The sweep in "The cancelled-epic sweep" is mechanical:
   close the open delivery and release PRs, delete `spec/<epic>`, cancel the remaining children
   and record what merged and what is abandoned. It runs from the `--until-status cancelled`
@@ -297,16 +318,16 @@ nothing else.
   a proposed set, not approved work: all `backlog`, none in a running status, no
   `ready-for-agent` until the promotion wake. On a spec FAIL the spec run reconciles them to the
   revised breakdown; if the epic is abandoned, cancel them with it.
-- **Blocked.** Any seat can move a ticket to `blocked`. The Planner triages it to a work
-  column, or cancels it. A ticket waiting on another ticket names it in a `Blocked by` section
-  in its body and stays in `blocked` until that ticket closes; a dependency is not triage.
+- **Blocked.** Any seat can move a ticket to `blocked`. The Planner triages it back to the lane
+  its timeline records, or cancels it. A cross-epic dependency is an `--until-issue` condition,
+  not a ticket section: the ticket stays in `blocked` until that condition clears.
 - **Cancel and duplicate.** Move to `cancelled`; use `--duplicate-of` so the original lists it.
 - **Branch cleanup.** Enable **Automatically delete head branches** on the repository. Every
   delivery merge deletes its head branch, and the release merge deletes `spec/<epic>`; a merge
   from the GitHub UI relies on that setting, and the catalog cannot set it. Auto-merge is off,
   so no deferred merge exists.
 - **Issue outside a project.** The workspace Default workflow accepts every status and hands
-  off to nobody. The Factory modes above do not apply until the issue is in a project.
+  off to nobody. The Factory promotion above does not apply until the issue is in a project.
 - **Manual override.** Any member can move a ticket to any column; the move is the handoff and
   the new handler takes over. A named workflow refuses a status it does not declare.
 - **Stage barriers.** A stage is a parallel barrier group, not a position label: serial
@@ -316,23 +337,24 @@ nothing else.
 
 ## Live acceptance
 
-The offline matrix pins the graph and the mode routes; it cannot prove the platform's
+The offline matrix pins the graph and the promotion routes; it cannot prove the platform's
 handoff. Run this once after a catalog change reaches a workspace, in a throwaway project
 with a repository resource and the Factory workflow bound.
 
 | Scenario | Shape | Expected evidence |
 | --- | --- | --- |
-| autonomous | epic, spec child + three parallel children + one serial child | the whole slice already exists in `backlog` when the spec PR is reviewed; the human merge completes the child and a **single** Planner wake promotes the parallel stage (no child is created after the merge); each PASS is posted before its delivery PR merges and closes the ticket |
-| integration topology | the same slice with the fork, the release child and filtered triggers | the spec PR and every delivery PR target `spec/<epic>`; a child's PASS merges into the branch and completes the child, with no CI run started for the branch; the release PR runs the repository's checks and lands as one squash on `main`, deleting the branch; the Planner then accepts the epic on evidence |
+| autonomous | epic, spec child + three parallel children + one serial child | the whole slice already exists in `backlog` when the spec PR is reviewed; the human merge completes the child and a **single** Planner wake promotes the parallel stage (no child is created after the merge); each PASS is posted before its delivery PR merges and closes the ticket; the epic shows `todo` → `epic_progress` |
+| integration topology | the same slice with the fork, the release child and filtered triggers | the spec PR and every delivery PR target `spec/<epic>`; a child's PASS merges into the branch and completes the child, with no CI run started for the branch; the release child runs in `release_progress`, is reviewed at `release_review`, runs the repository's checks and lands as one squash on `main`, deleting the branch; the Planner then accepts the epic on evidence |
 | release serialization | two integration epics with a release ready | only one release PR is open against `main`; the second release stays `backlog` until the first closes, then merges the moved `main` in and re-runs before its PR opens |
 | cancelled epic | an integration epic cancelled before its release merges | the open delivery and release PRs close, `spec/<epic>` is deleted, the remaining children are cancelled, and the record says what merged and what is abandoned |
 | direct-to-main | a single-ticket breakdown | the spec PR targets `main`, there is no branch and no release child, and the ticket PR runs CI |
 | spec rework | a spec FAIL after the slice is published | the children stay `backlog`; the spec run reconciles them to the revised breakdown; no run starts |
-| human merge | `manual-merge` ticket | PASS lands at `awaiting_merge`; the human merges and the merge completes the ticket |
-| human implements | `human-assigned` ticket | the ticket sits in `human_progress` assigned to the human; its PR is reviewed at `human_review`, the PASS is posted, then merged |
+| human merge | `has-human-release` epic | PASS lands at `awaiting_merge`; the human merges and the merge completes the ticket |
+| human implements | `has-human-implementer` epic | the ticket sits in `human_progress` assigned to the human; its PR is reviewed at `human_review`, the PASS is posted, then merged |
 | human implements and merges | both labels | `human_progress` to `human_review` to `awaiting_merge`; the human merges |
-| blocked | any ticket moved to `blocked` | the Planner triages it back to a work column or cancels it |
-| dependency | a ticket whose body names an open blocker | it stays in `blocked` until the blocker closes |
+| blocked | any ticket moved to `blocked` | the Planner triages it back to the lane its timeline records, or cancels it |
+| dependency | a ticket parked on an `--until-issue` condition | it stays in `blocked` until that issue closes |
+
 
 Record `multica issue timeline <id>` before closing each item: it carries the status and
 assignee changes that prove the route. Put the result on the test issue, not in this

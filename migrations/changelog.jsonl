@@ -1,0 +1,2 @@
+{"kind":"rename","entity":"label","from":"human-assigned","to":"has-human-implementer"}
+{"kind":"rename","entity":"label","from":"manual-merge","to":"has-human-release"}

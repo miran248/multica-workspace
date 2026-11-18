@@ -36,8 +36,9 @@ test('template descriptions stay within 100 characters', () => {
 test('shared instructions keep only generic rules; operational gates live in roles', () => {
   const shared = readFileSync(join(ROOT, 'shared/instructions.md'), 'utf8');
   for (const heading of ['One gate', 'Production authority', 'Stage advance']) assert.ok(!shared.includes(heading), heading);
-  assert.match(readFileSync(join(ROOT, 'roles/planner.md'), 'utf8'), /production:/);
+  assert.doesNotMatch(readFileSync(join(ROOT, 'roles/planner.md'), 'utf8'), /production:/);
+  assert.match(readFileSync(join(ROOT, 'roles/release.md'), 'utf8'), /production:/);
   assert.match(readFileSync(join(ROOT, 'roles/release.md'), 'utf8'), /requires second approval/);
   assert.match(readFileSync(join(ROOT, 'roles/implementer.md'), 'utf8'), /reviewable PR/);
-  assert.match(readFileSync(join(ROOT, 'roles/reviewer.md'), 'utf8'), /awaiting_merge/);
+  assert.match(readFileSync(join(ROOT, 'roles/reviewer.md'), 'utf8'), /exit rule/);
 });

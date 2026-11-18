@@ -2,13 +2,23 @@
   "schema_version": 1,
   "key": "factory",
   "name": "Factory",
-  "description": "Spec work becomes merged code: a stage-1 spec child is approved by its merge, agent and human delivery lanes review at their own columns, and a human merge gate holds the work when the epic asks for it.",
+  "description": "Spec work becomes merged code: a stage-1 spec child is approved by its merge, the agent, human and release seats deliver in their lanes, one exit rule decides who merges, and the epic records its state.",
   "steps": [
     {
       "status_key": "backlog"
     },
     {
       "status_key": "todo"
+    },
+    {
+      "status_key": "epic_progress",
+      "new_status": {
+        "name": "Epic progress",
+        "category": "started",
+        "icon": "half",
+        "color": "#0ea5e9"
+      },
+      "instructions": "The epic's state while its slice is in flight. The Planner moves an epic here from todo when it promotes the first delivery stage, and to done on acceptance; the move dispatches no handler."
     },
     {
       "status_key": "spec_progress",
@@ -23,7 +33,7 @@
         "role": "planner"
       },
       "next_status_key": "spec_review",
-      "instructions": "Rework the spec, ADR and any amended contracts to answer the review findings; keep the approved direction intact. The spec run forks `spec/<epic>` from `main` at the spec sha before the spec PR exists and records `integration: spec/<epic>` in the spec; the spec PR targets that branch, never `main`. A `direct-to-main` spec records `integration: none`, keeps its spec PR on `main` and gets no branch and no release child; a single-ticket breakdown defaults to `direct-to-main` without a label. `human-assigned`/`manual-merge` only on an approved human-mode epic. Publish the whole slice first with to-tickets: every child under the epic, in `backlog`, blockers first, with its stage, `Branch: spec/<epic>` under `## Parent`, and the blocking identifiers in its body; publish the final-stage release child last, in `backlog`, carrying its release procedure, base/source branch, included children and `Touch:` union; on a rework reconcile the existing children, never duplicate. Then open one reviewable pull request at the exact head against the recorded branch, carrying the proposed breakdown, linked to this ticket; the merge approves the set, so create nothing after it: no child is created once the spec PR opens. On a spec rework force-push the same head branch: the PR link, number and body survive. Register the epic-cancelled condition (`--until-status cancelled`) at approval. Before promoting the release, run `gh pr list --base main --state open`, filter the heads to `spec/*`, and while another is open park the release on `--until-issue <release>`. Move the ticket to spec_review: the linked spec PR is the handoff, the move is your last action; its body carries what the diff cannot. This ticket is the epic's stage-1 spec child: its merge approves the spec and the breakdown, so never close it yourself and never link the spec PR to the epic. An external blocker moves the ticket to blocked with the reason."
+      "instructions": "Rework the spec, ADR and any amended contracts to answer the review findings; keep the approved direction intact. The spec run forks `spec/<epic>` from `main` at the spec sha before the spec PR exists and records `integration: spec/<epic>` in the spec; the spec PR targets that branch, never `main`. A `direct-to-main` spec records `integration: none`, keeps its spec PR on `main` and gets no branch and no release child; a single-ticket breakdown defaults to `direct-to-main` without a label. Publish the whole slice first with to-tickets: every child under the epic, in `backlog`, blockers first, with its stage and `Branch: spec/<epic>`; publish the final-stage release child last, in `backlog`. On a rework reconcile the existing children, never duplicate. Then open one reviewable pull request at the exact head against the recorded branch, carrying the proposed breakdown, linked to this ticket; the merge approves the set, so create nothing after it: no child is created once the spec PR opens. On a spec rework force-push the same head branch: the PR link, number and body survive. Register the epic-cancelled condition (`--until-status cancelled`) at approval. Before promoting the release, run `gh pr list --base main --state open`, filter the heads to `spec/*`, and while another is open park the release on `--until-issue <release>`. Move the ticket to spec_review: the linked spec PR is the handoff, the move is your last action. This ticket is the epic's stage-1 spec child: its merge approves the spec and the breakdown, so never close it yourself and never link the spec PR to the epic. An external blocker moves the ticket to blocked with the reason."
     },
     {
       "status_key": "spec_review",
@@ -48,7 +58,7 @@
         "role": "implementer"
       },
       "next_status_key": "in_review",
-      "instructions": "Implement this ticket as one reviewable pull request. Read the ticket, its spec and the repository conventions first; reproduce any demonstrated failure before fixing it. Read `Branch:` under `## Parent`; absence means `main`. Branch from that base and open the PR against it, and keep to the ticket's `Touch:` paths. Merge the base branch in before `in_review`, so the reviewed head is the head that will merge. Run the check that covers the diff with a finite timeout. Link the PR to this ticket, then move it to in_review: the linked PR is the handoff, the move is your last action. A PR body is optional; an empty one is not a finding. Never merge and never review your own work. An external blocker moves the ticket to blocked with the reason. Planner-owned spec text belongs in spec_progress, not here. A human-assigned ticket belongs in human_progress, never here."
+      "instructions": "Implement this ticket as one reviewable pull request. Read the ticket, its spec and the repository conventions first; reproduce any demonstrated failure before fixing it. Run the check that covers the diff with a finite timeout. Link the PR to this ticket, then move it to in_review: the linked PR is the handoff, the move is your last action. Never merge and never review your own work. An external blocker moves the ticket to blocked with the reason. Planner-owned spec text belongs in spec_progress, not here."
     },
     {
       "status_key": "human_progress",
@@ -63,7 +73,22 @@
         "role": "human"
       },
       "next_status_key": "human_review",
-      "instructions": "Implement this ticket as one reviewable pull request; this column is the human's delivery. Read the ticket, its spec and the repository conventions first. Read `Branch:` under `## Parent`; absence means `main`. Branch from that base, open the PR against it, and merge the base branch in before `human_review`, so the reviewed head is the head that will merge. Run the check that covers the diff with a finite timeout. Link the PR to this ticket, then move it to human_review: the linked PR is the handoff, the move is your last action. A PR body is optional; an empty one is not a finding. Never merge and never review your own work. An external blocker moves the ticket to blocked with the reason. Planner-owned spec text belongs in spec_progress, not here."
+      "instructions": "Implement this ticket as one reviewable pull request; this column is the human's delivery. Read the ticket, its spec and the repository conventions first. Run the check that covers the diff with a finite timeout. Link the PR to this ticket, then move it to human_review: the linked PR is the handoff, the move is your last action. Never merge and never review your own work. An external blocker moves the ticket to blocked with the reason. Planner-owned spec text belongs in spec_progress, not here."
+    },
+    {
+      "status_key": "release_progress",
+      "new_status": {
+        "name": "Release progress",
+        "category": "started",
+        "icon": "half",
+        "color": "#f97316"
+      },
+      "handler": {
+        "type": "agent",
+        "role": "release"
+      },
+      "next_status_key": "release_review",
+      "instructions": "Deliver the release ticket as one reviewable pull request: follow `roles/release.md`. Link the PR to this ticket, then move it to release_review: the linked PR is the handoff, the move is your last action. Never merge and never review your own work. An external blocker moves the ticket to blocked with the reason."
     },
     {
       "status_key": "in_review",
@@ -71,8 +96,9 @@
         "type": "agent",
         "role": "reviewer"
       },
+      "next_status_key": "awaiting_merge",
       "back_status_key": "in_progress",
-      "instructions": "Review the linked pull request at its exact head against the ticket's acceptance criteria and the repository standards. Read the ticket's `Branch:` under `## Parent` (`main` when absent) and check it against the PR's base: a wrong base goes back to in_progress. Before a PASS on a PR whose base is `main`, check `mergeStateStatus` against the current `main`: behind or dirty goes back to in_progress, never a stale merge; a moved head or a moved base invalidates the verdict. If the PR's base is `main` and this ticket or its parent carries manual-merge: post the PASS, then move it to awaiting_merge for the human. Otherwise — including every ticket PR into `spec/<epic>` — post the PASS verdict at the exact head, then merge with `gh pr merge --squash --delete-branch`: the merge completes this ticket (done), so do not move it. Never enable auto-merge: an armed pull request merges on its checks, not on this ticket's status. On a blocking finding, comment the evidence and move the ticket back to in_progress. Review only an open pull request: if the link is not open, there is nothing to review, so comment the state and move the ticket back to in_progress. Never review or merge your own work. A human-assigned ticket is reviewed at human_review, not here."
+      "instructions": "Review the linked pull request at its exact head against the ticket's acceptance criteria and the repository standards, using the method and the exit rule in `code-review`. The exit rule decides the merge or a move to awaiting_merge; a merge completes this ticket, so do not move it. On a blocking finding, comment the evidence and move the ticket back to in_progress. Review only an open pull request: if the link is not open, there is nothing to review, so comment the state and move the ticket back to in_progress. Never enable auto-merge. Never review or merge your own work."
     },
     {
       "status_key": "human_review",
@@ -86,8 +112,25 @@
         "type": "agent",
         "role": "reviewer"
       },
+      "next_status_key": "awaiting_merge",
       "back_status_key": "human_progress",
-      "instructions": "Review the human's pull request at its exact head against the ticket's acceptance criteria and the repository standards. Read the ticket's `Branch:` under `## Parent` (`main` when absent) and check it against the PR's base: a wrong base goes back to human_progress. Before a PASS on a PR whose base is `main`, check `mergeStateStatus` against the current `main`: behind or dirty goes back to human_progress, never a stale merge; a moved head or a moved base invalidates the verdict. If the PR's base is `main` and this ticket or its parent carries manual-merge: post the PASS, then move it to awaiting_merge for the human. Otherwise — including every ticket PR into `spec/<epic>` — post the PASS verdict at the exact head, then merge with `gh pr merge --squash --delete-branch`: the merge completes this ticket (done), so do not move it. Never enable auto-merge: an armed pull request merges on its checks, not on this ticket's status. On a blocking finding, comment the evidence and move the ticket back to human_progress. Review only an open pull request: if the link is not open, there is nothing to review, so comment the state and move the ticket back to human_progress. Never review or merge your own work. A spec pull request is reviewed at spec_review, not here."
+      "instructions": "Review the human's pull request at its exact head against the ticket's acceptance criteria and the repository standards, using the method and the exit rule in `code-review`. The exit rule decides the merge or a move to awaiting_merge; a merge completes this ticket, so do not move it. On a blocking finding, comment the evidence and move the ticket back to human_progress. Review only an open pull request: if the link is not open, there is nothing to review, so comment the state and move the ticket back to human_progress. Never enable auto-merge. Never review or merge your own work. A spec pull request is reviewed at spec_review, not here."
+    },
+    {
+      "status_key": "release_review",
+      "new_status": {
+        "name": "Release review",
+        "category": "started",
+        "icon": "three_quarters",
+        "color": "#f97316"
+      },
+      "handler": {
+        "type": "agent",
+        "role": "reviewer"
+      },
+      "next_status_key": "awaiting_merge",
+      "back_status_key": "release_progress",
+      "instructions": "Review the release pull request at its exact head against the ticket's acceptance criteria and the repository standards, using the method and the exit rule in `code-review`. The exit rule decides the merge or a move to awaiting_merge; a merge completes this ticket, so do not move it. On a blocking finding, comment the evidence and move the ticket back to release_progress. Review only an open pull request: if the link is not open, there is nothing to review, so comment the state and move the ticket back to release_progress. Never enable auto-merge. Never review or merge your own work."
     },
     {
       "status_key": "awaiting_merge",
@@ -101,7 +144,7 @@
         "type": "member",
         "role": "human"
       },
-      "instructions": "Merge the reviewed pull request at its exact head when you are satisfied; the merge completes this ticket, so do not move it. This column is for a spec approval or a merge whose base is `main` under manual-merge; a ticket PR into `spec/<epic>` is Reviewer-merged in every mode and never waits here. A spec child's merge approves the spec, its proposed breakdown and the published children, and wakes the Planner to promote the frontier. If it should change first, move it to spec_progress for planner-owned spec text, in_progress for agent delivery, or human_progress for human delivery, with the reason. Delete the head branch when you merge. Never enable auto-merge: this column exists so the merge is an explicit human act, and an armed pull request would merge on its checks without one."
+      "instructions": "Merge the reviewed pull request at its exact head when you are satisfied; the merge completes this ticket, so do not move it. This column is for a spec approval or a review the exit rule sent here. A spec child's merge approves the spec, its proposed breakdown and the published children, and wakes the Planner to promote the frontier. If it should change first, move it to spec_progress for planner-owned spec text, in_progress for agent delivery, human_progress for human delivery, or release_progress for a release, with the reason. Delete the head branch when you merge. Never enable auto-merge: this column exists so the merge is an explicit human act, and an armed pull request would merge on its checks without one."
     },
     {
       "status_key": "blocked",
@@ -109,7 +152,7 @@
         "type": "agent",
         "role": "planner"
       },
-      "instructions": "Triage why the ticket stopped. Planner-owned spec work moves to spec_progress; human-assigned delivery to human_progress; other delivery to in_progress; an external blocker is unblocked or the ticket is cancelled. A ticket that waits on another ticket names it in its Blocked by section and stays here until that ticket closes; nothing else stays parked."
+      "instructions": "Triage why the ticket stopped. Planner-owned spec work moves to spec_progress; human work to human_progress; agent delivery to in_progress; a release to release_progress. A swept ticket returns to the lane its timeline records. A cross-epic dependency waits on an `--until-issue` condition; an external blocker is unblocked or the ticket is cancelled. Nothing else stays parked."
     },
     {
       "status_key": "done"
