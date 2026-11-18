@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, ROLES, readJSON, resolve, syntheticBinding } from '../scripts/config.js';
 import { render } from '../scripts/deploy.js';
@@ -12,26 +12,32 @@ import { id } from './support/platform.js';
 test('the shared contract reaches every role and the comment owns the handoff', t => {
   const f = fixture(t), resolved = resolve(f.binding, f.root);
   for (const role of ROLES) {
-    assert.match(render(role, f.binding, f.root), /Use Conventional Commits/, role);
-    assert.match(render(role, f.binding, f.root), /summary, TICKET/, role);
-    assert.match(render(role, f.binding, f.root), /The comment is the handoff/, role);
-    assert.match(render(role, f.binding, f.root), /last action/, role);
-    assert.doesNotMatch(render(role, f.binding, f.root), /[Aa]rm auto-merge/, role);
+    const text = render(role, f.binding, f.root);
+    assert.match(text, /^## Delivery$/m, role);
+    assert.match(text, /^## Handoffs$/m, role);
+    assert.match(text, /Use Conventional Commits/, role);
+    assert.match(text, /summary, TICKET/, role);
+    assert.match(text, /The comment is the handoff/, role);
+    assert.match(text, /last action/, role);
+    assert.doesNotMatch(text, /[Aa]rm auto-merge/, role);
   }
-  assert.match(render('reviewer', f.binding, f.root), /never approve your own implementation/);
+  assert.match(render('reviewer', f.binding, f.root), /a moved head or a moved base invalidates the verdict/);
   assert.match(render('planner', f.binding, f.root), /grilling to acceptance/);
-  assert.match(render('implementer', f.binding, f.root), /Title the PR/);
-  assert.match(render('implementer', f.binding, f.root), /move it to `in_review`/);
+  assert.match(render('planner', f.binding, f.root), /move the stage-1 child to `spec_progress`/);
+  assert.match(render('implementer', f.binding, f.root), /reviewable PR/);
   for (const role of ROLES) assert.doesNotMatch(readFileSync(join(ROOT, `roles/${role}.md`), 'utf8'), /Coordinator|squad/, role);
   assert.deepEqual(Object.keys(resolved.shared.workflows), ['factory']);
   assert.equal(resolved.shared.catalog.timezone, 'UTC');
   assert.equal(resolved.sync.timezone, 'UTC');
 });
 
-test('the shared contract links the handoff template at the workspace origin, never a stored one', t => {
+test('the catalog declares no document and no contract stores a link', t => {
   const f = fixture(t);
+  assert.deepEqual(readJSON(join(f.root, 'templates/default.json')).documents, {});
+  assert.equal(existsSync(join(f.root, 'templates/handoff.md')), false);
   for (const role of ROLES) {
-    assert.match(render(role, f.binding, f.root), /handoff: https:\/\/github\.com\/example\/multica-workspace\/blob\/main\/templates\/handoff\.md;/, role);
+    const text = render(role, f.binding, f.root);
+    assert.doesNotMatch(text, /templates\/handoff\.md/, role);
   }
   assert.doesNotMatch(readFileSync(join(ROOT, 'shared/instructions.md'), 'utf8'), /https?:\/\//);
 });

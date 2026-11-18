@@ -54,9 +54,7 @@
     "required_provider": "dsh",
     "thinking_level": "high"
   },
-  "documents": {
-    "handoff": "templates/handoff.md"
-  },
+  "documents": {},
   "id": "default",
   "labels": {
     "bug": {

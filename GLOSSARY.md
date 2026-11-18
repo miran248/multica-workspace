@@ -6,14 +6,14 @@ when an issue, spec or commit names a concept, it uses the term here rather than
 ## Catalog
 
 **catalog** — `templates/default.json` plus the assets it names (roles, shared instructions,
-labels, document paths, one autopilot). It is the only deployable unit; `just validate`
+labels, skill bindings, one autopilot). It is the only deployable unit; `just validate`
 refuses anything but `default`.
 
 **role** — one of the five seats: `general`, `planner`, `implementer`, `reviewer`, `release`.
 A role's behavior is `roles/<role>.md`; the shared rules are `shared/instructions.md`.
 
 **shared instructions** — `shared/instructions.md`, the contract every role renders. Capped
-at 220 words by the suite.
+by the suite; the caps table in `README.md` is the one home.
 
 **skill binding** — the single role a skill attaches to, declared only in
 `templates/default.json`. There is no second role field to drift.

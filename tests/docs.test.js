@@ -18,7 +18,7 @@ test('the knowledge layer exists and the routing file links to it', () => {
 test('every relative link in the catalog documentation resolves', () => {
   const docs = readdirSync(join(ROOT, 'docs'), { recursive: true })
     .filter(name => name.endsWith('.md')).map(name => `docs/${name}`);
-  const sources = ['AGENTS.md', 'README.md', 'GLOSSARY.md', 'templates/handoff.md', ...docs];
+  const sources = ['AGENTS.md', 'README.md', 'GLOSSARY.md', ...docs];
   const dangling = [];
   for (const source of sources) {
     for (const [, target] of read(source).matchAll(/\]\(([^)]+)\)/g)) {
@@ -30,11 +30,10 @@ test('every relative link in the catalog documentation resolves', () => {
   assert.deepEqual(dangling, []);
 });
 
-test('the handoff template points at a caps table that exists', () => {
-  assert.match(read('templates/handoff.md'), /\[README\.md\]\(\.\.\/README\.md#brevity-caps\)/);
+test('the caps table states the contract, role and comment caps', () => {
   const caps = read('README.md');
   assert.match(caps, /^## Brevity caps$/m);
-  for (const cap of ['220 words', '130 words', '600 bytes', '1 KB', '800 bytes'])
+  for (const cap of ['340 words', '130 words', '10 rendered lines and 1 KB', '1 KB', '800 bytes'])
     assert.ok(caps.includes(cap), `README.md omits the ${cap} cap`);
 });
 

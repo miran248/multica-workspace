@@ -135,9 +135,10 @@ test('the comment is the handoff and the move or merge comes last', () => {
   assert.match(steps.get('spec_review').instructions, /post the PASS at the exact head[^.]*then move/);
   for (const key of ['in_review', 'human_review'])
     assert.match(steps.get(key).instructions, /post the PASS verdict at the exact head, then merge/, `${key} does not post before merging`);
-  const handoff = readFileSync(join(ROOT, 'templates/handoff.md'), 'utf8');
-  assert.match(handoff, /## The comment is the handoff/);
-  assert.match(handoff, /comment first and make the change last/);
+  const handoff = readFileSync(join(ROOT, 'shared/instructions.md'), 'utf8');
+  assert.match(handoff, /^## Handoffs$/m);
+  assert.match(handoff, /The comment is the handoff/);
+  assert.match(handoff, /comment is the handoff: post it before the move/);
   assert.doesNotMatch(handoff, /before the comment is posted/);
 });
 
@@ -214,8 +215,6 @@ function specRunViolations({ planner, step, tickets, specSkill }) {
   for (const [name, text] of [['roles/planner.md', planner], ['spec_progress', step]]) {
     if (!/forks? `spec\/<epic>` from `main`/i.test(text)) violations.push(`${name}: no fork from main`);
     if (!/spec PR targets (it|that branch)/.test(text)) violations.push(`${name}: spec PR is not targeted at the branch`);
-    if (!/`Branch: spec\/<epic>`/.test(text)) violations.push(`${name}: no Branch line`);
-    if (!/final-stage release child/.test(text)) violations.push(`${name}: no final-stage release child`);
     if (!/gh pr list --base main --state open/.test(text)) violations.push(`${name}: no release query`);
     if (!/`spec\/\*`/.test(text)) violations.push(`${name}: release query does not filter spec/*`);
     if (!/--until-issue <release>/.test(text)) violations.push(`${name}: release query does not park on the release`);
@@ -224,6 +223,9 @@ function specRunViolations({ planner, step, tickets, specSkill }) {
     if (!/direct-to-main/.test(text)) violations.push(`${name}: no direct-to-main escape hatch`);
     if (!/never `main`/.test(text)) violations.push(`${name}: an integration spec may target main`);
   }
+  if (!/`Branch: spec\/<epic>`/.test(step)) violations.push('spec_progress: no Branch line');
+  if (!/final-stage release child/.test(step)) violations.push('spec_progress: no final-stage release child');
+  if (!/final-stage release child/.test(planner)) violations.push('roles/planner.md: no final-stage release child');
   if (!/records `integration: spec\/<epic>`/.test(step)) violations.push('spec_progress: no integration record');
   if (!/`integration: none`/.test(step)) violations.push('spec_progress: no direct-to-main record');
   if (!/single-ticket breakdown defaults to `direct-to-main`/.test(step)) violations.push('spec_progress: no single-ticket default');
@@ -232,8 +234,8 @@ function specRunViolations({ planner, step, tickets, specSkill }) {
   if (!/single ticket defaults to `direct-to-main`/.test(specSkill)) violations.push('to-spec: no single-ticket default');
   if (!/forks that branch from `main` at the spec sha/.test(specSkill) || !/targets its approval PR at `spec\/<epic-key>`/.test(specSkill))
     violations.push('to-spec: approval PR is not targeted at the recorded branch');
-  const parent = /## Parent\n\n([\s\S]*?)## What to build/.exec(tickets)?.[1] ?? '';
-  if (!/Branch: spec\/<epic-key>/.test(parent)) violations.push('to-tickets: no Branch line under ## Parent');
+  const body = /<issue-template>([\s\S]*?)<\/issue-template>/.exec(tickets)?.[1] ?? '';
+  if (!/^Branch: spec\/<epic-key>/m.test(body)) violations.push('to-tickets: no Branch line in the ticket template');
   if (!/absence means `main`/.test(tickets)) violations.push('to-tickets: no main default');
   if (!/release child is the final publication: created last, in `backlog`, in the final stage/.test(tickets))
     violations.push('to-tickets: release child is not last, backlog and final stage');
@@ -257,30 +259,33 @@ test('the spec run forks, records and targets the integration branch', () => {
   assert.notDeepEqual(specRunViolations(noBase), []);
 });
 
-// The delivery side reads its base from the ticket body, merges it before review, and the
-// Reviewer closes a ticket PR on the branch in every mode. A main-only delivery and a
-// manual-merge gate on a branch PR are the two failures this matrix exists to catch.
-function deliveryViolations({ implementer, reviewer, inProgress, humanProgress, inReview, humanReview, awaitingMerge }) {
+// The delivery contract lives once in shared; the columns and the ticket template carry only
+// their own route and base. A work column that derives no branch, a delivery that never
+// merges its base, or a manual-merge gate on a branch PR are the failures this matrix catches.
+function deliveryViolations({ shared, implementer, reviewer, inProgress, humanProgress, inReview, humanReview, awaitingMerge }) {
   const violations = [];
-  const delivery = [
-    ['roles/implementer.md', implementer, 'in_review'],
+  if (!/`Branch:`/.test(shared)) violations.push('shared: no body-derived branch');
+  if (!/absen[ct]e? means `main`/.test(shared)) violations.push('shared: main is not the default base');
+  if (!/(branch from it|PR into it)/.test(shared)) violations.push('shared: the PR is not targeted at the base');
+  if (!/[Mm]erge the base in before review/.test(shared)) violations.push('shared: the base is not merged before review');
+  if (!/`## Touch`/.test(shared)) violations.push('shared: does not keep to Touch:');
+  for (const [name, text] of [['roles/implementer.md', implementer], ['roles/reviewer.md', reviewer]])
+    for (const phrase of ['`Branch:`', '`## Touch`', 'Conventional Commits', 'squash'])
+      if (text.includes(phrase)) violations.push(`${name}: repeats the delivery contract: ${phrase}`);
+  for (const [name, text, next] of [
     ['in_progress', inProgress, 'in_review'],
     ['human_progress', humanProgress, 'human_review'],
-  ];
-  for (const [name, text, next] of delivery) {
+  ]) {
     if (!/`Branch:` under `## Parent`/.test(text)) violations.push(`${name}: no body-derived branch`);
-    if (!/(`main` when absent|absen[ct]e? means `main`)/.test(text)) violations.push(`${name}: main is not the default base`);
+    if (!/absen[ct]e? means `main`/.test(text)) violations.push(`${name}: main is not the default base`);
     if (!/(open the PR against it|PR into it)/.test(text)) violations.push(`${name}: the PR is not targeted at the base`);
     if (!new RegExp(`[Mm]erge the base( branch)? in before \`${next}\``).test(text)) violations.push(`${name}: the base is not merged before ${next}`);
   }
-  for (const [name, text] of [['roles/implementer.md', implementer], ['in_progress', inProgress]])
-    if (!/`Touch:`/.test(text)) violations.push(`${name}: does not keep to Touch:`);
+  if (!/`Touch:`/.test(inProgress)) violations.push('in_progress: does not keep to Touch:');
   for (const [name, text] of [['roles/reviewer.md', reviewer], ['in_review', inReview], ['human_review', humanReview]]) {
     if (!/mergeStateStatus/.test(text)) violations.push(`${name}: no mergeStateStatus check`);
     if (!/moved base invalidates/.test(text)) violations.push(`${name}: a moved base does not invalidate the verdict`);
   }
-  if (!/`manual-merge`[^.]*only[^.]*for a `main` base[^.]*never for a ticket PR into `spec\/<epic>`/.test(reviewer))
-    violations.push('roles/reviewer.md: manual-merge is not narrowed to the main base');
   for (const [name, text] of [['in_review', inReview], ['human_review', humanReview]]) {
     if (!/(`main` when absent|absen[ct]e? means `main`)/.test(text)) violations.push(`${name}: main is not the default base`);
     if (!/base is `main`[^.]*manual-merge/.test(text)) violations.push(`${name}: manual-merge is not scoped to the main base`);
@@ -293,6 +298,7 @@ function deliveryViolations({ implementer, reviewer, inProgress, humanProgress, 
 
 test('the delivery branch comes from the body and only a main-base merge waits', () => {
   const contract = {
+    shared: readFileSync(join(ROOT, 'shared/instructions.md'), 'utf8'),
     implementer: readFileSync(join(ROOT, 'roles/implementer.md'), 'utf8'),
     reviewer: readFileSync(join(ROOT, 'roles/reviewer.md'), 'utf8'),
     inProgress: steps.get('in_progress').instructions,

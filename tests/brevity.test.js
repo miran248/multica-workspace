@@ -4,15 +4,15 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, readJSON } from '../scripts/config.js';
 
-// Caps: generic shared contract <=220 words; role contracts <=130; descriptions <=100 chars.
+// Caps: generic shared contract <=340 words; role contracts <=130; descriptions <=100 chars.
 const wordCount = path => readFileSync(join(ROOT, path), 'utf8').trim().split(/\s+/).filter(Boolean).length;
 const overCap = (cap, paths) => paths
   .map(path => ({ path, words: wordCount(path) }))
   .filter(({ words }) => words > cap)
   .map(({ path, words }) => `${path}: ${words} > ${cap}`);
 
-test('shared instructions stay within 220 words', () => {
-  assert.deepEqual(overCap(220, ['shared/instructions.md']), []);
+test('shared instructions stay within 340 words', () => {
+  assert.deepEqual(overCap(340, ['shared/instructions.md']), []);
 });
 
 test('every role stays within 130 words', () => {
@@ -38,6 +38,6 @@ test('shared instructions keep only generic rules; operational gates live in rol
   for (const heading of ['One gate', 'Production authority', 'Stage advance']) assert.ok(!shared.includes(heading), heading);
   assert.match(readFileSync(join(ROOT, 'roles/planner.md'), 'utf8'), /production:/);
   assert.match(readFileSync(join(ROOT, 'roles/release.md'), 'utf8'), /requires second approval/);
-  assert.match(readFileSync(join(ROOT, 'roles/implementer.md'), 'utf8'), /in_review/);
+  assert.match(readFileSync(join(ROOT, 'roles/implementer.md'), 'utf8'), /reviewable PR/);
   assert.match(readFileSync(join(ROOT, 'roles/reviewer.md'), 'utf8'), /awaiting_merge/);
 });

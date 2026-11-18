@@ -75,7 +75,7 @@ and ensures exactly one enabled schedule trigger.
 | `shared/instructions.md` | rules shared by every role |
 | `roles/` | five seats, each one job |
 | `skills/` | the fifteen bound methods; each attaches to exactly one role |
-| `templates/default.json` | the only deployable catalog: agents, labels, defaults, documents |
+| `templates/default.json` | the only deployable catalog: agents, labels, defaults, skills, autopilots and workflows |
 | `templates/autopilots/` | the `config-sync` control and its prompt |
 | `templates/workflows/` | the `Factory` project workflow |
 | `schemas/` | JSON Schema contracts for the catalog, binding, skills and ledger |
@@ -95,12 +95,12 @@ Every contract is capped; a handoff or verdict over its cap is a blocking review
 
 | Cap | Applies to | Checked by |
 | --- | --- | --- |
-| 220 words | `shared/instructions.md` | `tests/brevity.test.js` |
+| 340 words | `shared/instructions.md` | `tests/brevity.test.js` |
 | 130 words | each `roles/<role>.md` | `tests/brevity.test.js` |
 | 100 characters | a template description | `tests/brevity.test.js` |
-| 600 bytes, 5 lines, at most 8 rendered lines | a handoff or a verdict | review, per [templates/handoff.md](templates/handoff.md) |
-| 1 KB | a findings list or an evidence table | review, per [templates/handoff.md](templates/handoff.md) |
-| 800 bytes | a human-facing decision packet | review, per [templates/handoff.md](templates/handoff.md) |
+| 10 rendered lines and 1 KB | a comment (handoff or verdict) | review, per the shared `## Handoffs` |
+| 1 KB | a findings list or an evidence table | review, per the shared `## Handoffs` |
+| 800 bytes | a human-facing decision packet | review, per the shared `## Handoffs` |
 
 ## Skills and provenance
 

@@ -12,6 +12,18 @@ Both axes run as **parallel sub-agents** so they don't pollute each other's cont
 
 The issue tracker and labels come from the workspace agent contract; work lives in Multica.
 
+## Delivery checks
+
+Every review also enforces the shared delivery contract, as five checks:
+
+1. **One pull request, one ticket.** The change is one PR, linked to the ticket, at the reviewed head.
+2. **The base.** The PR targets the ticket's `Branch:` line, or `main` when the line is absent.
+3. **The scope.** Every changed path is inside the ticket's `## Touch`; an unlisted path is a finding.
+4. **The subject.** The PR title is `type(scope): summary, TICKET`, and the squash subject keeps that shape.
+5. **The merge.** The merge is one squash; nobody merges their own work and auto-merge is never enabled.
+
+A breach is a blocking finding on the Standards axis.
+
 ## Process
 
 ### 1. Pin the fixed point
