@@ -15,10 +15,10 @@ remembered to create it on, and it is duplicated state on every child.
 
 ## Decision
 
-One catalog autopilot, `stale-sweep`, runs hourly in the Planner role, reading the five
+One catalog autopilot, `stale-sweep`, runs hourly in the Planner role, reading the seven
 reviewer-handled review columns — `spec_review`, `in_review`, `in_review_gate`, `human_review`,
-`human_review_gate`. It dates each ticket from `issue timeline`, and for a ticket older than two
-hours it posts a `## What` / `## Evidence` / `## Next` comment with the age and the last actor,
+`human_review_gate`, `release_review`, `release_review_gate`. It dates each ticket from
+`issue timeline`, and for a ticket older than two hours it posts a `## What` / `## Evidence` / `## Next` comment with the age and the last actor,
 then moves the ticket to `blocked` for triage. Human-handled columns (`human_progress`,
 `awaiting_merge`) are never swept: they wait indefinitely for the human, and no agent may
 un-gate a human step. Triage of a swept ticket restores the lane it held before `blocked` in its

@@ -4,10 +4,10 @@
 under this topology, so the record is what a rework and a later reader check against.
 
 Accepted 2026-11-17. Approval is the merge of this spec's pull request into `spec/MIR-227`,
-which completes MIR-228 and approves the published set; MIR-227 is the epic and stays `todo`
-until the release lands and the Planner accepts it on evidence. The decisions below are the
-answers given in the grilling session that opened the epic; ADR-0010, ADR-0011 and ADR-0012
-are their durable records.
+which completes MIR-228 and approves the published set; MIR-227 is the epic — it stays `todo`
+until the spec merge, `epic_progress` until the release lands, and the Planner accepts it on
+evidence. The decisions below are the answers given in the grilling session that opened the
+epic; ADR-0010, ADR-0011 and ADR-0012 are their durable records.
 
 ## Problem Statement
 
@@ -26,14 +26,18 @@ The costs are concrete.
   will check them either (that decision is out of scope by choice). Their only possible home
   is the seat that acts on the rule.
 - **The label read lands on the irreversible action.** The Reviewer is instructed to branch on
-  `manual-merge` while it holds the merge button. That is the one place a wrong read costs a
-  wrong merge and cannot be undone.
+  the epic's merge label — `manual-merge` until this change renames it `has-human-release` —
+  while it holds the merge button. That is the one place a wrong read costs a wrong merge and
+  cannot be undone.
 - **The one guard called essential has no carrier.** `task.failed` plus the 90m review check
   depends on the Planner remembering to arm a per-issue timer in every review column. The
   ticket the Planner forgets is exactly the ticket nobody watches.
 - **The guide is double bookkeeping.** `docs/factory.md` keeps a hand-written column table and
   Mermaid graph that no test parses, so a graph change can leave the guide describing the old
   graph while the workflow moves.
+- **The release seat is installed but unclaimed.** The `release` role exists and no workflow
+  handler ever selects it; the release procedure lives in one ticket's body, so it has one copy
+  and no reader with a contract.
 
 The repository is also inconsistent about templates: `templates/handoff.md` is declared as a
 document that the sync never deploys, `shared/instructions.md` carries a different five-line
@@ -47,24 +51,29 @@ label. Otherwise the home is exactly **one prose copy, in the seat that reads it
 carrier or one reader" is the single acceptance measure for the whole change, and the inventory
 in Testing Decisions is how it is measured.
 
-- **The graph carries the mode.** Fifteen columns. `human-merge` and `human-assigned` select a
-  lane when the Planner promotes a ticket, and two gate lanes end in the human's merge. A
-  Reviewer never reads a label; each review column declares its own exit.
+- **The graph carries the mode and the seat.** Twenty columns. `has-human-implementer` and
+  `has-human-release` select a lane when the Planner promotes a ticket; the release seat has its
+  own lane in both merge modes; three gate lanes end in the human's merge. A Reviewer never reads
+  a label; each review column declares its own exit.
+- **The epic has a state.** `epic_progress` records that the slice is approved and in flight;
+  the Planner moves the epic there when it promotes the first delivery stage, and to `done` on
+  acceptance. It is a state column with no handler, so the move starts no run and cannot
+  duplicate the barrier wake.
 - **One contract.** The delivery rules and the handoff shape live once in shared instructions;
   each role keeps only its own behaviour, and `code-review` carries the checking method.
 - **Two templates.** A ticket is a `Branch:` line plus `## What` / `## Acceptance` / `## Touch`;
   a comment is `## What` / `## Evidence` / `## Next`. Everything the platform already stores
   (the parent) or encodes (the stage edge) leaves the body.
-- **One sweep.** One hourly catalog autopilot sweeps the five reviewer-handled review
-  columns, comments the evidence and moves the ticket to `blocked`. `task.failed` stays
-  per-issue; the per-issue 90m timer is deleted.
+- **One sweep.** One hourly catalog autopilot sweeps the seven reviewer-handled review columns,
+  comments the evidence and moves the ticket to `blocked`. `task.failed` stays per-issue; the
+  per-issue 90m timer is deleted.
 - **One renderer.** The guide's column table and graph are generated from the workflow file,
   and the suite fails when the document and the workflow differ.
 - **One entry rule.** Durable work starts from a ticket or an epic; chat may produce throwaway
   artifacts but never a durable repository write, and the factory starts only when the Planner
   moves the spec child to `spec_progress` from a grilling session.
 - **One proof.** A drill on a throwaway project, bound to a copy of the new graph, exercises
-  every mode before the catalog change reaches a live project.
+  every mode and both release exits before the catalog change reaches a live project.
 
 ## User Stories
 
@@ -72,7 +81,7 @@ in Testing Decisions is how it is measured.
 2. As the approval owner, I want to read one document and see the whole workflow, so I do not have to reconcile the guide against the workflow file.
 3. As the approval owner, I want the mode I put on the epic to decide who merges before work starts, so a merge cannot depend on a reviewer's reading of a label.
 4. As the approval owner, I want no human approval after the spec merge unless an epic label asked for one, so the autonomous epic stays autonomous.
-5. As the approval owner, I want the release merge to follow the epic's mode, so a `human-merge` epic gates the release without a second label.
+5. As the approval owner, I want the release merge to follow the epic's mode, so a `has-human-release` epic gates the release without a second label.
 6. As the Planner, I want the mode-to-lane mapping written once in my own contract, so promotion is one table lookup and not a negotiation with the Reviewer.
 7. As the Planner, I want the stage to be the dependency edge inside an epic, so I stop writing `Blocked by` lists that no platform check reads.
 8. As the Planner, I want a `Touch:` list on every ticket, so the diff has a committed scope before implementation begins.
@@ -86,10 +95,10 @@ in Testing Decisions is how it is measured.
 16. As the Reviewer, I want the delivery checks in `code-review`, so the rule I enforce and the method I load are the same copy.
 17. As the Reviewer, I want a gate column to name `awaiting_merge` and a normal column to merge, so the ticket's column is the whole instruction.
 18. As the Reviewer, I want a ticket that is not an open PR to go back with a record, so I never review or complete a stale link.
-19. As the human in a `human-merge` epic, I want every pull request based on `main` to reach me at `awaiting_merge`, so I keep the boundary merges without holding every branch merge.
+19. As the human in a `has-human-release` epic, I want every pull request based on `main` to reach me at `awaiting_merge`, so I keep the boundary merges without holding every branch merge.
 20. As the human implementer, I want the gate lane to exist without a second status read, so my own delivery also ends at my merge when the epic asks for it.
 21. As the human implementer, I want my review to be independent of my implementation, so `human_review` and its gate twin are reviewed by the Reviewer, never by me.
-22. As a maintainer, I want the 15-column graph pinned by the offline matrix, so a column cannot be added without its route and its handler.
+22. As a maintainer, I want the twenty-column graph pinned by the offline matrix, so a column cannot be added without its route and its handler.
 23. As a maintainer, I want the guide rendered from the workflow, so a graph change cannot leave the guide behind.
 24. As a maintainer, I want the ticket and comment templates to be one shape each, so a handoff is read the same way by every seat.
 25. As a maintainer, I want the undeployed handoff document deleted, so there is no declared artifact that nothing deploys.
@@ -98,6 +107,8 @@ in Testing Decisions is how it is measured.
 28. As a maintainer, I want the drill to prove the graph on a throwaway project, so a wrong assumption costs a drill ticket and not a live sync.
 29. As a maintainer, I want a measured inventory of rule to carrier, so "the drift is gone" is a result and not an opinion.
 30. As a future agent, I want the catalog to be legible in one pass, so I can hold the whole contract in a fresh context window.
+31. As the release agent, I want a lane and a contract in the workflow, so the release procedure has one home and the release ticket carries only its instance.
+32. As the approval owner, I want an approved epic to leave `todo` for `epic_progress`, so a slice in flight is not indistinguishable from one that is queued.
 
 ## Implementation Decisions
 
@@ -113,40 +124,55 @@ dispatch instruction may name a route, but it may not restate the rule that rout
 repository's own CI stays whatever it was: this change adds no workflow and no check to any
 product repository.
 
-**D3 — The mode selects the lane at promotion.** The graph grows three columns and the Planner
-maps an epic's labels, plus the ticket's base, to a lane when it promotes the ticket. A
-Reviewer never reads a label. The mapping is one table in the Planner's contract:
+**D3 — The mode selects the lane at promotion.** The graph grows five columns and the Planner
+maps an epic's labels, the ticket's kind and the ticket's base to a lane when it promotes the
+ticket. A Reviewer never reads a label. The mapping is one table in the Planner's contract:
 
-| Epic labels | Ticket base | Implementation | Review | A PASS lands |
-| --- | --- | --- | --- | --- |
-| neither | any | `in_progress` | `in_review` | merged by the Reviewer |
-| `human-merge` | `spec/<epic>` | `in_progress` | `in_review` | merged by the Reviewer |
-| `human-merge` | `main` | `in_progress_gate` | `in_review_gate` | `awaiting_merge` |
-| `human-assigned` | any | `human_progress` | `human_review` | merged by the Reviewer |
-| `human-assigned` + `human-merge` | `spec/<epic>` | `human_progress` | `human_review` | merged by the Reviewer |
-| `human-assigned` + `human-merge` | `main` | `human_progress` | `human_review_gate` | `awaiting_merge` |
+| Epic labels | Ticket | Base | Implementation | Review | A PASS lands |
+| --- | --- | --- | --- | --- | --- |
+| neither | delivery | any | `in_progress` | `in_review` | merged by the Reviewer |
+| `has-human-release` | delivery | `spec/<epic>` | `in_progress` | `in_review` | merged by the Reviewer |
+| `has-human-release` | delivery | `main` | `in_progress_gate` | `in_review_gate` | `awaiting_merge` |
+| `has-human-implementer` | delivery | any | `human_progress` | `human_review` | merged by the Reviewer |
+| `has-human-implementer` + `has-human-release` | delivery | `spec/<epic>` | `human_progress` | `human_review` | merged by the Reviewer |
+| `has-human-implementer` + `has-human-release` | delivery | `main` | `human_progress` | `human_review_gate` | `awaiting_merge` |
+| any | release | `main` | `release_progress` | `release_review` | merged by the Reviewer |
+| `has-human-release` | release | `main` | `release_progress_gate` | `release_review_gate` | `awaiting_merge` |
 
-`human-merge` keeps the scope `manual-merge` has today: it gates the spec approval and every
-pull request whose base is `main`. A ticket PR into `spec/<epic>` is Reviewer-merged in every
-mode, because the human already approved the set and the branch is scratch. The two gate review
-columns are the only columns whose PASS moves to `awaiting_merge`; the two normal review columns
-merge on PASS and declare no advance. Because the mode is resolved per promotion, a label added
-after a ticket has been promoted does not move that ticket; the epic's mode is set before the
-spec merge when the whole slice is to share it.
+`has-human-release` keeps the scope `manual-merge` has today: it gates the spec approval and
+every pull request whose base is `main`. A ticket PR into `spec/<epic>` is Reviewer-merged in
+every mode, because the human already approved the set and the branch is scratch. The three gate
+delivery review columns are the only delivery columns whose PASS moves to `awaiting_merge`
+(`spec_review` always does, D4); the three normal review columns merge on PASS and declare no
+advance. The release child belongs to the release seat in
+every mode: `has-human-implementer` changes who implements delivery, not who releases. Because
+the mode is resolved per promotion, a label added after a ticket has been promoted does not move
+that ticket; the epic's mode is set before the spec merge when the whole slice is to share it.
+
+The epic also has a state. It leaves `todo` when the slice starts: the Planner moves it to
+`epic_progress` in the run that promotes the first delivery stage, and to `done` on acceptance.
+`epic_progress` has no handler, so the move starts no run and cannot duplicate the barrier wake
+that already fires when a stage closes.
 
 **D4 — The spec approval is always the human merge.** `spec_review` keeps one exit: PASS leaves
 the pull request open and moves the spec child to `awaiting_merge`; the human merge approves the
 spec, the proposed breakdown and the published set, in every mode including autonomous. No
 column may merge a spec PR, and no instruction may enable auto-merge.
 
-**D5 — Naming.** The gate columns are `in_progress_gate`, `in_review_gate` and
-`human_review_gate`. `_gate` names the exit, not the actor: it reads as "this lane ends at the
-human gate." `_manual` was rejected because it names the actor and duplicates the label's
-spelling. The epic label is renamed `manual-merge` → `human-merge`: the label names the policy,
-the columns name the state, and `human-merge` pairs with `human-assigned` as the two orthogonal
-mode flags. The rename is a migration-ledger event, so the live label keeps its id and its
-issues; `human-merge` is the name in the catalog, the review instructions, the guide and the
-tests.
+**D5 — Naming.** The gate columns are `in_progress_gate`, `in_review_gate`,
+`human_review_gate`, `release_progress_gate` and `release_review_gate`; the release seat's normal
+columns are `release_progress` and `release_review`. `_gate` names the exit, not the actor: it
+reads as "this lane ends at the human gate." `_manual` was rejected because it names the actor
+and duplicates the label's spelling.
+
+The epic labels are `has-human-implementer` (renamed from `human-assigned`) and
+`has-human-release` (renamed from `manual-merge`). `has-` states a property of the epic's
+delivery, so the two flags compose and read as one policy: the epic has a human implementer, a
+human release, or both. `uses-` would name a tool or an actor the epic employs and reads as a
+per-run choice, not an epic property. Both renames are migration-ledger events, so the live
+labels keep their ids and their issues; the new names are the names in the catalog, the review
+instructions, the guide and the tests. The drill creates its own copies of both names and
+deletes them before the release, so the ledger never sees two live labels with one meaning.
 
 **D6 — Two templates and no repeated state.** A ticket body is a `Branch:` line followed by
 `## What`, `## Acceptance` and `## Touch`; the line is present only for an integration spec and
@@ -186,24 +212,24 @@ their `Touch:` sets are disjoint; any ordering need is a later stage. The floor 
 behavioural: a chunk smaller than one verifiable behaviour cannot be reviewed or merged.
 
 **D11 — No human gate after the spec merge unless a label selects one.** An autonomous epic
-runs to the release without another human decision. `human-merge` is the label that adds a human
-merge gate; `human-assigned` selects human implementation. Each is resolved to a lane at
-promotion, never by a conditional inside a step instruction. Silence is not approval; a bare
-`approve` clears the gate it names.
+runs to the release without another human decision. `has-human-release` is the label that adds a
+human merge gate; `has-human-implementer` selects human implementation. Each is resolved to a
+lane at promotion, never by a conditional inside a step instruction. Silence is not approval; a
+bare `approve` clears the gate it names.
 
 **D12 — One sweep, one event.** The catalog declares a `stale-sweep` autopilot: hourly, planner
-role, `run_only`, reading the five reviewer-handled review columns — `spec_review`, `in_review`,
-`in_review_gate`, `human_review`, `human_review_gate` — dating each ticket from `issue timeline`,
-and for a ticket older than two hours posting a `## What` / `## Evidence` / `## Next` comment with
-the age and the last actor, then moving it to `blocked` for triage. Human-handled columns
-(`human_progress`, `awaiting_merge`) are never swept: they wait indefinitely for the human, and
-no agent may un-gate a human step. Triage of a swept ticket restores the lane it held before
-`blocked` in its timeline, so a swept gate ticket cannot be demoted to a normal review; a second
-sweep on the same ticket leaves it `blocked` for the human rather than re-entering the loop. The
-sweep never mentions anyone, never closes or cancels a ticket and never runs on `blocked`.
-`task.failed` stays a per-issue event the Planner registers, because the platform knows that
-fact exactly; the per-issue 90m timer is deleted, and the cancelled-epic sweep stays as
-`--until-status cancelled` on the epic. No wake is registered
+role, `run_only`, reading the seven reviewer-handled review columns — `spec_review`, `in_review`,
+`in_review_gate`, `human_review`, `human_review_gate`, `release_review`, `release_review_gate` —
+dating each ticket from `issue timeline`, and for a ticket older than two hours posting a
+`## What` / `## Evidence` / `## Next` comment with the age and the last actor, then moving it to
+`blocked` for triage. Human-handled columns (`human_progress`, `awaiting_merge`) are never
+swept: they wait indefinitely for the human, and no agent may un-gate a human step. Triage of a
+swept ticket restores the lane it held before `blocked` in its timeline, so a swept gate ticket
+cannot be demoted to a normal review; a second sweep on the same ticket leaves it `blocked` for
+the human rather than re-entering the loop. The sweep never mentions anyone, never closes or
+cancels a ticket and never runs on `blocked`. `task.failed` stays a per-issue event the Planner
+registers, because the platform knows that fact exactly; the per-issue 90m timer is deleted, and
+the cancelled-epic sweep stays as `--until-status cancelled` on the epic. No wake is registered
 on `comment.created`.
 
 **D13 — The guide renders from the workflow.** A renderer writes the column table and the
@@ -212,61 +238,69 @@ suite fails when the document differs. The mode matrix and the prose stay author
 rules, not a projection of the graph — but every status key they name must resolve. A hand edit
 inside a generated block is a test failure, not a review finding.
 
-**D14 — The deletions and the rename.** The undeployed `templates/handoff.md` and its
+**D14 — The deletions and the renames.** The undeployed `templates/handoff.md` and its
 `documents` declaration are deleted with the resolver's document list. The role copies of the
 delivery and handoff rules are deleted once shared carries them. The hand-written column table
 and Mermaid graph are deleted once the renderer writes them. `## Parent` and `Blocked by` leave
 the ticket template. The 90m timer leaves the Planner's contract. The `manual-merge` label is
-renamed `human-merge` by a migration-ledger event, not recreated: existing epics keep the label
-by id, and the catalog, the review instructions, the guide and the tests carry the new name.
-The `awaiting_merge` instruction stops naming the label — the column is a spec approval or a
-gate-lane exit — and the `blocked` instruction stops naming a `Blocked by` section: a swept
-ticket returns to the lane its timeline records, and any other ticket uses the stage or the
-`--until-issue` condition. ADR-0005, ADR-0008 and ADR-0009 are not edited: where this spec
-changes their consequence it does so through a new ADR. The `production:` body phrase in
-`roles/release.md` is left as it is; production promotion approval is out of scope.
+renamed `has-human-release` and `human-assigned` is renamed `has-human-implementer`, each by a
+migration-ledger event, not recreated: existing epics keep their labels by id, and the catalog,
+the review instructions, the guide and the tests carry the new names. The `awaiting_merge`
+instruction stops naming a label — the column is a spec approval or a gate-lane exit — and the
+`blocked` instruction stops naming a `Blocked by` section: a swept ticket returns to the lane
+its timeline records, and any other ticket uses the stage or the `--until-issue` condition. The
+release seat's contract gains the release procedure once the release lane owns it; the
+`production:` body phrase and its deploy-time second approval in `roles/release.md` are left as
+they are, and production promotion stays out of scope. ADR-0005, ADR-0008 and ADR-0009 are not
+edited: where this spec changes their consequence it does so through a new ADR.
 
 **D15 — The drill.** Before any catalog change reaches a live project, a throwaway Multica
 project and a disposable repository are bound to a copy of the new workflow — a separately
 named workflow object built from the graph in this spec, never the live `Factory`. It runs one
-drill epic per mode (D17), with one ticket left stale in an agent review column and one moved
-across the graph. Evidence is `issue timeline` for each ticket and each drill epic: the status
-and assignee changes, the gate lane landing at `awaiting_merge`, the merge that completes it, one
-Planner wake per closing stage, and the sweep's rule applied by hand to the stale ticket (the
-autopilot does not exist until the release). The copy, the project, the epics, the tickets and
-the pull requests are archived or deleted when the drill is green, and the drill's result gates
-the release: the release child does not open before the drill records green.
+drill epic per mode (D17), with each child landing in its mode's lane, one ticket left stale in
+an agent review column, one moved across the graph, and a release child in each merge mode so
+both release exits are exercised. Evidence is `issue timeline` for each ticket and each drill
+epic: the status and assignee changes, the gate lane landing at `awaiting_merge`, the merge that
+completes it, one Planner wake per closing stage, and the sweep's rule applied by hand to the
+stale ticket (the autopilot does not exist until the release). The copy, the project, the epics,
+the tickets and the pull requests are archived or deleted when the drill is green, and the
+drill's result gates the release: the release child does not open before the drill records
+green.
 
 **D16 — Release, sync and the in-flight move.** The release child merges the current `main` in,
 resolves, runs `just validate` and `just test`, and opens `spec/MIR-227` → `main`. The release
-procedure applies the catalog before the in-flight move — the fifteen columns, the gate
-statuses, the sweep and the `manual-merge` → `human-merge` rename — because the gate lanes do
-not exist before the sync. It then lists every open issue in `in_review` or `human_review`
-whose epic carries `human-merge` and whose pull request has a `main` base, and moves each to
-the matching gate lane with a comment — MIR-179 is the known case at spec time. It reads back
-fifteen columns, the label, the sweep autopilot and its hourly trigger. The epic is accepted
-only after the release squash is on `main` at the merged sha and the readback agrees; the
-release child's `done` is branch-scoped until then.
+procedure applies the catalog before the in-flight move — the twenty columns, the release
+lanes, the sweep and the `manual-merge` → `has-human-release` and `human-assigned` →
+`has-human-implementer` renames — because the gate lanes do not exist before the sync. It then
+lists every open issue in `in_review`, `human_review` or `release_review` whose epic carries
+`has-human-release` and whose pull request has a `main` base, and moves each to the matching
+gate lane with a comment — MIR-179 is the known case at spec time. It reads back twenty columns,
+both labels, the sweep autopilot and its hourly trigger, the release seat's handler and the
+rendered guide. The epic is accepted only after the release squash is on `main` at the merged
+sha and the readback agrees; the release child's `done` is branch-scoped until then.
 
-The rename is the only label migration, and it runs before the in-flight move so the move reads
-one name. MIR-227 carries neither `human-assigned` nor `human-merge`, so this epic's release is
-Reviewer-merged.
+The renames are the only label migrations, and they run before the in-flight move so the move
+reads one name. MIR-227 carries neither `has-human-implementer` nor `has-human-release`, so this
+epic's release is Reviewer-merged.
 
 **D17 — The drill runs one epic per mode.** The mode is an epic label, and an epic carries one
-mode: a single drill epic cannot promote its children into four lanes, so the drill that gates
-the release would prove one route and assume three. The drill therefore creates four drill epics
-on the one throwaway project and the one copy workflow — autonomous, `human-merge`,
-`human-assigned`, and `human-assigned` + `human-merge` — each carrying its mode's labels (none
-for autonomous) before its child is promoted, and each child landing in the lane its mode
-selects. The stale ticket and the in-flight move sit under the autonomous epic, because neither
-depends on the mode. Because the live workspace still calls the label `manual-merge` until the
-release sync, the drill creates `human-merge` for its epics and deletes it when the drill is
-archived, before the release rename, so the ledger never sees both names live.
+mode: a single drill epic cannot promote its children into four lanes, so the drill creates four
+drill epics on the one throwaway project and the one copy workflow — autonomous,
+`has-human-release`, `has-human-implementer`, and `has-human-implementer` + `has-human-release` —
+each carrying its mode's labels (none for autonomous) before its child is promoted, and each
+child landing in the lane its mode selects. The autonomous epic also carries the stale ticket in
+a final stage that never closes, the in-flight ticket beside its first delivery, and a release
+child so the normal release exit is exercised; the `has-human-release` epic carries a release
+child so the gated release exit is exercised. Each epic moves `todo` → `epic_progress` at its
+first promotion, so the state column is exercised too. The drill creates `has-human-implementer`
+and `has-human-release` for its epics and deletes both when the drill is archived, before the
+release renames, so the ledger never sees both names live.
 
 **D18 — Acceptance.** The epic closes when the inventory below has one home per rule, the
-offline matrix pins the fifteen columns and four review exits, the templates and the rendered
+offline matrix pins the twenty columns and six review exits, the templates and the rendered
 guide are present, the sweep and `task.failed` are the only review-time guards, the drill is
-green on the epic, and the live workspace reads back the graph, the autopilot and the guide.
+green on the epic, and the live workspace reads back the graph, both labels, the autopilot, the
+release seat and the guide.
 
 ## Testing Decisions
 
@@ -276,13 +310,14 @@ already loads it through `resolve()` and pins it against the guide, so the graph
 at that seam, and the route table extends rather than duplicates it.
 
 - **The graph matrix is the contract.** Every column resolves a handler, a legal edge and an
-  instruction naming its exit; each of the four review columns declares its own exit and its own
-  back status; the two gate reviews name `awaiting_merge`; the two normal reviews declare no
-  advance; `spec_review` always names `awaiting_merge`.
-- **No review instruction reads a mode label.** A scan over the four review instructions fails
-  on `human-merge`, `manual-merge` or `human-assigned`; the same scan over every instruction
-  fails on the per-issue 90m timer and on `comment.created`.
-- **The Planner's mapping is pinned.** The six-row table above is asserted against the
+  instruction naming its exit; each of the six review columns declares its own exit and its own
+  back status; the three gate reviews name `awaiting_merge`; the three normal reviews declare no
+  advance; `spec_review` always names `awaiting_merge`; `epic_progress` and the two queue columns
+  resolve `none` as their handler.
+- **No review instruction reads a mode label.** A scan over the six review instructions fails on
+  `has-human-release`, `has-human-implementer`, `manual-merge` or `human-assigned`; the same scan
+  over every instruction fails on the per-issue 90m timer and on `comment.created`.
+- **The Planner's mapping is pinned.** The eight-row table above is asserted against the
   Planner's contract, so a lane cannot be added or renamed in one place only.
 - **The rendered guide agrees with the workflow.** The renderer is idempotent; a test renders
   into memory and diffs the document, and a hand edit inside a marker block fails it. This is
@@ -292,13 +327,13 @@ at that seam, and the route table extends rather than duplicates it.
   three sections; the comment template names the three headings; the cap table and the brevity
   test agree on 340 words, 130 words, 10 lines and 1 KB.
 - **The sweep is a declared object.** `just validate` resolves the autopilot, its cron, its role
-  and its prompt; the prompt names only the five reviewer-handled columns; the sync fixture
+  and its prompt; the prompt names only the seven reviewer-handled columns; the sync fixture
   creates it and reads back exactly one enabled hourly trigger; a drift fixture refuses a second
   trigger, matching the existing control's behaviour.
-- **The deletions are complete.** The resolver fails on a declared document with no file, so the
-  `documents` deletion, the role copies and the hand-written blocks each fail loudly if half
-  done. The label rename is pinned by the migration resolver: a ledger event that leaves both
-  names live fails.
+- **The deletions and the renames are complete.** The resolver fails on a declared document with
+  no file, so the `documents` deletion, the role copies and the hand-written blocks each fail
+  loudly if half done. The two label renames are pinned by the migration resolver: a ledger event
+  that leaves both names live fails, and two events that rename one label fail.
 - **Prior art.** `tests/factory-workflow.test.js` (routes and modes), `tests/config.test.js`
   (resolver invariants), `tests/schedule.test.js` (autopilot trigger readback),
   `tests/docs.test.js` (knowledge layer and spec headers), `tests/brevity.test.js` (caps),
@@ -314,9 +349,12 @@ is the defect the review looks for.
 
 | Rule | One home |
 | --- | --- |
-| who implements a ticket | epic labels, resolved by the Planner at promotion |
-| who merges a delivery PR | the ticket's lane (four review columns) |
+| who implements a delivery | epic labels, resolved by the Planner at promotion |
+| who implements a release | the release seat's lane (`release_progress` / `release_progress_gate`) |
+| who merges a delivery PR | the ticket's lane (six review columns) |
 | who merges the spec PR | `spec_review` to `awaiting_merge` |
+| epic state | `epic_progress`, moved by the Planner |
+| release procedure | `roles/release.md`, read by the release seat |
 | when the factory starts | the spec child's move to `spec_progress` |
 | order inside an epic | the child's stage |
 | dependency between epics | `--until-issue` |
@@ -336,25 +374,39 @@ is the defect the review looks for.
 ## Acceptance
 
 1. `just validate` and `just test` are green on the released `main`.
-2. `multica workflow get Factory` resolves fifteen columns, four review columns with their exits, and the three gate lanes; no review instruction names a mode label.
-3. `docs/factory.md`'s column table and graph are rendered from the workflow, and the test fails on a hand edit inside a generated block.
-4. The rule inventory above resolves to one home per rule; no role repeats a shared section and no step instruction restates a role rule.
-5. A ticket body carries `Branch:` and the three sections; a comment carries the three headings; the cap table states 340 words, 130 words, 10 lines and 1 KB.
-6. The `stale-sweep` autopilot is declared, hourly, planner-owned, and the sync fixture reads back exactly one enabled trigger; it reads only the five reviewer-handled columns, `human_progress` and `awaiting_merge` are untouched, no per-issue 90m timer remains and `task.failed` does.
-7. `templates/handoff.md`, its `documents` declaration, the hand-written column table and graph, `## Parent` and `Blocked by` are gone from the catalog, and the `manual-merge` label is renamed `human-merge` with its live issues still attached.
-8. The drill records green on the epic: one drill epic per mode, the gate lane, the stale ticket and the in-flight move, each with its `issue timeline` evidence, and each drill epic shows one Planner wake per closing stage.
-9. The release squash is on `main` at the merged sha, and the live workspace reads back the fifteen columns, the `human-merge` label, the autopilot and the rendered guide.
-10. No product repository gained a CI check, and no live identifier, owner or consumer URL entered the catalog.
+2. `multica workflow get Factory` resolves twenty columns, the six delivery review columns and
+   `spec_review` with their exits, the three gate lanes and the release lane; no review instruction names a mode label and
+   `epic_progress` resolves no handler.
+3. `docs/factory.md`'s column table and graph are rendered from the workflow, and the test fails
+   on a hand edit inside a generated block.
+4. The rule inventory above resolves to one home per rule; no role repeats a shared section and
+   no step instruction restates a role rule.
+5. A ticket body carries `Branch:` and the three sections; a comment carries the three headings;
+   the cap table states 340 words, 130 words, 10 lines and 1 KB.
+6. The `stale-sweep` autopilot is declared, hourly, planner-owned, and the sync fixture reads
+   back exactly one enabled trigger; it reads only the seven reviewer-handled columns,
+   `human_progress` and `awaiting_merge` are untouched, no per-issue 90m timer remains and
+   `task.failed` does.
+7. `templates/handoff.md`, its `documents` declaration, the hand-written column table and graph,
+   `## Parent` and `Blocked by` are gone from the catalog, and both `manual-merge` and
+   `human-assigned` are renamed with their live issues still attached.
+8. The drill records green on the epic: one drill epic per mode, both release exits, the gate
+   lanes, the stale ticket, the in-flight move and the epic state, each with its `issue timeline`
+   evidence, and each drill epic shows one Planner wake per closing stage.
+9. The release squash is on `main` at the merged sha, and the live workspace reads back the
+   twenty columns, both labels, the autopilot, the release seat's handler and the rendered guide.
+10. No product repository gained a CI check, and no live identifier, owner or consumer URL
+    entered the catalog.
 
 ## Out of Scope
 
 - **Product-repository CI.** No check is added to any consumer repository; the delivery rules stay Reviewer-enforced (D2). The release topology's spec-level CI is unchanged.
 - **Platform constructs the platform cannot read.** Custom properties, issue metadata, saved views and MCP servers are not used to carry any rule here; the grilling rejected the codegraph MCP on cost and the rest as decoration. The mode stays a label, the base stays a body line, and the dependency stays a stage or a condition.
 - **The `direct-to-main` topology itself.** Its escape hatch, its single-ticket default and its per-ticket CI are unchanged; this spec only routes its PRs through the gate lanes.
-- **Production promotion approval.** The `production:` body phrase in `roles/release.md` and its deploy-time second approval are unchanged; this spec moves merges, not deployments. A label-selected production approval, if wanted, is a separate spec with its own carrier.
+- **Production promotion approval.** The `production:` body phrase in `roles/release.md` and its deploy-time second approval are unchanged; the release lane this spec adds is the PR into `main`, not the deployment. A label-selected production approval, if wanted, is a separate spec with its own carrier.
 - **The sandbox project and the `msbx` epic.** MIR-178's work is unaffected except for the one in-flight move D16 names.
 - **Status rollback.** No status is deleted or renamed; the change is additive.
-- **Human approval UX, member onboarding and the web application.** The only human-facing surface here is the label that selects a lane.
+- **Human approval UX, member onboarding and the web application.** The only human-facing surface here is the label that selects a lane and the member handler that waits.
 - **The upstream skill pins.** No skill is re-imported or retired; the three skills edited here are local forks and keep their provenance.
 
 ## Proposed breakdown
@@ -365,23 +417,32 @@ stage 2 is the only parallel stage, because the drill and the contracts have dis
 | Stage | Ticket | Assignee | Blocked by | Delivers |
 | --- | --- | --- | --- | --- |
 | 1 | Spec: factory native carriers and one copy per rule | Planner | — | This document, the published set, and the spec PR into `spec/MIR-227`; its merge approves both. |
-| 2 | Drill the fifteen-column graph on a throwaway project | Human | Stage 1 | The graph proved on the platform: one drill epic per mode (D17), both gate lanes, the stale ticket and the in-flight move, with `issue timeline` evidence, on a copy workflow and a disposable project; archived when green. Gates the release. |
+| 2 | Drill the twenty-column graph on a throwaway project | Human | Stage 1 | The graph proved on the platform: one drill epic per mode (D17), the three gate lanes, both release exits, the epic state, the stale ticket and the in-flight move, with `issue timeline` evidence, on a copy workflow and a disposable project; archived when green. Gates the release. |
 | 2 | One delivery and handoff contract in shared | Implementer | Stage 1 | The delivery rules and the three-heading handoff live once in shared; the role copies, the undeployed handoff document and its declaration are deleted; `code-review` carries the checking method; the ticket template drops parent and blockers; the caps match. |
-| 3 | Declare the fifteen-column graph and the Planner's lane mapping | Implementer | Stage 2 | The three gate columns, the four review exits, the label-free review instructions and the `manual-merge` → `human-merge` rename with its ledger event; the Planner's six-row mapping; the offline matrix pins all of it. |
-| 4 | Replace the per-issue timer with one hourly stale sweep | Implementer | Stage 3 | The `stale-sweep` autopilot with its hourly trigger, prompt and two-hour threshold over the five reviewer-handled columns; `human_progress` and `awaiting_merge` are never swept; lane-aware triage; `task.failed` stays; the 90m registration is deleted from the contract and the instructions. |
-| 5 | Render the Factory guide from the workflow | Implementer | Stages 3, 4 | The column table and graph generated between markers from the workflow file, the mode matrix updated for the gate lanes, and the test that fails when a hand edit drifts. |
-| 6 | Release `spec/MIR-227` to `main` | Implementer | Stages 2–5 | The release PR, the applied catalog, the post-sync in-flight move, the readback of fifteen columns, the `human-merge` label and the sweep, and the evidence the Planner accepts the epic on. |
+| 3 | Declare the twenty-column graph and the Planner's lane mapping | Implementer | Stage 2 | The five new columns, the six review exits, the label-free review instructions, the release seat, the epic state and the two label renames with their ledger events; the Planner's eight-row mapping; the offline matrix pins all of it. |
+| 4 | Replace the per-issue timer with one hourly stale sweep | Implementer | Stage 3 | The `stale-sweep` autopilot with its hourly trigger, prompt and two-hour threshold over the seven reviewer-handled columns; `human_progress` and `awaiting_merge` are never swept; lane-aware triage; `task.failed` stays; the 90m registration is deleted from the contract and the instructions. |
+| 5 | Render the Factory guide from the workflow | Implementer | Stages 3, 4 | The column table and graph generated between markers from the workflow file, the mode matrix updated for the gate and release lanes, and the test that fails when a hand edit drifts. |
+| 6 | Release `spec/MIR-227` to `main` | Implementer | Stages 2–5 | The release PR, the applied catalog, the post-sync in-flight move, the readback of twenty columns, both labels, the release seat and the sweep, and the evidence the Planner accepts the epic on. |
 
 ## Further Notes
 
 - **Why the mode moves to promotion.** The Reviewer was the only seat that read the label, and
-  it read it at the merge. The Planner already resolves `human-assigned` at promotion, so the
-  same place can resolve `human-merge`; the read happens once, before work starts, and a wrong
-  lane is visible on the board instead of silent in a merge.
-- **Why the boundary scope survives.** `human-merge` still gates only the spec approval and the
-  PRs whose base is `main`. The alternative — every ticket PR waits for the human — was
+  it read it at the merge. The Planner already resolves `has-human-implementer` at promotion, so
+  the same place can resolve `has-human-release`; the read happens once, before work starts, and
+  a wrong lane is visible on the board instead of silent in a merge.
+- **Why the boundary scope survives.** `has-human-release` still gates only the spec approval and
+  the PRs whose base is `main`. The alternative — every ticket PR waits for the human — was
   rejected because the human already approved the set at the spec merge and the integration
   branch is scratch; it would add N human merges for no new decision.
+- **Why the release seat gets a lane.** The role existed with no handler selecting it, so its
+  procedure lived in the release ticket's body and only that ticket's assignee ever read it. A
+  release lane with its own review twin gives the procedure a contract and the release PR a
+  declared exit in both merge modes; the alternative, a single release column, would send a
+  review FAIL back to the Implementer's lane and add a second human decision the mode did not ask
+  for.
+- **Why the epic gets a state.** An approved epic in `todo` is indistinguishable from one nobody
+  has started. `epic_progress` is a state column with no handler, so it changes what the board
+  says without adding a dispatch the barrier wake already performs.
 - **Why the sweep moves rather than pings.** A stale ticket is a triage problem, and `blocked`
   is the column that owns triage. A mention would start a run and duplicate the dispatch the
   status move already performs.
