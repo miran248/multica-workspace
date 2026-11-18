@@ -93,12 +93,36 @@ test('shared autopilot templates carry no catalog identity and no stale reposito
   const catalog = readJSON(join(ROOT, 'templates/default.json'));
   const uuid = /[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/i;
   for (const [key, path] of Object.entries(catalog.autopilots)) {
-    const prompt = readFileSync(join(ROOT, readJSON(join(ROOT, path)).prompt), 'utf8');
+    const definition = readJSON(join(ROOT, path));
+    const prompt = readFileSync(join(ROOT, definition.prompt), 'utf8');
     assert.doesNotMatch(prompt, uuid, `${key} embeds a workspace ID`);
     assert.doesNotMatch(prompt, /https?:\/\/github\.com\//, `${key} hardcodes a repository URL`);
-    assert.match(prompt, /\{\{repository\}\}/, `${key} asks the run for its own origin`);
-    assert.match(prompt, /just sync/);
+    // The sync control reconciles this catalog, so it needs the live origin; a sweep is
+    // workspace-local and must not acquire one.
+    if (definition.parameters.includes('repository')) {
+      assert.match(prompt, /\{\{repository\}\}/, `${key} asks the run for its own origin`);
+      assert.match(prompt, /just sync/);
+    } else {
+      assert.deepEqual(definition.parameters, [], `${key} carries no parameters`);
+      assert.doesNotMatch(prompt, /\{\{/, `${key} leaves an unapproved parameter`);
+    }
   }
+});
+
+test('the catalog resolves the hourly stale sweep with its role and prompt', () => {
+  const resolved = resolve(syntheticBinding());
+  const sweep = resolved.autopilots.find(item => item.key === 'stale-sweep');
+  assert.ok(sweep, 'the catalog does not deploy a stale-sweep autopilot');
+  assert.equal(sweep.cron, '0 * * * *');
+  assert.equal(sweep.role, 'planner');
+  assert.equal(sweep.execution_mode, 'run_only');
+  assert.equal(sweep.issue_title_template, null);
+  assert.equal(sweep.timezone, 'UTC');
+  for (const column of ['spec_review', 'in_review', 'human_review', 'release_review'])
+    assert.ok(sweep.prompt.includes(`\`${column}\``), `the sweep prompt does not read ${column}`);
+  assert.match(sweep.prompt, /two hours/);
+  assert.match(sweep.prompt, /issue timeline/);
+  assert.doesNotMatch(sweep.prompt, /human_progress|awaiting_merge/);
 });
 
 for (const [name, mutate] of Object.entries({

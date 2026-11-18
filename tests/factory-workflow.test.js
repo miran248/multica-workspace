@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, ROLES, resolve, syntheticBinding } from '../scripts/config.js';
 
@@ -180,6 +180,32 @@ test('the exit rule lives once and the promotion table lives once', () => {
   for (const role of ['general', 'implementer', 'reviewer', 'release']) assert.doesNotMatch(read(`roles/${role}.md`), LABELS, `${role} names a label`);
   assert.doesNotMatch(read('shared/instructions.md'), LABELS);
   assert.match(read('skills/code-review/SKILL.md'), /has-human-release/);
+});
+
+test('the sweep is the only stale-review guard and the 90m timer is gone', () => {
+  const catalog = ['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
+    readdirSync(join(ROOT, directory), { recursive: true })
+      .filter(name => /\.(md|json)$/.test(name))
+      .map(name => `${directory}/${name}`));
+  for (const path of catalog) {
+    assert.doesNotMatch(read(path), /\b90m\b|90-minute|90 minute/i, `${path} still registers the 90m timer`);
+    assert.doesNotMatch(read(path), /comment\.created/, `${path} registers a comment.created wake`);
+  }
+  const planner = read('roles/planner.md');
+  assert.match(planner, /`task\.failed` per issue/);
+  assert.match(planner, /--until-status cancelled/);
+  assert.match(planner, /one `--until-children-done --stage N` barrier per promotion/);
+  assert.match(planner, /replaced not duplicated/);
+});
+
+test('the guide carries the sweep, its threshold, its move and the human columns it skips', () => {
+  const section = /### The stale sweep\n\n([\s\S]*?)\n\n### /.exec(guide)?.[1] ?? '';
+  for (const column of REVIEWS) assert.ok(section.includes(`\`${column}\``), `the sweep section does not read ${column}`);
+  assert.match(section, /two or more hours/);
+  assert.match(section, /moves to `blocked`/);
+  assert.match(section, /`human_progress`/);
+  assert.match(section, /`awaiting_merge`/);
+  assert.match(section, /first live run is the acceptance/);
 });
 
 test('no skill or glossary carries a gate twin or the deleted promotion lanes', () => {
@@ -439,6 +465,7 @@ function guideViolations({ guide: text, apply, workflowFile }) {
     ['the direct-to-main N + 1', /N \+ 1/],
     ['release serialization', /serializ/i],
     ['the cancelled-epic sweep', /cancelled-epic sweep/],
+    ['the stale sweep', /### The stale sweep/],
     ['direct-to-main', /direct-to-main/],
     ['the single-ticket default', /single-ticket/],
     ['the modes table two-merge row', /^\| `spec\/<epic>` \| 2 —/m],

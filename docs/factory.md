@@ -137,6 +137,23 @@ another release is open parks the next one on `--until-issue <release>`. A relea
 stale tree. The Reviewer's `mergeStateStatus` check and the human's merge button are the second
 and third detectors.
 
+### The stale sweep
+
+`stale-sweep` is the catalog's one stale-review guard: an hourly `0 * * * *` UTC autopilot in
+the Planner role, mode `run_only`. It reads the four reviewer-handled columns — `spec_review`,
+`in_review`, `human_review` and `release_review` — and dates each ticket from its `issue
+timeline`, never from its last comment. A ticket two or more hours into its column gets one
+`## What` / `## Evidence` / `## Next` comment carrying the age and the last actor, and then
+moves to `blocked`; the comment is written first and the move is the last action.
+
+It never sweeps `human_progress` or `awaiting_merge`: those wait indefinitely for the human, and
+no agent may un-gate a human step. It never mentions anyone, never closes or cancels a ticket
+and never runs on a `blocked` ticket. Triage restores the lane the timeline records; a second
+sweep leaves a swept ticket in `blocked` for the human.
+
+The first live run is the acceptance: the release reads the autopilot and its single enabled
+hourly trigger back, and the first blocking move is the observable evidence.
+
 ### The cancelled-epic sweep
 
 At approval the Planner registers `--until-status cancelled` on the epic. If the epic is
