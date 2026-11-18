@@ -97,20 +97,20 @@ nothing.
 **handoff gate** — the one question that ends grilling and starts the factory. The Planner
 presents the destination, the shape (a single ticket, an epic + stage-1 spec child, or a
 wayfinder map when the frontier is not empty), the mode labels and the proposed slice outline,
-then waits. The epic may exist inert in `backlog`; the answer is the yes that starts the spec
-run, and the slice freezes when the spec PR opens. One prose copy in `skills/grilling`; the
-Planner contract names the route.
+then waits. The epic opens in `todo` with its stage-1 spec child inert in `backlog`; the answer
+is the yes that starts the spec run, and the slice freezes when the spec PR opens. One prose copy
+in `skills/grilling`; the Planner contract names the route.
 
 **factory mode** — the epic-level choice of who implements and who merges, encoded by the
 `has-human-implementer` and `has-human-release` labels before the spec is approved. With neither
 label the epic is autonomous. `has-human-implementer` without `has-human-release` is human
 implementation with agent merge; `has-human-release` alone is agent implementation with a human
-merge of the spec approval and every pull request based on `main` — ticket PRs into an integration
-branch are Reviewer-merged; both are human implementation and merge. The release child is always
-the release seat's, in both modes. The mode is not read by a reviewer: the Planner resolves it to
-a lane at promotion. `has-human-implementer` is the renamed `human-assigned` and
-`has-human-release` the renamed `manual-merge`; both are migration-ledger events, so existing
-epics keep their labels and their history.
+merge of every pull request based on `main` — the spec approval is the human merge in every mode
+(D4); ticket PRs into an integration branch are Reviewer-merged; both are human implementation
+and merge. The release child is always the release seat's, in both modes. The mode is not read by
+a reviewer: the Planner resolves it to a lane at promotion. `has-human-implementer` is the
+renamed `human-assigned` and `has-human-release` the renamed `manual-merge`; both are
+migration-ledger events, so existing epics keep their labels and their history.
 
 **carrier** — the one home of a rule: a **native carrier** the platform stores or acts on (a
 status, a handler, a stage, an issue link, a wakeup, an autopilot or a label), or exactly one

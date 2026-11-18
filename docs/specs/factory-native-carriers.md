@@ -151,13 +151,13 @@ its never-closing diagnostic stage sits above the release on purpose (D17), so t
 table assigns each drill child's kind and the drill is hand-driven, never routed through the
 Planner's mapping.
 
-`has-human-release` keeps the scope `manual-merge` has today: it gates the spec approval and
-every pull request whose base is `main`. A ticket PR into `spec/<epic>` is Reviewer-merged in
-every mode, because the human already approved the set and the branch is scratch. The four
-delivery review columns split by exit: the two gate columns (`in_review_gate`,
-`human_review_gate`) are the only delivery reviews whose PASS moves to `awaiting_merge`
-(`spec_review` always does, D4), and the two normal columns (`in_review`, `human_review`) merge
-on PASS and declare no advance. The two release reviews follow the same split:
+`has-human-release` keeps the scope `manual-merge` has today: it gates every pull request whose
+base is `main`; the spec approval is the human merge in every mode (D4). A ticket PR into
+`spec/<epic>` is Reviewer-merged in every mode, because the human already approved the set and
+the branch is scratch. The four delivery review columns split by exit: the two gate columns
+(`in_review_gate`, `human_review_gate`) are the only delivery reviews whose PASS moves to
+`awaiting_merge` (`spec_review` always does, D4), and the two normal columns (`in_review`,
+`human_review`) merge on PASS and declare no advance. The two release reviews follow the same split:
 `release_review_gate` names `awaiting_merge` and `release_review` merges.
 
 A gate lane needs its own implementation column or it is unreachable. `human_progress` advances
@@ -464,7 +464,7 @@ is the defect the review looks for.
 - **The sandbox project and the `msbx` epic.** MIR-178's work is unaffected except for the one in-flight move D16 names.
 - **Status rollback.** No status is deleted or renamed; the change is additive.
 - **Human approval UX, member onboarding and the web application.** The only human-facing surface here is the label that selects a lane and the member handler that waits.
-- **The upstream skill pins.** No skill is re-imported or retired; the three skills edited here are local forks and keep their provenance.
+- **The upstream skill pins.** No skill is re-imported or retired; the four skills edited here are local forks and keep their provenance.
 
 ## Proposed breakdown
 
@@ -492,10 +492,11 @@ stage 2 is the only parallel stage, because the drill and the contracts have dis
   instead. One status cannot carry two nexts, so a single `human_progress` would force the mode
   back into an instruction — the label read this spec deletes. `human_progress_gate` is the
   entry column that makes the gate lane reachable at promotion, with no conditional anywhere.
-- **Why the boundary scope survives.** `has-human-release` still gates only the spec approval and
-  the PRs whose base is `main`. The alternative — every ticket PR waits for the human — was
-  rejected because the human already approved the set at the spec merge and the integration
-  branch is scratch; it would add N human merges for no new decision.
+- **Why the boundary scope survives.** `has-human-release` still gates only the PRs whose base
+  is `main`; the spec approval is the human merge in every mode (D4). The alternative — every
+  ticket PR waits for the human — was rejected because the human already approved the set at the
+  spec merge and the integration branch is scratch; it would add N human merges for no new
+  decision.
 - **Why the release seat gets a lane.** The role existed with no handler selecting it, so its
   procedure lived in the release ticket's body and only that ticket's assignee ever read it. A
   release lane with its own review twin gives the procedure a contract and the release PR a

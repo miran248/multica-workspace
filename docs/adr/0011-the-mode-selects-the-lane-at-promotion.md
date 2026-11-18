@@ -46,11 +46,11 @@ A gate review column's PASS lands at `awaiting_merge`; a normal review column's 
 pull request into its base and declares no advance. `spec_review` keeps its one exit: PASS
 leaves the pull request open and always waits for the human merge, in every mode.
 
-`has-human-release` keeps the boundary scope `manual-merge` had: it gates the spec approval and
-every pull request whose base is `main`. A ticket PR into `spec/<epic>` is Reviewer-merged in
-every mode, because the human already approved the set and the branch is scratch. The release
-child's base is always `main`, so only the merge axis applies to it; `has-human-implementer`
-changes who implements delivery, not who releases.
+`has-human-release` keeps the boundary scope `manual-merge` had: it gates every pull request
+whose base is `main`; the spec approval is the human merge in every mode (D4). A ticket PR into
+`spec/<epic>` is Reviewer-merged in every mode, because the human already approved the set and
+the branch is scratch. The release child's base is always `main`, so only the merge axis applies
+to it; `has-human-implementer` changes who implements delivery, not who releases.
 
 The labels are renamed `human-assigned` → `has-human-implementer` and `manual-merge` →
 `has-human-release`. `has-` states a property of the epic's delivery, so the two flags compose;
