@@ -307,9 +307,9 @@ deleted when the drill is green, and the drill's result gates the release: the r
 does not open before the drill records green.
 
 The drill ran on the gate-twin graph before this revision. Its gate-lane evidence is historical
-and is not re-run: the deletion it proves is a deletion, and the exit at the PASS is the live
-graph's existing behaviour, already exercised on live epics. The member handler, one-run-per-move
-and the barrier wake it proved carry over unchanged.
+and is not re-run: the lanes it proved are the lanes being deleted, and the exit at the PASS is
+the live graph's existing behaviour, already exercised on live epics. The member handler,
+one-run-per-move and the barrier wake it proved carry over unchanged.
 
 **D16 — Release and sync.** The release child merges the current `main` in, resolves, runs
 `just validate` and `just test`, and opens `spec/MIR-227` → `main`. The release procedure
