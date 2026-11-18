@@ -94,6 +94,13 @@ move last, so the next run can read the record; the move is what dispatches it. 
 a ticket when a run ends; the handler makes the next move. A member handler is assigned and runs
 nothing.
 
+**handoff gate** — the one question that ends grilling and starts the factory. The Planner
+presents the destination, the shape (a single ticket, an epic + stage-1 spec child, or a
+wayfinder map when the frontier is not empty), the mode labels and the proposed slice outline,
+then waits. The epic may exist inert in `backlog`; the answer is the yes that starts the spec
+run, and the slice freezes when the spec PR opens. One prose copy in `skills/grilling`; the
+Planner contract names the route.
+
 **factory mode** — the epic-level choice of who implements and who merges, encoded by the
 `has-human-implementer` and `has-human-release` labels before the spec is approved. With neither
 label the epic is autonomous. `has-human-implementer` without `has-human-release` is human

@@ -7,7 +7,7 @@ Accepted 2026-11-17. Approval is the merge of this spec's pull request into `spe
 which completes MIR-228 and approves the published set; MIR-227 is the epic — it stays `todo`
 until the spec merge, `epic_progress` until the release lands, and the Planner accepts it on
 evidence. The decisions below are the answers given in the grilling session that opened the
-epic; ADR-0010, ADR-0011 and ADR-0012 are their durable records.
+epic; ADR-0010, ADR-0011, ADR-0012 and ADR-0013 are their durable records.
 
 ## Problem Statement
 
@@ -72,6 +72,9 @@ in Testing Decisions is how it is measured.
 - **One entry rule.** Durable work starts from a ticket or an epic; chat may produce throwaway
   artifacts but never a durable repository write, and the factory starts only when the Planner
   moves the spec child to `spec_progress` from a grilling session.
+- **One handoff gate.** Grilling ends on one packet and the user's answer. The epic and its
+  spec child may exist inert, but no spec run starts before the answer, and the slice freezes
+  when the spec PR opens.
 - **One proof.** A drill on a throwaway project, bound to a copy of the new graph, exercises
   every mode and both release exits before the catalog change reaches a live project.
 
@@ -109,6 +112,7 @@ in Testing Decisions is how it is measured.
 30. As a future agent, I want the catalog to be legible in one pass, so I can hold the whole contract in a fresh context window.
 31. As the release agent, I want a lane and a contract in the workflow, so the release procedure has one home and the release ticket carries only its instance.
 32. As the approval owner, I want an approved epic to leave `todo` for `epic_progress`, so a slice in flight is not indistinguishable from one that is queued.
+33. As the approval owner, I want the grilling-to-factory handoff to be one explicit question, so an epic and a slice never start from a chat as a side effect.
 
 ## Implementation Decisions
 
@@ -216,9 +220,10 @@ repository file (a glossary term, an ADR, code) rides in the ticket that acts on
 Planner never implements in chat.
 
 **D9 — Grilling is the factory entry.** An epic may be created from any session, but the
-factory starts when the Planner moves the spec child to `spec_progress`, and that only happens
-from a grilling session. A small task is a regular ticket with no grilling and no spec child.
-This keeps `improve-codebase-architecture` and `prototype` useful in chat without reopening D8.
+factory starts only after the handoff gate (D19): the Planner moves the spec child to
+`spec_progress`, or, when the grilling session is the spec run, writes the spec there. A small
+task is a regular ticket with no grilling and no spec child. This keeps
+`improve-codebase-architecture` and `prototype` useful in chat without reopening D8.
 
 **D10 — The slice floor.** A ticket delivers one observable behaviour, one pull request and one
 green head. A stage may hold several tickets only when they are independently mergeable and
@@ -317,6 +322,26 @@ guide are present, the sweep and `task.failed` are the only review-time guards, 
 green on the epic, and the live workspace reads back the graph, both labels, the autopilot, the
 release seat and the guide.
 
+**D19 — The factory start is an explicit gate.** Grilling creates nothing on its own: it may
+write a throwaway artifact, but the epic, spec and tickets come from the handoff, not from the
+conversation. If the user asks for the epic before the graph is settled, the Planner may open
+the epic and its stage-1 spec child inert in `backlog` once the destination is named — the
+container is not the start. No spec run begins and no slice is written until the user answers one
+handoff packet: the destination, the shape (a single ticket, an epic + spec child, or a wayfinder
+map when the frontier is not actually empty), the mode labels, and the proposed slice outline.
+The answer is the yes that starts the factory: the Planner then moves the spec child to `spec_progress` or, in
+the chat, begins the spec run. The spec run publishes the whole slice in `backlog` and opens the
+PR; the set is frozen when the PR opens, and a later addition is a spec revision on the same
+head, never an incremental ticket on an approved set. An epic opened before the destination is
+settled is rejected: it is inert, and the durable container for unresolved decisions is a
+wayfinder map. A small task is a regular ticket and skips the gate (D9); a pure question stays in
+chat.
+
+No platform construct can require the answer before an issue exists or a run starts. The gate is
+one prose copy in `skills/grilling`, the seat that reads it; the Planner contract names the route
+and does not restate it. The mechanical half is the freeze: the merge approves the set, and the
+stage barrier re-evaluates whenever the child set changes.
+
 ## Testing Decisions
 
 The suite tests the catalog through the resolver and the sync fixture, never the bytes of a
@@ -349,6 +374,11 @@ at that seam, and the route table extends rather than duplicates it.
   no file, so the `documents` deletion, the role copies and the hand-written blocks each fail
   loudly if half done. The two label renames are pinned by the migration resolver: a ledger event
   that leaves both names live fails, and two events that rename one label fail.
+- **The handoff gate is a run rule.** The grilling skill carries the packet's four fields and
+  the answer-before-spec-run order; the Planner contract names the route and does not restate
+  it. The suite pins neither as a platform behaviour — there is no native gate — so the live
+  check is a Planner run: with an empty frontier it ends on the packet and creates or starts
+  nothing before the answer. The drill proves the graph, not a chat gate.
 - **Prior art.** `tests/factory-workflow.test.js` (routes and modes), `tests/config.test.js`
   (resolver invariants), `tests/schedule.test.js` (autopilot trigger readback),
   `tests/docs.test.js` (knowledge layer and spec headers), `tests/brevity.test.js` (caps),
@@ -371,7 +401,7 @@ is the defect the review looks for.
 | who merges the spec PR | `spec_review` to `awaiting_merge` |
 | epic state | `epic_progress`, moved by the Planner |
 | release procedure | `roles/release.md`, read by the release seat |
-| when the factory starts | the spec child's move to `spec_progress` |
+| when the factory starts | the handoff answer in the grilling skill, then the spec child's move to `spec_progress` |
 | order inside an epic | the child's stage |
 | dependency between epics | `--until-issue` |
 | parent | `--parent`, `issue children` |
@@ -416,6 +446,9 @@ is the defect the review looks for.
    guide.
 10. No product repository gained a CI check, and no live identifier, owner or consumer URL
     entered the catalog.
+11. The grilling skill carries the handoff packet and the answer-before-spec-run rule once; the
+    Planner contract names the route; a Planner run with an empty frontier starts no spec run
+    and writes no slice before the answer.
 
 ## Out of Scope
 
@@ -437,7 +470,7 @@ stage 2 is the only parallel stage, because the drill and the contracts have dis
 | --- | --- | --- | --- | --- |
 | 1 | Spec: factory native carriers and one copy per rule | Planner | — | This document, the published set, and the spec PR into `spec/MIR-227`; its merge approves both. |
 | 2 | Drill the twenty-one-column graph on a throwaway project | Human | Stage 1 | The graph proved on the platform: one drill epic per mode (D17), the three gate lanes, both release exits, the epic state, the stale ticket and the in-flight move, with `issue timeline` evidence, on a copy workflow and a disposable project; archived when green. Gates the release. |
-| 2 | One delivery and handoff contract in shared | Implementer | Stage 1 | The delivery rules and the three-heading handoff live once in shared; the role copies, the undeployed handoff document and its declaration are deleted; `code-review` carries the checking method; the ticket template drops parent and blockers; the caps match. |
+| 2 | One delivery and handoff contract in shared | Implementer | Stage 1 | The delivery rules and the three-heading handoff live once in shared; the grilling handoff gate lands once in the grilling skill with the Planner contract naming the route; the role copies, the undeployed handoff document and its declaration are deleted; `code-review` carries the checking method; the ticket template drops parent and blockers; the caps match. |
 | 3 | Declare the twenty-one-column graph and the Planner's lane mapping | Implementer | Stage 2 | The nine new columns, the seven review exits, the label-free review instructions, the release seat, the epic state and the two label renames with their ledger events; the Planner's eight-row mapping; the offline matrix pins all of it. |
 | 4 | Replace the per-issue timer with one hourly stale sweep | Implementer | Stage 3 | The `stale-sweep` autopilot with its hourly trigger, prompt and two-hour threshold over the seven reviewer-handled columns; `human_progress` and `awaiting_merge` are never swept; lane-aware triage; `task.failed` stays; the 90m registration is deleted from the contract and the instructions. |
 | 5 | Render the Factory guide from the workflow | Implementer | Stages 3, 4 | The column table and graph generated between markers from the workflow file, the mode matrix updated for the gate and release lanes, and the test that fails when a hand edit drifts. |
@@ -467,6 +500,12 @@ stage 2 is the only parallel stage, because the drill and the contracts have dis
 - **Why the epic gets a state.** An approved epic in `todo` is indistinguishable from one nobody
   has started. `epic_progress` is a state column with no handler, so it changes what the board
   says without adding a dispatch the barrier wake already performs.
+- **Why the start is gated, and not the container.** An epic is inert, so opening it early
+  is visibility, not work; the spec run is the first durable behaviour, and the slice it
+  publishes is what the merge approves. Gating the run rather than the container keeps the
+  "epic ASAP" convenience without letting a chat commit to a slice. The platform cannot require
+  the answer, so the gate is one copy in the grilling skill, and the freeze at the PR is the
+  mechanical half.
 - **Why the sweep moves rather than pings.** A stale ticket is a triage problem, and `blocked`
   is the column that owns triage. A mention would start a run and duplicate the dispatch the
   status move already performs.
