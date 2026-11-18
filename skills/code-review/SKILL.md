@@ -41,6 +41,25 @@ Apply at every PASS, after the verdict and before the move or merge. Read the ba
 A merge completes the ticket, so do not move it. Post the PASS at the exact head before the
 move or the merge. Never enable auto-merge.
 
+## The conflicts condition
+
+At every review, before the verdict, arm one continuous condition on the ticket:
+
+    multica issue wakeup create <ticket> --until-pr conflicts --mode continuous --agent-id <seat>
+
+The command replaces the configuration, so re-arming is idempotent, and the condition survives
+the PASS into `awaiting_merge`. The seat is the one that owns the work column: the Planner for a
+spec PR, the Implementer for a delivery PR — including a human-authored one, since a member is
+not a wakeup target — and the Release seat for a release PR.
+
+## The void PASS
+
+A push after a PASS is a new head, so the PASS is void. The resolver follows the resolution
+contract in shared `## Delivery`, then moves the ticket to the review column that PASSed it —
+every review column's `next` is `awaiting_merge`, so the timeline names it. The re-review covers
+the delta `H...H'` plus the delivery facts at `H'`; a fresh PASS returns the ticket to
+`awaiting_merge`, and a blocking finding sends it back to the work column.
+
 ## Process
 
 ### 1. Pin the fixed point
