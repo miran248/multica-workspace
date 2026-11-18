@@ -2,7 +2,8 @@
 
 - Status: Accepted, 2026-11-17 (approved in the MIR-227 grilling)
 - Supersedes: the `manual-merge`-on-PASS clause of ADR-0004, which kept the mode branch in the
-  Reviewer's instructions.
+  Reviewer's instructions, and ADR-0004's rejection of one lane per mode, which assumed the
+  condition had to stay in prose.
 
 ## Context
 
@@ -22,15 +23,22 @@ state of its own: an approved slice in flight and a queued epic both read `todo`
 ## Decision
 
 The mode selects the lane when the Planner promotes a ticket, and a column then decides the
-behaviour with no label read. The graph grows five columns — `epic_progress`,
-`release_progress`, `release_progress_gate`, `release_review`, `release_review_gate` — to
-twenty columns, and the Planner maps the epic's labels, the ticket's kind and the ticket's base
-to a lane in one table: neither label is Reviewer-merged; `has-human-implementer` starts a
-delivery in `human_progress`; `has-human-release` selects the gate lane for a pull request whose
-base is `main`; the release child starts in `release_progress` or `release_progress_gate` and
-is reviewed in its own twin. The epic itself moves `todo` → `epic_progress` at the first delivery
-promotion and `epic_progress` → `done` on acceptance; `epic_progress` has no handler, so the
-move dispatches nothing.
+behaviour with no label read. The graph grows nine columns — `epic_progress`, `in_progress_gate`,
+`human_progress_gate`, `in_review_gate`, `human_review_gate`, `release_progress`,
+`release_progress_gate`, `release_review`, `release_review_gate` — to twenty-one columns, and
+the Planner maps the epic's labels, the ticket's kind and the ticket's base to a lane in one
+table: neither label is Reviewer-merged; `has-human-implementer` starts a delivery in
+`human_progress`; `has-human-release` selects the gate lane for a pull request whose base is
+`main`; the release child starts in `release_progress` or `release_progress_gate` and is reviewed
+in its own twin. The ticket's kind is a stage read: an integration spec's final-stage child is
+the release, every other child is delivery, and a `direct-to-main` spec has no release child. The
+epic itself moves `todo` → `epic_progress` at the first delivery promotion and `epic_progress` →
+`done` on acceptance; `epic_progress` has no handler, so the move dispatches nothing.
+
+A gate lane needs its own entry column or it is unreachable. `human_progress` advances to
+`human_review`, so the human implementer whose epic also has `has-human-release` starts in
+`human_progress_gate` and its one next is `human_review_gate`; a conditional inside
+`human_progress` would put the mode back in an instruction.
 
 A gate review column's PASS lands at `awaiting_merge`; a normal review column's PASS merges the
 pull request into its base and declares no advance. `spec_review` keeps its one exit: PASS
@@ -50,12 +58,12 @@ issues; the catalog, the review instructions, the guide and the tests carry the 
 
 ## Consequences
 
-- Twenty columns, thirteen custom statuses beside the built-in ones. The gate, release and epic
-  statuses carry their own presentation and are read back like every other declared status.
-- Six review columns, three of them gates, and no review instruction names
-  `has-human-release`, `has-human-implementer`, `manual-merge` or `human-assigned`. The mode is
-  read once, by the seat that owns it, before work starts; a wrong lane is visible on the board
-  instead of silent in a merge.
+- Twenty-one columns, fourteen custom statuses beside the built-in ones. The gate, release and
+  epic statuses carry their own presentation and are read back like every other declared status.
+- Seven review columns — four delivery, two release and the spec review — three of them gates,
+  and no review instruction names `has-human-release`, `has-human-implementer`, `manual-merge` or
+  `human-assigned`. The mode is read once, by the seat that owns it, before work starts; a wrong
+  lane is visible on the board instead of silent in a merge.
 - The release seat now has a lane and a contract, so its procedure has one home and the release
   ticket carries only its instance.
 - The two label renames are pinned by the migration resolver: a ledger event that leaves both
