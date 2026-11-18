@@ -26,17 +26,17 @@ registered with `multica issue wakeup create --mode continuous` (the command rep
 configuration, so re-arming does not duplicate it). The Reviewer arms it at every review — the
 only seat that runs in every lane between PR open and merge — and the condition survives the
 PASS into `awaiting_merge`. It targets the seat that owns the work column: the Planner for a spec
-PR, the Implementer for a delivery PR, including a human-authored one. A member is not a wakeup
-target, so the Implementer takes the mechanical part and judgement reaches the human by the
-status move.
+PR, the Implementer for a delivery PR — including a human-authored one, since a member is not a
+wakeup target — and the Release seat for a release PR.
 
 On firing, that seat merges the base, resolves inside `## Touch`, reruns the check that covers
 the diff and pushes. The split is judgement, not lane: a base merge, a lockfile or disjoint
 hunks is mechanical; when both sides changed the meaning of the same lines, no agent resolves —
 it comments and moves the ticket to `human_progress`, on every lane, and the human resolves and
-moves it to the review column. Behind-but-clean is not a conflict and never fires the condition;
-the merge still works, and a branch protection that requires an up-to-date head is one
-`gh pr update-branch`, left manual.
+moves it to the review column that owns the work (`human_review`, `release_review` or
+`spec_review`). Behind-but-clean is not a conflict and never fires the condition; the merge still
+works, and a branch protection that requires an up-to-date head is one `gh pr update-branch`,
+left manual.
 
 A push voids the PASS. The resolver moves the ticket to the review column that PASSed it — every
 review column's `next` is `awaiting_merge`, so the timeline names it — and the Reviewer

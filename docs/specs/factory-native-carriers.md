@@ -390,17 +390,18 @@ carries one continuous `--until-pr conflicts` condition (GitHub only), registere
 `multica issue wakeup create` and `--mode continuous`; the command replaces the configuration, so
 re-arming does not duplicate it. The Reviewer arms it at every review — the only seat that runs
 in every lane between PR open and merge — and it survives the PASS into `awaiting_merge`. It is
-an agent condition: the Planner for a spec PR, the Implementer for a delivery PR, including one
-the human authored. The member is not a wakeup target, so the Implementer takes the mechanical
-part and the judgement part reaches the human by the status move.
+an agent condition: the Planner for a spec PR, the Implementer for a delivery PR — including one
+the human authored, since a member is not a wakeup target — and the Release seat for a release
+PR.
 
 When it fires, that seat merges the base, resolves inside `## Touch`, reruns the check that
 covers the diff and pushes. The split is judgement, not lane: a base merge, a lockfile or
 disjoint hunks is mechanical and the Implementer resolves it; when both sides changed the
 meaning of the same lines, no agent resolves — it comments the conflict and moves the ticket to
-`human_progress`, on every lane, and the human resolves and moves it to the review column.
-Behind-but-clean is not a conflict and the condition never fires on it: the merge still works,
-and branch protection that requires an up-to-date head is one `gh pr update-branch`, left
+`human_progress`, on every lane, and the human resolves and moves it to the review column that
+owns the work: `human_review` for a delivery, `release_review` for a release, `spec_review` for a
+spec. Behind-but-clean is not a conflict and the condition never fires on it: the merge still
+works, and branch protection that requires an up-to-date head is one `gh pr update-branch`, left
 manual.
 
 A push changes the head, so it voids the PASS. The resolver moves the ticket to the review
