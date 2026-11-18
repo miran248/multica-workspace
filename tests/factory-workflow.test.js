@@ -128,18 +128,19 @@ test('the route table resolves: every named target is a column and every column 
   assert.doesNotMatch(merge, /move (it|this ticket) to done/);
 });
 
-test('the comment is the handoff and the move or merge comes last', () => {
+test('the linked PR is the handoff and the move or merge comes last', () => {
   for (const key of ['spec_progress', 'in_progress', 'human_progress']) {
-    assert.match(steps.get(key).instructions, /[Cc]omment[^.]*then move/, `${key} does not comment before moving`);
+    assert.match(steps.get(key).instructions, /linked (spec )?PR is the handoff/, `${key} does not hand off the PR`);
+    assert.match(steps.get(key).instructions, /last action/, `${key} does not move last`);
   }
   assert.match(steps.get('spec_review').instructions, /post the PASS at the exact head[^.]*then move/);
   for (const key of ['in_review', 'human_review'])
     assert.match(steps.get(key).instructions, /post the PASS verdict at the exact head, then merge/, `${key} does not post before merging`);
   const handoff = readFileSync(join(ROOT, 'shared/instructions.md'), 'utf8');
   assert.match(handoff, /^## Handoffs$/m);
-  assert.match(handoff, /The comment is the handoff/);
-  assert.match(handoff, /comment is the handoff: post it before the move/);
-  assert.doesNotMatch(handoff, /before the comment is posted/);
+  assert.match(handoff, /The linked PR is the delivery handoff/);
+  assert.match(handoff, /empty body is not a finding/);
+  assert.doesNotMatch(handoff, /comment is the handoff/i);
 });
 
 test('no column enables auto-merge; a PASS is the merge', () => {

@@ -9,7 +9,7 @@ import { resolveWorkspace } from '../scripts/workspace.js';
 import { fixture } from './support/helpers.js';
 import { id } from './support/platform.js';
 
-test('the shared contract reaches every role and the comment owns the handoff', t => {
+test('the shared contract reaches every role and the linked PR owns the handoff', t => {
   const f = fixture(t), resolved = resolve(f.binding, f.root);
   for (const role of ROLES) {
     const text = render(role, f.binding, f.root);
@@ -17,7 +17,8 @@ test('the shared contract reaches every role and the comment owns the handoff', 
     assert.match(text, /^## Handoffs$/m, role);
     assert.match(text, /Use Conventional Commits/, role);
     assert.match(text, /summary, TICKET/, role);
-    assert.match(text, /The comment is the handoff/, role);
+    assert.match(text, /The linked PR is the delivery handoff/, role);
+    assert.match(text, /empty body is not a finding/, role);
     assert.match(text, /last action/, role);
     assert.doesNotMatch(text, /[Aa]rm auto-merge/, role);
   }

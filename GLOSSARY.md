@@ -88,11 +88,11 @@ nobody.
 
 ## Factory
 
-**handoff** — the comment that records the work, followed by the status move that assigns the
-issue to the new column's handler and starts that handler's run. The comment goes first and the
-move last, so the next run can read the record; the move is what dispatches it. Nothing advances
-a ticket when a run ends; the handler makes the next move. A member handler is assigned and runs
-nothing.
+**handoff** — the linked pull request that records the work, followed by the status move that
+assigns the issue to the new column's handler and starts that handler's run. The link goes first
+and the move last, so the next run can read the work; the move is what dispatches it. The PR
+body is optional, and an empty body is not a finding. Nothing advances a ticket when a run ends;
+the handler makes the next move. A member handler is assigned and runs nothing.
 
 **handoff gate** — the one question that ends grilling and starts the factory. The Planner
 presents the destination, the shape (a single ticket, an epic + stage-1 spec child, or a

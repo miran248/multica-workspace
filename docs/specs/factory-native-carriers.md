@@ -61,9 +61,11 @@ in Testing Decisions is how it is measured.
   duplicate the barrier wake.
 - **One contract.** The delivery rules and the handoff shape live once in shared instructions;
   each role keeps only its own behaviour, and `code-review` carries the checking method.
-- **Two templates.** A ticket is a `Branch:` line plus `## What` / `## Acceptance` / `## Touch`;
-  a comment is `## What` / `## Evidence` / `## Next`. Everything the platform already stores
-  (the parent) or encodes (the stage edge) leaves the body.
+- **Two templates and one native handoff.** A ticket is a `Branch:` line plus `## What` /
+  `## Acceptance` / `## Touch`; the delivery handoff is the linked pull request, whose body is
+  optional. A verdict, finding or sweep note is a `## What` / `## Evidence` / `## Next` comment.
+  Everything the platform already stores (the parent, the link) or encodes (the stage edge)
+  leaves the body.
 - **One sweep.** One hourly catalog autopilot sweeps the seven reviewer-handled review columns,
   comments the evidence and moves the ticket to `blocked`. `task.failed` stays per-issue; the
   per-issue 90m timer is deleted.
@@ -103,7 +105,7 @@ in Testing Decisions is how it is measured.
 21. As the human implementer, I want my review to be independent of my implementation, so `human_review` and its gate twin are reviewed by the Reviewer, never by me.
 22. As a maintainer, I want the twenty-one-column graph pinned by the offline matrix, so a column cannot be added without its route and its handler.
 23. As a maintainer, I want the guide rendered from the workflow, so a graph change cannot leave the guide behind.
-24. As a maintainer, I want the ticket and comment templates to be one shape each, so a handoff is read the same way by every seat.
+24. As a maintainer, I want the ticket template and the verdict comment to be one shape each, so a handoff is read the same way by every seat.
 25. As a maintainer, I want the undeployed handoff document deleted, so there is no declared artifact that nothing deploys.
 26. As a maintainer, I want the stale sweep to be one declared autopilot, so a ticket the Planner forgot is still found.
 27. As a maintainer, I want `task.failed` to stay per-issue, so a failed run wakes the Planner on the issue it failed on.
@@ -197,9 +199,11 @@ deletes them before the release, so the ledger never sees two live labels with o
 
 **D6 — Two templates and no repeated state.** A ticket body is a `Branch:` line followed by
 `## What`, `## Acceptance` and `## Touch`; the line is present only for an integration spec and
-its absence means `main`. A comment is `## What`, `## Evidence` and `## Next`; the five-line
-handoff becomes the content under those headings, and a finding stays one `Evidence` bullet in
-the form `P2 — file:line: trigger; consequence; fix`. The parent is native (`--parent`,
+its absence means `main`. The delivery handoff is the linked pull request, not a comment: the
+platform already carries the link, the head, the checks and the merge state, so the body is
+optional and an empty body is not a finding. A verdict, finding or sweep note is one comment —
+`## What`, `## Evidence` and `## Next` — and a finding stays one `Evidence` bullet in the form
+`P2 — file:line: trigger; consequence; fix`. The parent is native (`--parent`,
 `issue children`) and leaves the body. `Blocked by` leaves the body too: an intra-epic
 dependency is the stage, a cross-epic one is an `--until-issue` condition, and a ticket that
 cannot start is `blocked` with the reason on the record rather than a list nobody parses. The
@@ -208,12 +212,12 @@ a decision packet 800 bytes, shared instructions 340 words, and each role 130 wo
 
 **D7 — One contract, one checker.** `shared/instructions.md` carries a `## Delivery` section
 (one PR per ticket, base, `Touch:`, commit and PR title shape, squash, no self-merge, no
-auto-merge) and a `## Handoffs` section (the three-heading comment, the comment-before-move
-order, the caps). Each role keeps only its seat's behaviour, and `code-review` gains the
-delivery checklist, so the rule the Reviewer enforces and the method the Reviewer loads are the
-same copy. The per-ticket scope stays in the ticket's `## Touch`; the per-ticket base stays in
-its `Branch:` line. The Implementer reads the shared contract because every role already
-renders it.
+auto-merge) and a `## Handoffs` section (the linked PR as the delivery handoff, the three-heading
+verdict comment, the move-last order, the caps). Each role keeps only its seat's behaviour, and
+`code-review` gains the delivery checklist, so the rule the Reviewer enforces and the method the
+Reviewer loads are the same copy. The per-ticket scope stays in the ticket's `## Touch`; the
+per-ticket base stays in its `Branch:` line. The Implementer reads the shared contract because
+every role already renders it.
 
 **D8 — Planner always tickets; chat writes nothing durable.** Any request that will change
 repository or platform state becomes an epic (more than one ticket) or a regular ticket (one
@@ -373,8 +377,9 @@ at that seam, and the route table extends rather than duplicates it.
   the only test that reads `docs/factory.md` as a generated artifact; the prose around the
   blocks stays a review concern.
 - **The templates are pinned by shape.** The ticket template names the `Branch:` line and the
-  three sections; the comment template names the three headings; the cap table and the brevity
-  test agree on 340 words, 130 words, 10 lines and 1 KB.
+  three sections; the verdict comment names the three headings; a delivery handoff is the linked
+  PR and its body is optional; the cap table and the brevity test agree on 340 words, 130 words,
+  10 lines and 1 KB.
 - **The sweep is a declared object.** `just validate` resolves the autopilot, its cron, its role
   and its prompt; the prompt names only the seven reviewer-handled columns; the sync fixture
   creates it and reads back exactly one enabled hourly trigger; a drift fixture refuses a second
@@ -417,7 +422,8 @@ is the defect the review looks for.
 | pull-request base | the ticket's `Branch:` line |
 | diff scope | the ticket's `## Touch` |
 | commit and PR shape | shared `## Delivery`; checked by `code-review` |
-| comment shape and order | shared `## Handoffs` |
+| delivery handoff | the linked pull request; checked by `code-review` |
+| verdict and finding shape | shared `## Handoffs` |
 | stale review | the `stale-sweep` autopilot |
 | failed run | the per-issue `task.failed` wake |
 | cancelled epic | `--until-status cancelled` |
@@ -437,8 +443,9 @@ is the defect the review looks for.
    on a hand edit inside a generated block.
 4. The rule inventory above resolves to one home per rule; no role repeats a shared section and
    no step instruction restates a role rule.
-5. A ticket body carries `Branch:` and the three sections; a comment carries the three headings;
-   the cap table states 340 words, 130 words, 10 lines and 1 KB.
+5. A ticket body carries `Branch:` and the three sections; a delivery handoff is the linked PR
+   and its body is optional; a verdict comment carries the three headings; the cap table states
+   340 words, 130 words, 10 lines and 1 KB.
 6. The `stale-sweep` autopilot is declared, hourly, planner-owned, and the sync fixture reads
    back exactly one enabled trigger; it reads only the seven reviewer-handled columns,
    `human_progress`, `human_progress_gate` and `awaiting_merge` are untouched, no per-issue 90m
@@ -525,6 +532,11 @@ stage 2 is the only parallel stage, because the drill and the contracts have dis
 - **Why the drill is before the catalog edits.** A wrong assumption about a member handler or
   the barrier wake is cheap to fix in a throwaway project and expensive to discover after a
   live sync. The drill copies the graph from this spec, so it tests the design, not the file.
+- **Why the PR carries the handoff.** A status move carries no payload, but the platform carries
+  the link, the head, the checks and the merge state natively, so a second written handoff on the
+  ticket duplicated that and is deleted. The PR body stays optional: the diff is the record, and
+  a note is for what the diff cannot say — a limit, a judgment call, a review question. An empty
+  body is not a finding, or the requirement simply moves from the comment to the body.
 - **What "the drift is gone" does not claim.** One copy does not make an agent obey it. The
   measure is structural — one home per rule, one reader — and the drill plus review are the
   behavioural check. A rule that the platform cannot read stays prose by design, and the

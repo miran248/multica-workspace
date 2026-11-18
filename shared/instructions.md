@@ -10,10 +10,10 @@
 - Merge only through a green PR; `main` takes no direct push. Merge after the exact-head verdict; never merge your own work and never enable auto-merge.
 
 ## Handoffs
-- A handoff or verdict is one comment: `## What` (record, exact revision, links, outcome), `## Evidence` (checks, measured facts, limits), `## Next` (next owner and action).
+- The linked PR is the delivery handoff: link it, then move it (or merge) as your last action; never dispatch by mention. PR body optional; an empty body is not a finding.
+- A verdict, finding or sweep note is one comment: `## What` (revision, links, outcome), `## Evidence` (checks, facts, limits), `## Next` (owner, action).
 - A finding is one `## Evidence` bullet: `P2 — file:line: trigger; consequence; fix`.
-- The comment is the handoff: post it before the move, and make the status move (or merge) your last action; never dispatch by mention.
-- Caps: a comment is at most 10 rendered lines and 1 KB; a findings list 1 KB; a decision packet 800 bytes. Over-cap blocks review.
+- Caps: a comment is 10 rendered lines and 1 KB; a findings list 1 KB; a decision packet 800 bytes. Over-cap blocks review.
 
 ## Scope and evidence
 - Act within scope; a bare `approve`/`proceed` clears only the gate it names, never a verified delivery; silence is not approval; scope change reopens it.

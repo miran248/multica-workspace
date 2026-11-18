@@ -231,12 +231,14 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
   judging or completing it. The Reviewer never reviews its own work.
 - **Implementer.** Owns `in_progress`: read the ticket's `Branch:` under `## Parent`, branch
   from that base (`main` when absent), open the PR against it, merge the base in before
-  `in_review`, then implement, validate, link the PR and comment the handoff.
+  `in_review`, then implement, validate and link the PR.
 - **Release.** Owns production only; see `roles/release.md`.
 
-The comment is the handoff: entering a column reassigns the issue to that column's handler and
-starts their run; a member handler is assigned and runs nothing. Nothing advances a ticket when
-a run ends, so the handler always makes the next move — after the comment, never before it.
+The linked pull request is the delivery handoff: entering a column reassigns the issue to that
+column's handler and starts their run; a member handler is assigned and runs nothing. Nothing
+advances a ticket when a run ends, so the handler always makes the next move; the link and the
+move are the whole handoff. The PR body is optional: it carries only what the diff cannot say,
+and an empty body is not a finding.
 
 ## Commits
 
