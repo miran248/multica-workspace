@@ -26,7 +26,6 @@ const read = path => readFileSync(join(ROOT, path), 'utf8');
 // The only edges the graph declares. Everything else the instructions carry is checked here
 // as a route table: the target must be a real column, and the column must name it.
 const ROUTES = {
-  epic_progress: ['todo', 'done'],
   spec_progress: ['spec_review', 'blocked'],
   spec_review: ['spec_progress', 'awaiting_merge'],
   in_progress: ['in_review', 'blocked', 'spec_progress'],
@@ -61,6 +60,10 @@ test('the graph resolves fifteen columns, each with a legal edge and a seat', ()
     }
   }
   assert.equal(steps.get('epic_progress').handler.type, 'none');
+  // The platform clears instructions on a handler-less step, so a declared one can never be
+  // read back and the sync can never converge. The state rule lives in the guide and the
+  // Planner contract instead.
+  assert.ok(!steps.get('epic_progress').instructions);
   assert.equal(steps.get('human_progress').handler.role, 'human');
   assert.equal(steps.get('awaiting_merge').handler.role, 'human');
   assert.equal(steps.get('release_progress').handler.type, 'agent');
