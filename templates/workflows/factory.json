@@ -17,8 +17,7 @@
         "category": "started",
         "icon": "half",
         "color": "#0ea5e9"
-      },
-      "instructions": "The epic's state while its slice is in flight. The Planner moves an epic here from todo when it promotes the first delivery stage, and to done on acceptance; the move dispatches no handler."
+      }
     },
     {
       "status_key": "spec_progress",
