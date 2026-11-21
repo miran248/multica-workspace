@@ -95,6 +95,9 @@ Describe what the platform does, keep the approved direction, and let the contra
 - **The live text links every ticket.** The link rule covers the PR body, the proposed breakdown
   and the spec comments; a bare ticket key there is a Standards finding and blocks the PASS. The
   catalog's own Markdown stays anonymous and carries bare keys, never a workspace URL.
+- **The review caps go; the binding caps stay.** The comment 10-line/1 KB cap and the
+  findings-list/evidence-table 1 KB cap are removed. The single-finding 1 KB, the packet
+  800 bytes and the word caps stay, and the review keeps its three headings and one-line findings.
 
 ## User Stories
 
@@ -129,6 +132,7 @@ Describe what the platform does, keep the approved direction, and let the contra
 29. As a maintainer, I want the seven ADRs and the glossary terms, so that each rule has one durable home and one word.
 30. As a future reader, I want this spec to record its own rule, its named exception and its expected snapshot, so that it practices the live-data rule it writes.
 31. As the approval owner, I want a bare ticket key in the PR body, the proposed breakdown or a comment to fail the review, so that no reader is left with a reference they cannot follow.
+32. As the Reviewer, I want no line or byte cap on the verdict comment, so that the evidence is written for the finding, not for the cap.
 
 ## Implementation Decisions
 
@@ -233,6 +237,15 @@ link read in `skills/code-review` from the title and head to the body and the ti
 names the three places in shared and the ticket template, and pins the read and the anonymity
 exception in the suite.
 
+**D14 — The review caps go; the binding caps stay.** The review's comment cap — 10 rendered lines
+and 1 KB — and its findings-list/evidence-table cap — 1 KB — are removed from shared `## Handoffs`
+and the README caps table. The single-finding 1 KB, the packet 800 bytes and the catalogue word
+caps (340, 130 and 100) stay, and the review keeps its `## What` / `## Evidence` / `## Next` shape
+and one-line findings. The cap compressed the four-finding FAIL at this slice's second review into
+ten lines, so the verdict was written for the cap rather than for the evidence; the record keeps
+the binding caps and drops the two that bind the review's own comment. The change lands in MIR-306
+with the other carriers; `tests/docs.test.js` asserts the kept caps and the removed ones' absence.
+
 ## Testing Decisions
 
 The seam is the existing offline matrix, not a new module: `tests/factory-workflow.test.js` pins
@@ -278,6 +291,11 @@ run renders and the guide a human reads, never the bytes of a spec or an interna
   reads those three places in its existing link check and fails a bare ticket key on Standards; the
   ticket template points at the rule. A bare key in the PR body, the breakdown or a comment fails
   the fixture, and a catalog file that embeds a workspace URL fails the anonymity check.
+- **The review caps are removed where they bind.** Shared `## Handoffs` names the single-finding
+  1 KB and the packet 800 bytes and no comment or findings-list cap; the README caps table lists
+  the word caps, the single finding and the packet and drops the comment and findings-list rows;
+  `tests/docs.test.js` asserts the kept caps and the absence of the removed ones. The three
+  headings and one-line findings stay.
 - **The caps prove replacement.** `tests/brevity.test.js` stays unchanged and green at 340 and
   130; a sentence added without a removal fails it.
 - **Negative fixtures.** A shared Delivery without the head rule, a shared Ownership with an
@@ -295,7 +313,8 @@ run renders and the guide a human reads, never the bytes of a spec or an interna
 a planned owner; the epic is `epic_progress` from the kickoff; the platform's parent stage wake
 promotes and conflicts are updated in place; no condition's only trigger is a closing ticket; the
 release lane is the whole-slice gate with no serialization; the workflow's `human` handler is the
-one seat; the live text links every ticket and the review reads it.
+one seat; the live text links every ticket and the review reads it; the review's comment and
+findings-list caps are removed while the word, single-finding and packet caps stay.
 
 **Named exceptions.** This slice is the last prefixed one: its integration branch is
 `spec/MIR-304` and its release head is that branch, because the live release contract pins it and
@@ -374,7 +393,7 @@ refine the split. Stage 3 verifies stage 2 at the integrated head.
 | Stage | Ticket | Assignee | Delivers |
 | --- | --- | --- | --- |
 | 1 | MIR-305 — Spec: platform realignment | Planner | This document, ADR-0022–0028, the six glossary terms and the spec PR into `spec/MIR-304`; its merge approves both. |
-| 2 | MIR-306 — Realign the Factory contracts with the platform | Implementer | Shared, the roles, the three skills, the workflow file, the guide, `docs/apply.md`, the glossary's rule copies, the live-text link rule and its review read, and the offline pins; caps replaced. |
+| 2 | MIR-306 — Realign the Factory contracts with the platform | Implementer | Shared, the roles, the three skills, the workflow file, the guide, `docs/apply.md`, the glossary's rule copies, the live-text link rule and its review read, the review-cap removal, and the offline pins; the word caps replaced. |
 | 3 | MIR-307 — Release the platform-realignment spec to main | Release | The release PR as one squash, the applied catalog readback, the nine live-acceptance rows with `multica issue timeline`, the executed set against this snapshot, and the evidence the Planner accepts the epic on. |
 
 ## Further Notes
@@ -423,6 +442,12 @@ and the platform's link table never sees it. The rule already lived in shared `#
 missing piece was a reader, so the review reads the three live-text places with the link check it
 already runs. The catalog's own Markdown is the other side of the same rule: it is anonymous, so it
 carries bare keys and never a workspace URL.
+
+**Why the review caps go.** The caps were written to keep a verdict short; the record shows the
+opposite cost. A four-finding FAIL had exactly ten lines to say four things, so the line budget
+chose what the reviewer could say. The binding caps stay — one finding is still 1 KB, a packet is
+still 800 bytes, and the contracts keep their word caps — but the review comment itself is
+evidence, and evidence is not improved by a line budget.
 
 **The live delta this spec already names.** The `main` branch protection and the up-to-date
 requirement are operator state, and the repository may not carry them when the release runs; the
