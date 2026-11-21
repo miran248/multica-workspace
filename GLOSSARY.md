@@ -88,20 +88,38 @@ nobody.
 
 ## Factory
 
+**delivering ticket** — the ticket whose pull request carries the work: the spec child for the
+spec PR, the ticket itself for a delivery PR, the release child for the release PR. Its key is
+the only key in the PR title and head branch; the epic's key never appears there, and the spec
+child's title does not repeat the epic key.
+
 **handoff** — the linked pull request that records the work, followed by the status move that
-assigns the issue to the new column's handler and starts that handler's run. The link goes first
-and the move last, so the next run can read the work; the move is what dispatches it. The PR
-body is optional, and an empty body is not a finding. Nothing advances a ticket when a run ends;
-the handler makes the next move. A member handler is assigned and runs nothing.
+assigns the issue to the new column's handler and starts that handler's run. The PR's title and
+head branch carry the delivering ticket's key, never the epic's; the link is read back
+(`multica issue pull-requests`) and the move waits until the PR is listed. The link goes first
+and the move last, so the next run can read the work; the move is what dispatches it. An empty
+read is the operator's fix and a `blocked` move, never a started lane. The PR body is optional,
+and an empty body is not a finding. Nothing advances a ticket when a run ends; the handler makes
+the next move. A member handler is assigned and runs nothing.
 
 **handoff gate** — the one question that ends grilling and starts the factory. The Planner
-presents the destination, the proposed slice outline, and — last — the labels question: which of
-`has-human-implementer` and `has-human-release` to apply to the epic before the kickoff, or
-neither. Every grilling produces an epic, so there is no shape field: a single ticket is the
-smallest epic, and a non-empty frontier is a wayfinder map rather than a factory shape. The epic
-opens in `todo` with its stage-1 spec child inert in `backlog`; the answer is the yes that starts
-the spec run, and the slice freezes when the spec PR opens. One prose copy in `skills/grilling`;
-the Planner contract names the route.
+presents the destination and the proposed slice outline, and ends on one question: apply the
+chosen mode labels and start stage 1. The labels are `has-human-implementer`,
+`has-human-release`, or neither, and they stay the last field; a human mode names the human seat
+the project's workflow binds to the `human` role, read from the handler and recorded on the epic
+as issue state. Every grilling produces an epic, so there is no shape field: a single ticket is
+the smallest epic. Wayfinder is invoked explicitly and never tied to grilling; grilling may
+answer a decision inside a wayfinder ticket, and that answer starts nothing. The epic opens in
+`todo` with its stage-1 spec child inert in `backlog`; the answer is the yes that starts the spec
+run, and the slice freezes when the spec PR opens. One prose copy in `skills/grilling`; the
+Planner contract names the route.
+
+**planned owner** — the assignee an issue carries from creation: the role promotion will pick,
+paired with `--project` at create time. Status entry still reassigns natively, so the planned
+owner only has to be right until the first move. Every agent-created issue carries one; the
+human lane is the exception — the catalog cannot name a member, so the child is created
+unassigned and the `human_progress` member handler binds the member. One rule in shared
+`## Ownership`, read by the publisher's pre-flight and the `spec_review` PASS.
 
 **factory mode** — the epic-level choice of who implements, encoded by the
 `has-human-implementer` label before the spec run. With neither label the epic is autonomous;
