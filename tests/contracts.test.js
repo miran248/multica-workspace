@@ -42,16 +42,19 @@ test('no role repeats a delivery rule', () => {
 // The publisher and the spec PASS act on that copy; a role, skill or column carrying the rule
 // again is the third copy the contract removes.
 const CREATION_RULE = ['`--project`', "the planned owner's `--assignee`", 'status entry still reassigns natively', 'member handler binds it'];
+// A create command that passes a flag uses the rule; a file carrying two or more of its
+// sentences restates it.
+const ruleCopy = text => CREATION_RULE.filter(phrase => text.includes(phrase));
 
 function ownershipViolations({ shared, catalog }) {
   const violations = [];
   const ownership = /^## Ownership\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
   for (const phrase of CREATION_RULE)
     if (!ownership.includes(phrase)) violations.push(`shared Ownership: no ${phrase}`);
-  for (const [path, text] of Object.entries(catalog))
-    if (path !== 'shared/instructions.md')
-      for (const phrase of CREATION_RULE)
-        if (text.includes(phrase)) violations.push(`${path}: second copy of ${phrase}`);
+  for (const [path, text] of Object.entries(catalog)) {
+    const copies = path === 'shared/instructions.md' ? [] : ruleCopy(text);
+    if (copies.length > 1) violations.push(`${path}: second copy of ${copies.join(', ')}`);
+  }
   return violations;
 }
 
@@ -79,11 +82,13 @@ function readerViolations({ tickets, review }) {
   if (!/project and its planned owner/.test(tickets)) violations.push('to-tickets: the project and planned owner are not checked');
   if (!/fails the publish/.test(tickets)) violations.push('to-tickets: a broken child does not fail the publish');
   if (!/unassigned/.test(tickets)) violations.push('to-tickets: the unassigned child is not checked');
+  if (!/`--project`/.test(tickets)) violations.push('to-tickets: the create call omits the project');
   if (!/shared\s+`## Ownership`/.test(review)) violations.push('code-review: does not act on shared Ownership');
   if (!/exact head/.test(pass)) violations.push('code-review: the set is not read at the exact head');
   if (!/`backlog`/.test(pass)) violations.push('code-review: the set states are not read');
   if (!/stage higher/.test(pass)) violations.push('code-review: the stage order is not read');
   if (!/ownerless/.test(pass)) violations.push('code-review: an ownerless child is not a blocking finding');
+  if (!/human-lane child may be unassigned/.test(pass)) violations.push('code-review: the human-lane child is not excepted');
   return violations;
 }
 
@@ -94,6 +99,12 @@ test('the publisher pre-flights the set and the spec PASS reads it', () => {
   assert.notDeepEqual(readerViolations(noPreflight), []);
   const noSetRead = { ...contract, review: contract.review.replace(/^## The spec PASS set read\n\n[\s\S]*?\n\n## /m, '## ') };
   assert.notDeepEqual(readerViolations(noSetRead), []);
+  // A set read that blocks every unassigned child fails a valid human-mode set.
+  const noException = { ...contract, review: contract.review.replace('; the one human-lane child may be unassigned,', ',') };
+  assert.notDeepEqual(readerViolations(noException), []);
+  // A publish instruction without the project creates an issue outside the Factory graph.
+  const noProject = { ...contract, tickets: contract.tickets.replace('with `--project`, ', 'with ') };
+  assert.notDeepEqual(readerViolations(noProject), []);
 });
 
 // The delivering ticket's key is in the title and the head branch, never the epic's; the rule

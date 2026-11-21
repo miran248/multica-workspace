@@ -46,7 +46,7 @@ The spec you are writing carries the proposed breakdown, and its PR merge will a
 
 **Pre-flight the whole set against shared `## Ownership` before publishing.** Every child carries its project and its planned owner; the only unassigned child is the human lane's. A child that misses either fails the publish: fix the set, never publish part of it.
 
-Publish one Multica child issue per ticket in stage order. Create every child `--status backlog` with `--parent` the **epic** (the spec child's parent, never the spec child), `--stage` and `--assignee` (the role that will do the work). The stage is the dependency edge; a dependency between epics is an `--until-issue` condition, never a body list. List the parent's children first and reconcile by title: a rerun creates only what is missing and updates the rest, never duplicates.
+Publish one Multica child issue per ticket in stage order. Create every child `--status backlog` with `--project`, `--parent` the **epic** (the spec child's parent, never the spec child), `--stage` and `--assignee` (the role that will do the work); the human-lane child is the one exception, created unassigned. The stage is the dependency edge; a dependency between epics is an `--until-issue` condition, never a body list. List the parent's children first and reconcile by title: a rerun creates only what is missing and updates the rest, never duplicates.
 
 **The merge is the approval, not the publish.** The whole set is visible in `backlog` before the human merges the spec PR. Nothing starts until the merge completes the spec child and the Planner's wake promotes the frontier. Apply `ready-for-agent` in that promotion, not here.
 
