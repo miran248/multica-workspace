@@ -14,10 +14,11 @@ The rule was written when every release head carried the prefix. With ticket-id 
 identifies nothing, and it never identified the merge-safe fact: a release is safe to merge when
 its tree contains the current `main`, not when its head starts with a word.
 
-The two facts that do hold the order are already in the contract: the repository's up-to-date
-requirement (a behind head must merge `main` in before it merges) and the Reviewer's
-`mergeStateStatus` read before the release PASS. The query adds a third detector that has to be
-executed by hand and can disagree with both.
+Two facts can hold the order: the Reviewer's `mergeStateStatus` read before the release PASS,
+which is in the contract, and the repository's up-to-date requirement, which is operator state the
+catalog names in `docs/apply.md` and cannot set — a repository with an unprotected `main` does not
+carry it. The query added a third detector that has to be executed by hand and can disagree with
+both.
 
 The `--until-issue` condition also had a defect of its own: it defaulted to `done`, so a
 dependency that was cancelled instead of completed waited forever.
@@ -30,9 +31,11 @@ the release ticket's key. Its head is the **release branch**, the release child'
 the integration branch at the release head; the integration branch is never the release PR's head.
 
 There is no release serialization query and no release park: no `gh pr list --base main` filtered
-to a prefix, no `--until-issue <release>`. Release order is held by the repository's up-to-date
-requirement and the Reviewer's `mergeStateStatus` against `main` before the PASS; a behind or
-dirty release fails the PASS and reworks on the release ticket.
+to a prefix, no `--until-issue <release>`. Release order is held by the Reviewer's
+`mergeStateStatus` against `main` before the PASS, with the repository's up-to-date requirement as
+the expected operator enforcement; a behind or dirty release fails the PASS and reworks on the
+release ticket. A repository that does not carry the requirement is a reported delta; the release
+never merges a stale tree on the strength of a query.
 
 Where a condition on another issue remains — a cross-epic dependency — it reads
 `--until-issue-state ended`, so a cancelled dependency releases the wait and either status is
@@ -41,8 +44,9 @@ outside the factory and is never the slice gate.
 
 ## Consequences
 
-- One executable rule for release order: the up-to-date requirement and the `mergeStateStatus`
-  read. The hand query and the park are gone, and so is the drift between them.
+- One executable read for release order: the `mergeStateStatus` check, with the up-to-date
+  requirement as the expected operator state. The hand query and the park are gone, and so is the
+  drift between them.
 - A cancelled dependency can no longer hang a waiting ticket; `ended` covers both terminal states.
 - The release PR's head identifies the release ticket, so the release link is a branch fact
   (ADR-0022) and the epic holds no head.

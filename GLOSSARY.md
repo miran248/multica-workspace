@@ -170,9 +170,10 @@ head and the head of the release PR into `main`. The release PR is the only path
 integration branch to `main`, and the epic's key never heads it.
 
 **slice release** — the final-stage child and the one squash that carries the whole slice onto
-`main`: the pre-merge gate the release PR holds. Release order is the repository's up-to-date
-requirement plus the Reviewer's `mergeStateStatus`, never a `spec/*` query or a park. A package
-release such as release-please is outside the factory and is not the slice release.
+`main`. The release PR is its pre-merge gate; release order is the Reviewer's `mergeStateStatus`
+read, with the repository's up-to-date requirement as the expected operator state, never a
+`spec/*` query or a park. A package release such as release-please is outside the factory and is
+not the slice release.
 
 **rewrite/lease** — a rework adds a commit to the same head; a rewrite replaces the head only when
 the commits themselves must not remain, on your own PR head, after a fetch, with

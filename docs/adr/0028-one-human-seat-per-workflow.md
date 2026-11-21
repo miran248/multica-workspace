@@ -1,15 +1,16 @@
 # 0028 — One human seat per workflow
 
 - Status: Accepted, 2026-11-21 (approved in the MIR-304 spec)
-- Supersedes: the per-epic human-seat clause of ADR-0013 — the packet naming the seat and the
-  kickoff recording it as issue state. The kickoff gate, its labels question and its single yes
-  stand.
+- Supersedes: nothing. ADR-0013's packet has no seat field; the per-epic seat rule lives in the
+  kickoff copy in `skills/grilling`, the Planner contract and the guide, and this record replaces
+  it there. The kickoff gate, its labels question and its single yes stand.
 
 ## Context
 
-ADR-0013's packet names the human seat for a human mode: the member the project's workflow binds
-to the `human` role, read from the handler and recorded on the epic as issue state. The
-"per epic" part is the defect. The workflow has one `human` handler, and every human-lane column —
+The live carriers name the human seat per epic: the kickoff copy in `skills/grilling`,
+`roles/planner.md` and the guide's kickoff section say the member the project's workflow binds to
+the `human` role is read from the handler and recorded on the epic as issue state. The "per epic"
+part is the defect. The workflow has one `human` handler, and every human-lane column —
 `human_progress` and the `awaiting_merge` gate — resolves to it. A per-epic field adds a choice
 the routing already answers, and it can name a member the handler does not route; the kickoff then
 records a seat the workflow will not use.

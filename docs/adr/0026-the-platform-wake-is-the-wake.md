@@ -19,11 +19,12 @@ command replaces the configuration. `create` adds a rule; a second review re-arm
 so the ticket ends with several watchers for the same hazard. `wakeup update` is the command that
 replaces one rule's whole configuration.
 
-The closing conditions: the guide registered the release readback and the `--until-status
-cancelled` sweep as wakeups on the release child and the epic. The platform disables an issue's
-wakeups when it is closed, cancelled or completed, and reopening does not restore them. A readback
-that fires when the release child completes is disabled by that completion; a sweep that fires
-when the epic is cancelled is disabled by the cancellation. Both are unreachable by construction.
+The closing conditions: the guide registers the `--until-status cancelled` sweep on the epic and
+leaves the release readback as the Planner's verification after the release merge. The platform
+disables an issue's wakeups when it is closed, cancelled or completed, and reopening does not
+restore them: the sweep is disabled by the cancellation that should trigger it, and a readback
+registered on the release child would be disabled by the child's completion. The sweep is
+unreachable as a condition; the readback must stay a run rule.
 
 ## Decision
 

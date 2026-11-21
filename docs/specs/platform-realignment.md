@@ -36,26 +36,28 @@ Each is a rule the catalog states and the platform does not behave as the rule a
 4. **The epic is created in `todo`.** ADR-0013 and the grilling skill open the epic there; on an
    agent-assigned issue a non-`backlog` create enqueues a run, and `epic_progress` is unreachable
    until the first promotion, so a slice under way reads as queued.
-5. **`wakeup create` is re-armed as if it replaced.** ADR-0015, the review contract and the guide
-   register the conflicts condition with `wakeup create --mode continuous` and say the command
-   replaces the configuration. `create` adds a rule; re-arming at every review duplicates it, and
-   `update` is the command that replaces one rule's whole configuration.
+5. **`wakeup create` is re-armed as if it replaced.** ADR-0015 and the review contract register
+   the conflicts condition with `wakeup create --mode continuous` and say the command replaces the
+   configuration. `create` adds a rule; re-arming at every review duplicates it, and `update` is
+   the command that replaces one rule's whole configuration.
 6. **The promotion barrier is armed by hand.** The Planner contract and the suite carry "one
    `--until-children-done --stage N` barrier per promotion". The platform already wakes the
    parent assignee when a stage closes while a later stage waits; the second condition is a
    duplicate wake that must be replaced on every promotion.
-7. **The release and cancelled conditions cannot fire.** The guide registers the release readback
-   and the `--until-status cancelled` sweep as wakeups on tickets whose own closure is the
-   trigger. Closing, cancelling or completing an issue disables its wakeups, so a cancelled epic
-   cannot wake its sweep and a completed release cannot wake its readback.
+7. **The closing conditions cannot fire as wakeups.** The guide registers the `--until-status
+   cancelled` sweep on the epic and leaves the release readback as the Planner's verification after
+   the release merge. A condition whose trigger is the ticket's own closure is disabled by that
+   closure, so the cancelled epic cannot wake its sweep; the readback stays a run rule and must not
+   become a wakeup on the release child.
 8. **The release serializes on a prefix.** ADR-0009, the guide and the Planner query open
    `gh pr list --base main` heads, filter them to `spec/*`, and park the next release on
    `--until-issue`. With ticket-id heads there is no prefix to filter, the query was never the
    merge-safe fact, and an `--until-issue` on a cancelled dependency waits forever unless it
    reads `ended`.
-9. **The human seat is chosen per epic.** ADR-0013's packet names the seat for each epic and the
-   kickoff records it as issue state. The workflow binds exactly one `human` handler, so the
-   choice is a readback of the handler; two epics cannot have different seats in one workflow.
+9. **The human seat is chosen per epic.** The kickoff copy in `skills/grilling`, the Planner
+   contract and the guide name the seat for each epic and the kickoff records it as issue state.
+   The workflow binds exactly one `human` handler, so the choice is a readback of the handler; two
+   epics cannot have different seats in one workflow.
 10. **The vocabulary and the guide describe the old model.** The glossary still defines a prefixed
     scratch branch, an unassigned human lane, an epic that moves at the first promotion and a
     release child whose head is the integration branch; the guide repeats all four. The new
@@ -170,7 +172,7 @@ the rule survives the PASS into `awaiting_merge`.
 
 **D6 — No condition's only trigger is a closing ticket.** The platform disables an issue's
 wakeups when it is closed, cancelled or completed. A release readback registered on the release
-child therefore never fires, and a `--until-status cancelled` sweep on the epic is disabled by the
+child would never fire, and the `--until-status cancelled` sweep on the epic is disabled by the
 cancellation that should have triggered it. The release readback runs in the Planner's acceptance
 run, after the release merge; the cancelled sweep runs in the run that cancels the epic, as part
 of that run. The live `spec_progress` instruction that still says to register the cancelled
@@ -249,15 +251,16 @@ run renders and the guide a human reads, never the bytes of a spec or an interna
   a second copy. A `--force` without the lease, or a mandated rewrite, fails the scan.
 - **The ownership rule is pinned where it is read.** Shared `## Ownership` carries the planned
   owner and the human lane's live seat; the publisher in `skills/to-tickets` pre-flights every
-  child; the `spec_review` instruction reads every child's owner with no human-lane exception. An
-  unassigned-lane sentence, or an ownerless child in the fixture, fails the suite.
+  child; the spec PASS's set read in `skills/code-review` reads every child's owner with no
+  human-lane exception. An unassigned-lane sentence, or an ownerless child in the fixture, fails
+  the suite.
 - **The epic state is pinned in the workflow and the guide.** The kickoff instruction, the Planner
   contract and the guide say create in `backlog`, move to `epic_progress` at the kickoff, and
   accept `done` on the release evidence; a `todo` create or a first-promotion move fails the suite.
 - **The wake rules are pinned by presence and absence.** The Planner contract says the stage wake
   promotes and names no `--until-children-done`; `skills/code-review` names `wakeup list` then
-  `wakeup update`; the guide carries the release readback in the Planner's acceptance and the
-  cancelled sweep in the cancelling run; no file registers a condition whose only trigger is a
+  `wakeup update`; the updated guide carries the release readback in the Planner's acceptance and
+  the cancelled sweep in the cancelling run; no file registers a condition whose only trigger is a
   closing ticket. The old barrier sentence, the old create-replaces sentence and the
   `--until-status cancelled` registration each fail the scan.
 - **The release lane is pinned.** `roles/release.md` names the release branch, the
@@ -307,8 +310,8 @@ promotion table keeps its four rows. `spec/MIR-304` exists at `074cd90` and is t
 second spec PR is open at once. MIR-305 is this child, and MIR-306 and MIR-307 exist in `backlog`
 before this PR opens, MIR-307 last; every child carries its planned owner. This PR's head is `MIR-305` and it is linked to MIR-305 only. The workflow's
 `human` handler is bound to one member; the repository has squash-only merges, auto-merge off and
-delete-head-branches on; its `main` is expected to require an up-to-date head before merge.
-`multica issue pull-requests unlink` exists.
+delete-head-branches on; its `main` is expected to require an up-to-date head before merge, as
+operator state whose absence the release reports. `multica issue pull-requests unlink` exists.
 
 **Executed set.** The stage-2 and release tickets report what the run actually found and every
 delta against this snapshot, with the commit SHA and the evidence; the release verifies the report
@@ -330,7 +333,7 @@ item, and put the result on MIR-307, never in this repository.
 | native wake | a stage whose children all close while a later stage waits | one Planner run starts from the platform's parent wake and promotes the frontier; no `--until-children-done` condition exists |
 | one conflicts rule | a reviewed PR revisited twice | `wakeup list` shows one conflicts rule; `wakeup update` replaces it in place; a second rule is never created |
 | no unassigned | a published set with a human-lane child | every child carries a planned owner, the human lane's being the live `human` handler's member; the spec PASS finds no ownerless child |
-| no serialization | two slices with a release each | no `spec/*` query runs; the second release waits on the repository's up-to-date requirement and the Reviewer's `mergeStateStatus`, not on a park |
+| no serialization | two slices with a release each | no `spec/*` query runs; the second release waits on the Reviewer's `mergeStateStatus` read, with the up-to-date requirement where the repository carries it; a missing requirement is reported as an operator delta, not filled by a park |
 | release readback | the release merge completes the release child | the Planner's acceptance run reads the squash on `main`, the checks and the applied catalog back; no wakeup on the release child is registered |
 | cancelled sweep | an epic cancelled before its release merges | the run that cancels the epic closes its open PRs, deletes the integration branch, cancels the remaining children and records what merged and what is abandoned |
 
@@ -397,15 +400,17 @@ the acceptance.
 **Why the release keeps its child but loses the query.** The whole-slice gate is what makes a
 release reviewable as one tree; the serialization query was an attempt to keep two releases from
 racing. With ticket-id heads the prefix no longer identifies a release, and the query never
-prevented the race it named: the merge-safe facts are the repository's up-to-date requirement and
-the Reviewer's `mergeStateStatus`. Removing the query removes a rule that cannot be executed; the
-gate stays.
+prevented the race it named: the merge-safe fact is the Reviewer's `mergeStateStatus` read, with
+the up-to-date requirement as the expected operator enforcement. Removing the query removes a rule
+that cannot be executed; the gate stays.
 
 **Why the wakeups had to change.** The platform disables an issue's wakeups when it closes, so a
-condition whose trigger is that closure is unreachable by construction. The release readback and
-the cancelled sweep were those conditions. Moving each into the run that owns the moment — the
-acceptance and the cancelling run — keeps the work and deletes the unreachable rule. The conflicts
-condition stays a wakeup, but as one rule updated in place rather than a new rule per review.
+condition whose trigger is that closure is unreachable by construction. The cancelled sweep is
+that condition; the release readback is the verification the merge makes possible, and giving it a
+wakeup on the release child would be the same unreachable shape. Moving each into the run that owns
+the moment — the acceptance and the cancelling run — keeps the work and deletes the unreachable
+rule. The conflicts condition stays a wakeup, but as one rule updated in place rather than a new
+rule per review.
 
 **Why one human seat.** The workflow binds one `human` handler; every human-lane column and the
 merge gate resolve to it. A per-epic choice adds a field the routing already answers, and it can
