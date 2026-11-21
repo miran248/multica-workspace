@@ -323,13 +323,14 @@ function specRunViolations({ planner, step, tickets, specSkill }) {
   const violations = [];
   for (const [name, text] of [['roles/planner.md', planner], ['spec_progress', step]]) {
     if (!/forks? `spec\/<epic>` from `main`/i.test(text)) violations.push(`${name}: no fork from main`);
-    if (!/(spec PR|the PR) targets (it|that branch)/.test(text)) violations.push(`${name}: spec PR is not targeted at the branch`);
     if (!/gh pr list --base main --state open/.test(text)) violations.push(`${name}: no release query`);
     if (!/`spec\/\*`/.test(text)) violations.push(`${name}: release query does not filter spec/*`);
     if (!/--until-issue <release>/.test(text)) violations.push(`${name}: release query does not park on the release`);
     for (const term of DELETED_TOPOLOGY)
       if (text.includes(term)) violations.push(`${name}: reintroduces the deleted topology`);
   }
+  // The run's own column instruction carries the base, so the role needs only the fork.
+  if (!/(spec PR|the PR) targets (it|that branch)/.test(step)) violations.push('spec_progress: spec PR is not targeted at the branch');
   if (!/force-push/.test(step)) violations.push('spec_progress: a rework does not force-push');
   if (!/epic-cancelled/.test(step)) violations.push('spec_progress: no cancelled-epic sweep');
   if (!/--until-status cancelled/.test(planner)) violations.push('roles/planner.md: no cancelled-epic condition');
@@ -375,28 +376,74 @@ test('the spec run forks, records and targets the integration branch', () => {
   assert.notDeepEqual(specRunViolations(mainOnly), []);
   const noBase = { ...contract, tickets: contract.tickets.replace(/^Branch: spec\/<epic-key>.*$/m, '') };
   assert.notDeepEqual(specRunViolations(noBase), []);
+  const noFork = { ...contract, planner: contract.planner.replace(/Fork `spec\/<epic>` from `main` at spec sha\./, '') };
+  assert.notDeepEqual(specRunViolations(noFork), []);
   const branchless = { ...contract, specSkill: `${contract.specSkill} A ${DELETED_TOPOLOGY[0]} spec records \`${DELETED_TOPOLOGY[1]}\`.` };
   assert.notDeepEqual(specRunViolations(branchless), []);
 });
 
-// One topology, one kickoff: the packet ends on the labels, the Planner applies them before
-// the stage-1 move, and no surface keeps the deleted branchless shape alive.
-test('the grilling packet ends on the labels and the Planner applies them before the move', () => {
-  const grilling = read('skills/grilling/SKILL.md');
-  const packet = /The packet names:\n\n([\s\S]*?)\n\n/.exec(grilling)?.[1] ?? '';
-  const fields = [...packet.matchAll(/^- \*\*(.+?)\*\*/gm)].map(([, field]) => field);
-  assert.deepEqual(fields, ['Destination', 'Slice outline', 'Mode labels']);
-  assert.match(packet, /which of `has-human-implementer` and `has-human-release` to apply to the epic before the kickoff, or neither/);
-  assert.doesNotMatch(grilling, /\*\*Shape\*\*/);
-  assert.match(grilling, /Every grilling produces an epic with its stage-1 spec child/);
-  assert.match(grilling, /a single ticket is the smallest epic/);
-  assert.match(grilling, /wayfinder map, not a factory shape/);
-  const planner = read('roles/planner.md');
-  assert.match(planner, /apply the epic labels[^.]*move the stage-1 child to `spec_progress`/);
-  const step = steps.get('spec_progress').instructions;
-  assert.match(step, /kickoff[^.]*labels[^.]*before this move/i);
-  assert.doesNotMatch(planner, new RegExp(DELETED_TOPOLOGY[0]));
-  assert.doesNotMatch(step, new RegExp(DELETED_TOPOLOGY[0]));
+// One kickoff: the packet closes on one question, the Planner creates the epic and its stage-1
+// child, applies the labels and records the human seat before the move, and the guide reads the
+// same route once. A kickoff that starts nothing, or creates without an owner, is the defect.
+function kickoffViolations({ grilling, planner, step, guide }) {
+  const violations = [];
+  if (!/one close-and-start question: apply the chosen labels and start stage 1/.test(grilling))
+    violations.push('grilling: the packet has no close-and-start question');
+  if (!/invoked explicitly and never tied to grilling/.test(grilling))
+    violations.push('grilling: wayfinder is not the explicit-invocation method');
+  if (/wayfinder map, not a factory shape/.test(grilling)) violations.push('grilling: a non-empty frontier selects a wayfinder map');
+  if (!/create epic and stage-1 child \(project, planned owner\)/.test(planner))
+    violations.push('roles/planner.md: the kickoff creates without the project and the planned owner');
+  if (!/record the human seat/.test(planner)) violations.push('roles/planner.md: the kickoff records no seat');
+  if (!/apply the epic labels[^.]*move the stage-1 child to `spec_progress`/.test(planner))
+    violations.push('roles/planner.md: the labels are not applied before the move');
+  if (!/- Kickoff: .*move the stage-1 child to `spec_progress`\.$/m.test(planner))
+    violations.push('roles/planner.md: the move is not the kickoff last action');
+  if (!/kickoff[^.]*labels[^.]*before this move/i.test(step)) violations.push('spec_progress: the kickoff labels are not applied before the move');
+  const kickoff = /^## The kickoff labels step\n\n([\s\S]*?)\n\n## /m.exec(guide)?.[1] ?? '';
+  if (!/one close-and-start question: apply the chosen mode labels and start\s+stage 1/.test(kickoff))
+    violations.push('docs/factory.md: the kickoff has no close-and-start question');
+  if (!/human seat the project's workflow binds to the `human`\s+role, read from the handler/.test(kickoff))
+    violations.push('docs/factory.md: the kickoff names no human seat');
+  if (!/creates the epic\s+and the stage-1\s+spec child with the project\s+and the planned owner/.test(kickoff))
+    violations.push('docs/factory.md: the kickoff creates without an owner');
+  if (!/records the chosen human seat on the epic/.test(kickoff)) violations.push('docs/factory.md: the kickoff records no seat');
+  const mover = /^- \*\*Planner\.\*\*[\s\S]*?(?=\n- \*\*)/m.exec(guide)?.[0] ?? '';
+  if (!/Create the epic and the stage-1 spec child/.test(mover))
+    violations.push('docs/factory.md: the Planner section creates nothing');
+  if (!/record the chosen human seat/.test(mover)) violations.push('docs/factory.md: the Planner section records no seat');
+  return violations;
+}
+
+test('the grilling packet ends on one question and the kickoff creates, labels and moves', () => {
+  const contract = {
+    grilling: read('skills/grilling/SKILL.md'),
+    planner: read('roles/planner.md'),
+    step: steps.get('spec_progress').instructions,
+    guide,
+  };
+  assert.deepEqual(kickoffViolations(contract), []);
+  assert.match(contract.grilling, /Every grilling produces an epic with its stage-1 spec child/);
+  assert.match(contract.grilling, /a single ticket is the smallest epic/);
+  assert.doesNotMatch(contract.grilling, /\*\*Shape\*\*/);
+  assert.doesNotMatch(contract.planner, new RegExp(DELETED_TOPOLOGY[0]));
+  assert.doesNotMatch(contract.step, new RegExp(DELETED_TOPOLOGY[0]));
+  // A labels-only packet never starts the factory.
+  assert.notDeepEqual(kickoffViolations({
+    ...contract,
+    grilling: contract.grilling.replace('one close-and-start question: apply the chosen labels and start stage 1', 'The packet ends on the labels question.'),
+  }), []);
+  // A kickoff that creates without an owner is the hole the create rule closes.
+  assert.notDeepEqual(kickoffViolations({
+    ...contract,
+    guide: contract.guide.replace('with the project and the planned owner, ', ''),
+  }), []);
+  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('(project, planned owner)', '') }), []);
+  // A reintroduced wayfinder-map sentence selects a container the user never asked for.
+  assert.notDeepEqual(kickoffViolations({
+    ...contract,
+    grilling: `${contract.grilling} A non-empty frontier is a wayfinder map, not a factory shape.`,
+  }), []);
 });
 
 test('no catalog surface names the deleted topology', () => {
@@ -581,8 +628,12 @@ function guideViolations({ guide: text, apply, workflowFile }) {
     ['the cancelled-epic sweep', /cancelled-epic sweep/],
     ['the stale sweep', /### The stale sweep/],
     ['the one topology', /Every grilling produces an epic/],
+    ['the one closing question', /one close-and-start question: apply the chosen mode labels and start\s+stage 1/],
+    ['the human seat', /human seat the project's workflow binds to the `human`\s+role, read from the handler/],
+    ['the kickoff record', /records the chosen human seat on the epic/],
+    ['the link read-back', /linked pull requests[^.]*moves?\s+only when the PR is listed/],
     ['the kickoff labels step', /kickoff[^.]*labels|labels[^.]*kickoff/i],
-    ['the owned create', /stage-1 child[^.]*project[^.]*planned owner/],
+    ['the owned create', /stage-1\s+(spec\s+)?child[^.]*project[^.]*planned owner/],
     ['the delivering ticket key', /delivering ticket's, never the epic's/],
     ['the spec child title', /spec child's title[^.]*repeating the epic key/],
     ['the epic state', /`epic_progress`/],
@@ -621,6 +672,9 @@ test('the guide carries the integration topology and the narrowed routes', () =>
   // The integration topology must keep its human-merge cost: the spec and the release.
   const noTwoMergeCost = { ...contract, guide: contract.guide.replace(/Under `has-human-release`,\s*one topology costs two human merges[^.]*\./, '') };
   assert.notDeepEqual(guideViolations(noTwoMergeCost), []);
+  // A guide that drops the read-back or the one question leaves the human on the old prose.
+  assert.notDeepEqual(guideViolations({ ...contract, guide: contract.guide.replace(/linked pull requests[^.]*listed\./, '') }), []);
+  assert.notDeepEqual(guideViolations({ ...contract, guide: contract.guide.replace('one close-and-start question: apply the chosen mode labels', 'one question: apply the chosen mode labels') }), []);
   // The reference trigger is the recipe a new repository copies.
   const unfiltered = { ...contract, workflowFile: contract.workflowFile.replace(/\n\s*branches: \[main\]/g, '') };
   assert.notDeepEqual(guideViolations(unfiltered), []);
