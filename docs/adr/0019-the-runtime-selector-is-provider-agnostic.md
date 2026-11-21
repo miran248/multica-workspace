@@ -13,11 +13,11 @@ serve a workspace that has not cut over, so it cannot name one provider or one m
 
 ## Decision
 
-The selector is provider-agnostic. `defaults.required_provider` names the runtime provider
-family — `pi`, `dsh` or `codex` — and `just sync` requires exactly one online runtime of that
-provider. Zero or several refuses before any write; there is no `--runtime-id` / `RUNTIME`
-choice, because a second online runtime is a misconfiguration to stop rather than a choice to
-make. The `flash-first-v1` guard asserts high thinking, the configured provider family and the
+The selector is provider-agnostic. The schema accepts `pi`, `dsh` and `codex` as the provider
+enum, and `defaults.required_provider` names the one the selector reads; `just sync` requires
+exactly one online runtime of that provider. Zero or several refuses before any write; there is
+no `--runtime-id` / `RUNTIME` choice, because a second online runtime is a misconfiguration to
+stop rather than a choice to make. The `flash-first-v1` guard asserts high thinking and the
 DeepSeek model family, never a literal model id; `defaults.model` carries the id the pinned
 image lists (`deepseek/deepseek-flash`), so a model change is a catalog edit.
 
@@ -27,6 +27,7 @@ image lists (`deepseek/deepseek-flash`), so a model change is a catalog edit.
   five-agent binding stay at cutover.
 - A workspace that has not cut over keeps `required_provider: dsh`; `pi` binds the same way
   after cutover, and no script names either provider.
+- The schema is the single carrier of the provider enum; no script repeats it.
 - A second online runtime of the configured provider is a visible refusal, not an operator
   choice; the old `--runtime-id` / `RUNTIME` pair is gone.
 - The model id is data, not a code constant: `deepseek/deepseek-flash` is the default and

@@ -39,15 +39,9 @@ skill. It is not a dependency: nothing fetches it, and a skill is a local file s
 applies unchanged to any number of them.
 
 **live binding** — what a run resolves at start and never stores: the workspace id, name,
-slug and owners (`multica workspace get`, `member list`), the one online runtime of the
-catalog's required provider (`runtime list`), the checkout's `origin` and the app origin. An
-ambiguous binding refuses the run.
-
-**runtime selector** — the provider-agnostic choice of runtime. `defaults.required_provider`
-in the catalog names the provider family (`pi`, `dsh` or `codex`), and `runtime list` must show
-exactly one online runtime of it. Zero or more than one refuses before any write; a second
-online runtime is a misconfiguration to stop, not a choice, so there is no per-run runtime
-override. The defaults name the model by the id the pinned image lists, never a literal.
+slug and owners (`multica workspace get`, `member list`), the single online Dsh runtime
+(`runtime list`), the checkout's `origin` and the app origin. An ambiguous binding refuses the
+run.
 
 **workspace url** — `app_url` + `identity.workspace_slug`, rendered once at sync as
 `{{workspace_url}}` and the base of every issue reference an agent writes. `app_url` is

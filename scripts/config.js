@@ -30,9 +30,6 @@ export function requiredProvider(root = ROOT) {
 }
 
 export const ROLES = ['general', 'planner', 'implementer', 'reviewer', 'release'];
-/** Runtime provider families the selector may require. `dsh` stays valid for a workspace that
- *  has not cut over; `pi` is the cut-over target. */
-export const PROVIDERS = ['pi', 'dsh', 'codex'];
 /** Operator state, not catalog content: the app origin issue references point at. A self-hosted
  *  consumer overrides it with --app-url / MULTICA_APP_URL; the slug is never committed. */
 export const DEFAULT_APP_URL = 'https://multica.ai';
@@ -99,13 +96,12 @@ export function validateModelFamily({ model, thinking_level: effort }) {
   if ((deepseek || astra) && !['off', 'minimal', 'low', 'medium', 'high'].includes(effort)) throw new Error('Model family effort cap requires explicit effort at most high');
 }
 
-/** The `flash-first-v1` guard: high thinking, a DeepSeek-family model and a known provider
- *  family. The provider value is the configured one, so `pi`, `dsh` and `codex` all pass. */
+/** The `flash-first-v1` guard: high thinking and a DeepSeek-family model. The schema carries
+ *  the provider enum; the selector reads the configured value. */
 function validateDefaults(defaults) {
   validateModelFamily(defaults);
   if (defaults.thinking_level !== 'high') throw new Error('flash-first-v1 requires high thinking; no fallback');
   if (!/deepseek/i.test(defaults.model)) throw new Error('flash-first-v1 requires a DeepSeek-family model; no fallback');
-  if (!PROVIDERS.includes(defaults.required_provider)) throw new Error(`Unknown runtime provider: ${defaults.required_provider}`);
 }
 
 function sameKeys(actual, expected, label) {
