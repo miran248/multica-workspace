@@ -111,8 +111,8 @@ as issue state. Every grilling produces an epic, so there is no shape field: a s
 the smallest epic. Wayfinder is invoked explicitly and never tied to grilling; grilling may
 answer a decision inside a wayfinder ticket, and that answer starts nothing. The epic opens in
 `todo` with its stage-1 spec child inert in `backlog`; the answer is the yes that starts the spec
-run, and the slice freezes when the spec PR opens. One prose copy in `skills/grilling`; the
-Planner contract names the route.
+run. The change window is the reslice window, and the slice freezes at the first started child.
+One prose copy in `skills/grilling`; the Planner contract names the route.
 
 **planned owner** — the assignee an issue carries from creation: the role promotion will pick,
 paired with `--project` at create time. Status entry still reassigns natively, so the planned
@@ -182,8 +182,42 @@ it.
 
 **proposed breakdown** — the ticket list and blocking edges carried by the spec pull request.
 It is reviewed with the spec, and the merge that approves the spec approves the breakdown. The
-spec run publishes the children in `backlog` before that merge, so the set is final when stage 1
-closes; the merge is what starts them.
+spec run publishes the children in `backlog` before the merge that approves them, so the set is
+final when that merge is reviewed; the merge is what starts them. A revision PR carries a
+revised set, and its own merge approves that set.
+
+**started child** — a child in any status but `backlog`, `todo`, `done` or `cancelled`. The first
+started child after the spec merge closes the reslice window and latches the freeze. `done` is
+not a started status, but a done child proves the freeze had already started; `blocked` is
+started, because the child was promoted and the set was committed to execution.
+
+**reslice window** — the one period a change is made in place: while the spec pull request is
+unmerged, or after its approval merge while no child has started. The Planner amends the open
+pull request at the same head and number, or — once the merge has landed — opens one revision PR
+on the same spec child, rewrites the child set and bodies, and returns the child to
+`spec_review` for a fresh PASS. No second spec PR is open at once, and the window closes at the
+first started child.
+
+**frozen slice** — a slice whose spec has merged and whose first child has started. The freeze is
+a latch: once true it holds for the rest of the slice's life. A real change is a new epic; the
+old epic runs to its release, the new epic owns the change, and the affected acceptance is
+recorded as superseded and cited.
+
+**revision PR** — the spec pull request that carries a reslice after the approval merge while the
+slice is idle. It targets `spec/<epic>`, is reviewed at `spec_review`, and its merge re-approves
+the revised spec and set; it reopens the same spec child and is not a second epic.
+
+**superseded** — an acceptance criterion the old epic no longer carries because a later epic owns
+the change. It is recorded and cited in the old epic's acceptance, never silently dropped; the
+old epic can still close on the criteria it kept.
+
+**expected snapshot** — the live state an approved spec declares that acceptance should find:
+names, counts and shape, recorded as an expectation, not as a claim that live state is current at
+read time.
+
+**executed set** — the set the delivering run actually observed when it ran the acceptance,
+reported on the ticket with the commit SHA and the evidence. The release verifies it against the
+expected snapshot; a delta is reported, never inferred or quietly absorbed.
 
 **human lane** — the human's columns: `human_progress` for implementation, `human_review` for
 the Reviewer's verdict, and `awaiting_merge` for the human merge that approves a spec or
