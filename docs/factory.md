@@ -17,7 +17,11 @@ retargets the approval merge at the integration branch,
 [ADR-0009](adr/0009-release-the-spec-as-one-squash.md) releases the spec as one squash on
 `main`, and [ADR-0014](adr/0014-the-merge-exit-is-read-at-the-pass.md) reads the merge exit
 once, at the PASS; [ADR-0016](adr/0016-every-grilled-slice-takes-the-integration-topology.md)
-deletes the second topology and asks the labels at the kickoff.
+deletes the second topology and asks the labels at the kickoff. The change boundary is
+[ADR-0019](adr/0019-the-slice-freezes-at-the-first-started-child.md), the one-ticket link and
+the unlink correction [ADR-0020](adr/0020-one-pr-links-to-one-ticket.md), and the
+rule/expected-snapshot/executed-set reading
+[ADR-0021](adr/0021-the-spec-records-the-rule-not-the-live-state.md).
 
 ## Status graph
 
@@ -95,7 +99,8 @@ The Reviewer leaves the PR open on PASS and moves the child to `awaiting_merge`;
 merges it, the workspace PR rule completes the child to `done`, and that completion wakes the
 Planner to promote the frontier — not to slice. The merge still approves the spec and the set:
 the children exist, but all are `backlog` and none has started.
-No child is created after the merge: the set is final before the child closes.
+No child is created after the merge that approves its set: the set is final before the child
+closes.
 Publishing before the child closes is what keeps the barrier wake single: the platform
 re-evaluates the stage condition whenever the child set changes.
 
@@ -177,6 +182,30 @@ cancelled before its release merges, that sweep runs once and in order: close th
 and release PRs, delete `spec/<epic>`, cancel the children that are still open, and record what
 merged and what is abandoned. If the release already merged, do not cancel it: accept the epic,
 or open a follow-up spec — a revert is a new epic.
+
+## The reslice window and the freeze
+
+A change is made in place only inside the reslice window: while the spec PR is unmerged, or after
+its approval merge while no child has started. On an unmerged PR the Planner force-pushes the same
+head, so the number, link and body survive; after the merge it reopens the same spec child at
+`spec_progress` and opens one revision PR against `spec/<epic>`. Either way the child set and
+bodies are rewritten in place — list the children, create only the missing ones, edit the rest,
+cancel the dropped — and the child returns to `spec_review` for a fresh PASS. No second spec PR is
+open at once.
+
+The window closes when the spec has merged and any child is in a started status: anything but
+`backlog`, `todo`, `done` or `cancelled`. The freeze is a latch: once it holds, the slice stays
+frozen for its life, so `done` never reopens it and a child parked in `blocked` counts as
+started. A real change after the freeze is a new epic: the old epic runs to its release and is
+not cancelled or amended, the new epic owns the change, and the affected acceptance criterion is
+recorded as superseded and cited in the old epic's acceptance.
+
+The spec records the rule, the named exceptions and the expected snapshot; acceptance is the
+executed set. The reslice window is the named exception to the freeze, and a live-data delta that
+leaves the rule, the exceptions and the acceptance unchanged is the named exception to
+re-speccing: the delivering ticket reports the set it observed and every delta with the commit SHA
+and the evidence, and the release verifies the report at the integrated head. A delta that changes
+the rule takes the reslice or new-epic route instead.
 
 ## Columns
 
@@ -262,12 +291,13 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
   the spec recording `integration:`, and publish every delivery child in `backlog` with its stage
   and its `Branch:` base, the final-stage release child last. Then link the spec PR, targeted at
   `spec/<epic>`, to the child only. The merge approves the set and wakes you to promote, not to
-  slice: create no child after it. Move the epic to `epic_progress` in the run that promotes the
-  first delivery stage, and to `done` on acceptance. Promote the frontier by the four-row table in
-  `roles/planner.md`, applying `ready-for-agent`; keep later stages in `backlog`. Before promoting
-  a release, query open `spec/*` heads against `main` and park the next release while another is
-  in flight. Triage `blocked`, run the cancelled-epic sweep, and accept the epic on evidence after
-  the release merge.
+  slice: create no child after the merge that approves its set, and make a change inside the
+  reslice window a revision, after the freeze a new epic. Move the epic to `epic_progress` in the
+  run that promotes the first delivery stage, and to `done` on acceptance. Promote the frontier by
+  the four-row table in `roles/planner.md`, applying `ready-for-agent`; keep later stages in
+  `backlog`. Before promoting a release, query open `spec/*` heads against `main` and park the next
+  release while another is in flight. Triage `blocked`, run the cancelled-epic sweep, and accept
+  the epic on evidence after the release merge.
 - **Reviewer.** Owns `spec_review`, `in_review`, `human_review` and `release_review`: one
   verdict at the exact head, evidence per criterion, then the move or the merge. Post the
   verdict first, at the reviewed head, before the status move or the merge: the move starts the
@@ -293,7 +323,9 @@ The linked pull request is the delivery handoff: entering a column reassigns the
 column's handler and starts their run; a member handler is assigned and runs nothing. The link
 comes first: after a run opens a pull request it reads the ticket's linked pull requests and moves
 only when the PR is listed. An empty read is the operator's fix — the wrong key, a URL relink, or
-the repository integration — and a `blocked` move, never a started lane. Nothing advances a ticket
+the repository integration — and a `blocked` move, never a started lane. A ticket holds one open
+linked PR: a second open link, or a link to a ticket the PR does not deliver, is a blocking finding
+at review. Nothing advances a ticket
 when a run ends, so the handler always makes the next move; the link and the move are the whole
 handoff. The PR body is optional: it carries only what the diff cannot say, and an empty body is
 not a finding.
@@ -337,9 +369,9 @@ detail; the subject carries the two identifiers and nothing else.
   nothing on a close: a closed, unmerged PR changes no status, wakes nobody, and is not an
   automatic rejection — rejected, superseded, rebased and cancelled PRs all close the same
   way, so a close cannot be assumed to mean any of them. The actor who closes the PR owns the
-  move: `cancelled` for abandoned work, or the lane that owns the rework, with the reason on
-  the ticket. There is no CLI unlink, so a human who closes a linked PR removes the stale link
-  on the issue page before linking a replacement.
+  move — `cancelled` for abandoned work, or the lane that owns the rework, with the reason on
+  the ticket — and the actor who closes the PR owns the unlink: `multica issue pull-requests
+  unlink` removes the closed link before a replacement is linked.
 - **A review needs an open PR.** Each review column checks the link before judging: with no
   open pull request there is nothing to review, so the Reviewer comments the state and moves
   the ticket to that column's back status. This is a precondition on entry, not a reaction to
