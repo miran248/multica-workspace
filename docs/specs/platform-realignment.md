@@ -90,6 +90,9 @@ Describe what the platform does, keep the approved direction, and let the contra
 - **The record and the vocabulary.** Seven ADRs carry the decisions, the glossary gains or changes
   `integration branch`, `release branch`, `slice release`, `planned owner`, `epic_progress` and
   `rewrite/lease`, and stage 2 updates the guide from the same rules.
+- **The live text links every ticket.** The link rule covers the PR body, the proposed breakdown
+  and the spec comments; a bare ticket key there is a Standards finding and blocks the PASS. The
+  catalog's own Markdown stays anonymous and carries bare keys, never a workspace URL.
 
 ## User Stories
 
@@ -123,6 +126,7 @@ Describe what the platform does, keep the approved direction, and let the contra
 28. As the human, I want one seat per workflow read from the handler, so that a kickoff cannot route my lane to a different member.
 29. As a maintainer, I want the seven ADRs and the glossary terms, so that each rule has one durable home and one word.
 30. As a future reader, I want this spec to record its own rule, its named exception and its expected snapshot, so that it practices the live-data rule it writes.
+31. As the approval owner, I want a bare ticket key in the PR body, the proposed breakdown or a comment to fail the review, so that no reader is left with a reference they cannot follow.
 
 ## Implementation Decisions
 
@@ -215,6 +219,18 @@ the checker is the same offline matrix.
 child; the spec PR's merge approves the set and starts nothing. No child is created after that
 merge, and nothing here starts delivery.
 
+**D13 — Live issue text links every ticket.** The review's first pass found the spec PR body
+carrying bare ticket keys while the repository contract already requires a workspace link; the
+reslice adds the read, not a new rule. The rule is one line in shared `## Ownership`: write each
+issue as its workspace link, and keep a bare identifier only in a commit subject, PR title or branch
+name. The places the review reads are the PR body, including the proposed breakdown table; the spec
+comments; and any packet an agent posts. A bare key there is a Standards finding and blocks the
+PASS. The catalog's own Markdown is the exception by construction: it is anonymous, carries no
+workspace URL, and keeps bare keys, which the anonymity check governs. Stage 2 extends the existing
+link read in `skills/code-review` from the title and head to the body and the ticket's comments,
+names the three places in shared and the ticket template, and pins the read and the anonymity
+exception in the suite.
+
 ## Testing Decisions
 
 The seam is the existing offline matrix, not a new module: `tests/factory-workflow.test.js` pins
@@ -254,6 +270,11 @@ run renders and the guide a human reads, never the bytes of a spec or an interna
 - **The glossary is pinned by term.** `tests/contracts.test.js` reads the six terms and the
   corrected handoff-gate entry; a glossary without `rewrite/lease` or with the old epic-`todo`
   sentence fails.
+- **The live-text link rule is pinned where it is read.** Shared `## Ownership` carries the link
+  rule and names the PR body, the proposed breakdown and the spec comments; `skills/code-review`
+  reads those three places in its existing link check and fails a bare ticket key on Standards; the
+  ticket template points at the rule. A bare key in the PR body, the breakdown or a comment fails
+  the fixture, and a catalog file that embeds a workspace URL fails the anonymity check.
 - **The caps prove replacement.** `tests/brevity.test.js` stays unchanged and green at 340 and
   130; a sentence added without a removal fails it.
 - **Negative fixtures.** A shared Delivery without the head rule, a shared Ownership with an
@@ -271,13 +292,14 @@ run renders and the guide a human reads, never the bytes of a spec or an interna
 a planned owner; the epic is `epic_progress` from the kickoff; the platform's parent stage wake
 promotes and conflicts are updated in place; no condition's only trigger is a closing ticket; the
 release lane is the whole-slice gate with no serialization; the workflow's `human` handler is the
-one seat.
+one seat; the live text links every ticket and the review reads it.
 
 **Named exceptions.** This slice is the last prefixed one: its integration branch is
 `spec/MIR-304` and its release head is that branch, because the live release contract pins it and
-deploys after this release. The transition is the exception; every other head is a ticket id. A
-live-data delta that leaves the rule, the exceptions and the acceptance unchanged is reported and
-verified, not re-approved.
+deploys after this release. The transition is the exception; every other head is a ticket id. The
+catalog's own Markdown is the other: it is anonymous, so it carries bare keys and no workspace URL,
+and the anonymity check governs it. A live-data delta that leaves the rule, the exceptions and the
+acceptance unchanged is reported and verified, not re-approved.
 
 **Expected snapshot.** The Factory graph keeps its fifteen columns, five seats and two mode labels;
 `epic_progress` has no handler; the four review columns still declare `awaiting_merge` and the
@@ -303,6 +325,7 @@ item, and put the result on MIR-307, never in this repository.
 | Scenario | Shape | Expected evidence |
 | --- | --- | --- |
 | ticket-id link | a spec child and a delivery child whose PR heads are their own keys | each PR links to its own ticket; the merge completes that ticket; the title and the head name the same key |
+| bare-key review | a PR body, a proposed breakdown or a spec comment with a bare ticket key | the review reads the live text in its link check and fails it on Standards; the author links the key; no PASS stands over a bare key |
 | no epic link | a spec merge and a release merge with the epic still open | the epic holds no linked PR; the release child holds its release PR; the epic's state moves only by the Planner's hand |
 | native wake | a stage whose children all close while a later stage waits | one Planner run starts from the platform's parent wake and promotes the frontier; no `--until-children-done` condition exists |
 | one conflicts rule | a reviewed PR revisited twice | `wakeup list` shows one conflicts rule; `wakeup update` replaces it in place; a second rule is never created |
@@ -348,8 +371,8 @@ refine the split. Stage 3 verifies stage 2 at the integrated head.
 | Stage | Ticket | Assignee | Delivers |
 | --- | --- | --- | --- |
 | 1 | MIR-305 — Spec: platform realignment | Planner | This document, ADR-0022–0028, the six glossary terms and the spec PR into `spec/MIR-304`; its merge approves both. |
-| 2 | MIR-306 — Realign the Factory contracts with the platform | Implementer | Shared, the roles, the three skills, the workflow file, the guide, `docs/apply.md`, the glossary's rule copies and the offline pins; caps replaced. |
-| 3 | MIR-307 — Release the platform-realignment spec to main | Release | The release PR as one squash, the applied catalog readback, the eight live-acceptance rows with `multica issue timeline`, the executed set against this snapshot, and the evidence the Planner accepts the epic on. |
+| 2 | MIR-306 — Realign the Factory contracts with the platform | Implementer | Shared, the roles, the three skills, the workflow file, the guide, `docs/apply.md`, the glossary's rule copies, the live-text link rule and its review read, and the offline pins; caps replaced. |
+| 3 | MIR-307 — Release the platform-realignment spec to main | Release | The release PR as one squash, the applied catalog readback, the nine live-acceptance rows with `multica issue timeline`, the executed set against this snapshot, and the evidence the Planner accepts the epic on. |
 
 ## Further Notes
 
@@ -388,6 +411,13 @@ condition stays a wakeup, but as one rule updated in place rather than a new rul
 merge gate resolve to it. A per-epic choice adds a field the routing already answers, and it can
 name a member the handler does not route. The readback keeps the seat visible on the epic without
 making it a decision.
+
+**Why the live text is part of the delivery contract.** A bare ticket key in a pull request body,
+a proposed breakdown or a comment is not a broken link: it is a reference the reader cannot follow,
+and the platform's link table never sees it. The rule already lived in shared `## Ownership`; the
+missing piece was a reader, so the review reads the three live-text places with the link check it
+already runs. The catalog's own Markdown is the other side of the same rule: it is anonymous, so it
+carries bare keys and never a workspace URL.
 
 **The live delta this spec already names.** The `main` branch protection and the up-to-date
 requirement are operator state, and the repository may not carry them when the release runs; the
