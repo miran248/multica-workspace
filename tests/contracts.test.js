@@ -334,6 +334,7 @@ test('the stale freeze sentence and the stale no-unlink line fail a scan of ever
     const text = read(path);
     assert.doesNotMatch(text, /freezes when the spec PR opens/, `${path} keeps the old freeze sentence`);
     assert.doesNotMatch(text, /There is no CLI unlink/, `${path} keeps the stale no-unlink line`);
+    assert.doesNotMatch(text, /no child after the spec PR opens/i, `${path} keeps the stale child-set cut`);
   }
 });
 

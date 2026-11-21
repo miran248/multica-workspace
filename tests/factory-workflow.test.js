@@ -361,7 +361,7 @@ function specRunViolations({ planner, step, tickets, specSkill }) {
   if (!/single-ticket breakdown is the smallest epic/.test(tickets)) violations.push('to-tickets: a single-ticket breakdown has no release');
   if (!/release child is the final publication: created last, in `backlog`, in the final stage/.test(tickets))
     violations.push('to-tickets: release child is not last, backlog and final stage');
-  for (const clause of ['release procedure', 'base/source branch', 'included children', '`Touch:` union', 'Create no child after the spec PR opens'])
+  for (const clause of ['release procedure', 'base/source branch', 'included children', '`Touch:` union', 'Create no child after the merge that approves its set'])
     if (!tickets.includes(clause)) violations.push(`to-tickets: missing ${clause}`);
   for (const term of DELETED_TOPOLOGY)
     if (tickets.includes(term)) violations.push('to-tickets: reintroduces the deleted topology');
