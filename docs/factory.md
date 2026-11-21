@@ -257,13 +257,13 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
   a review the exit rule sent there reaches you; a ticket PR into `spec/<epic>` is
   Reviewer-merged. Never move human work into `in_progress`.
 - **Planner.** Create the epic and the stage-1 spec child; at the kickoff apply the chosen labels
-  to the epic, record the chosen human seat, and move the stage-1 child to `spec_progress` last.
-  In that child's run, fork `spec/<epic>` from `main` at the spec sha, write the spec recording
-  `integration:`, and publish every delivery child in `backlog` with its stage and its `Branch:`
-  base, the final-stage release child last. Then link the spec PR, targeted at `spec/<epic>`, to
-  the child only. The merge approves the set and wakes you to promote, not to slice: create no
-  child after it. Move the epic to `epic_progress` in the run that promotes the first delivery
-  stage, and to `done` on acceptance. Promote the frontier by the four-row table in
+  to the epic, record the chosen human seat on the epic, and move the stage-1 child to
+  `spec_progress` last. In that child's run, fork `spec/<epic>` from `main` at the spec sha, write
+  the spec recording `integration:`, and publish every delivery child in `backlog` with its stage
+  and its `Branch:` base, the final-stage release child last. Then link the spec PR, targeted at
+  `spec/<epic>`, to the child only. The merge approves the set and wakes you to promote, not to
+  slice: create no child after it. Move the epic to `epic_progress` in the run that promotes the
+  first delivery stage, and to `done` on acceptance. Promote the frontier by the four-row table in
   `roles/planner.md`, applying `ready-for-agent`; keep later stages in `backlog`. Before promoting
   a release, query open `spec/*` heads against `main` and park the next release while another is
   in flight. Triage `blocked`, run the cancelled-epic sweep, and accept the epic on evidence after

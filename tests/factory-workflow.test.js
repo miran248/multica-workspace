@@ -376,7 +376,7 @@ test('the spec run forks, records and targets the integration branch', () => {
   assert.notDeepEqual(specRunViolations(mainOnly), []);
   const noBase = { ...contract, tickets: contract.tickets.replace(/^Branch: spec\/<epic-key>.*$/m, '') };
   assert.notDeepEqual(specRunViolations(noBase), []);
-  const noFork = { ...contract, planner: contract.planner.replace(/Fork `spec\/<epic>` from `main` at spec sha\./, '') };
+  const noFork = { ...contract, planner: contract.planner.replace(/Fork `spec\/<epic>` from `main`\./, '') };
   assert.notDeepEqual(specRunViolations(noFork), []);
   const branchless = { ...contract, specSkill: `${contract.specSkill} A ${DELETED_TOPOLOGY[0]} spec records \`${DELETED_TOPOLOGY[1]}\`.` };
   assert.notDeepEqual(specRunViolations(branchless), []);
@@ -392,13 +392,15 @@ function kickoffViolations({ grilling, planner, step, guide }) {
   if (!/invoked explicitly and never tied to grilling/.test(grilling))
     violations.push('grilling: wayfinder is not the explicit-invocation method');
   if (/wayfinder map, not a factory shape/.test(grilling)) violations.push('grilling: a non-empty frontier selects a wayfinder map');
-  if (!/create epic and stage-1 child \(project, planned owner\)/.test(planner))
+  if (!/create epic and stage-1 child \(project, planned owner\)/i.test(planner))
     violations.push('roles/planner.md: the kickoff creates without the project and the planned owner');
-  if (!/record the human seat/.test(planner)) violations.push('roles/planner.md: the kickoff records no seat');
-  if (!/apply the epic labels[^.]*move the stage-1 child to `spec_progress`/.test(planner))
+  if (!/record the chosen human seat on the epic/.test(planner))
+    violations.push('roles/planner.md: the seat is not scoped to a chosen human mode and placed on the epic');
+  if (!/apply epic labels[^.]*move the stage-1 child to `spec_progress`/.test(planner))
     violations.push('roles/planner.md: the labels are not applied before the move');
-  if (!/- Kickoff: .*move the stage-1 child to `spec_progress`\.$/m.test(planner))
+  if (!/- Create epic and stage-1 child .*move the stage-1 child to `spec_progress`\.$/m.test(planner))
     violations.push('roles/planner.md: the move is not the kickoff last action');
+  if (!/`done` at acceptance/.test(planner)) violations.push('roles/planner.md: the epic never reaches done');
   if (!/kickoff[^.]*labels[^.]*before this move/i.test(step)) violations.push('spec_progress: the kickoff labels are not applied before the move');
   const kickoff = /^## The kickoff labels step\n\n([\s\S]*?)\n\n## /m.exec(guide)?.[1] ?? '';
   if (!/one close-and-start question: apply the chosen mode labels and start\s+stage 1/.test(kickoff))
@@ -411,7 +413,7 @@ function kickoffViolations({ grilling, planner, step, guide }) {
   const mover = /^- \*\*Planner\.\*\*[\s\S]*?(?=\n- \*\*)/m.exec(guide)?.[0] ?? '';
   if (!/Create the epic and the stage-1 spec child/.test(mover))
     violations.push('docs/factory.md: the Planner section creates nothing');
-  if (!/record the chosen human seat/.test(mover)) violations.push('docs/factory.md: the Planner section records no seat');
+  if (!/record the chosen human seat on the epic/.test(mover)) violations.push('docs/factory.md: the Planner section records no seat on the epic');
   return violations;
 }
 
@@ -439,6 +441,11 @@ test('the grilling packet ends on one question and the kickoff creates, labels a
     guide: contract.guide.replace('with the project and the planned owner, ', ''),
   }), []);
   assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('(project, planned owner)', '') }), []);
+  // An unconditional or unplaced seat can be fabricated or recorded off the epic.
+  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('the chosen human seat on the epic', 'the human seat') }), []);
+  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('the chosen human seat on the epic', 'a chosen human seat') }), []);
+  // An epic whose contract stops at epic_progress never reaches done on acceptance.
+  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('→`done` at acceptance', '') }), []);
   // A reintroduced wayfinder-map sentence selects a container the user never asked for.
   assert.notDeepEqual(kickoffViolations({
     ...contract,
