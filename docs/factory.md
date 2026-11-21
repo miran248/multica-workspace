@@ -73,21 +73,24 @@ release child. A single-ticket breakdown is the smallest epic — one delivery c
 release — and a small task that never grills stays a regular ticket, the only PR into `main` with
 no slice behind it.
 
-The grilling packet ends on one question: which of `has-human-implementer` and `has-human-release`
-to apply to the epic, or neither. The Planner applies the answer at the kickoff, before moving the
-stage-1 child to `spec_progress`; the mode is set before the spec PR exists, so the whole slice
-shares it. A label added later applies at the next PASS.
+The grilling packet ends on one close-and-start question: apply the chosen mode labels and start
+stage 1. The labels are `has-human-implementer`, `has-human-release`, or neither, and they stay
+the last field; a human mode names the human seat the project's workflow binds to the `human`
+role, read from the handler. The Planner applies the answer at the kickoff: it creates the epic
+and the stage-1 spec child with the project and the planned owner, applies the labels to the epic,
+records the chosen human seat on the epic, and then moves the stage-1 child to `spec_progress`.
+The labels are set before the spec PR exists, so the whole slice shares them; a label added later
+applies at the next PASS.
 
 ## The spec is a stage-1 child
 
-The Planner creates the spec as the epic's stage-1 child, in the project with the planned owner
-already named, and keeps the epic at `todo` until it promotes the first delivery stage, when the
-epic moves to `epic_progress`. In that child's run the Planner writes the spec, forks
-`spec/<epic>` from `main` at the spec sha before the spec PR exists, publishes the whole slice
-with `to-tickets` — every delivery child under the epic, in `backlog`, in stage order, the
-final-stage release child last — then opens the spec PR carrying the proposed breakdown, against
-`spec/<epic>`, and links it only to the child, never the epic, and never after `Closes`, `Fixes`
-or `Resolves`.
+The Planner creates the spec as the epic's stage-1 child and keeps the epic at `todo` until it
+promotes the first delivery stage, when the epic moves to `epic_progress`. In that child's run the
+Planner writes the spec, forks `spec/<epic>` from `main` at the spec sha before the spec PR
+exists, publishes the whole slice with `to-tickets` — every delivery child under the epic, in
+`backlog`, in stage order, the final-stage release child last — then opens the spec PR carrying
+the proposed breakdown, against `spec/<epic>`, and links it only to the child, never the epic, and
+never after `Closes`, `Fixes` or `Resolves`.
 The Reviewer leaves the PR open on PASS and moves the child to `awaiting_merge`; the human
 merges it, the workspace PR rule completes the child to `done`, and that completion wakes the
 Planner to promote the frontier — not to slice. The merge still approves the spec and the set:
@@ -253,17 +256,18 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
   the merge completes the ticket, so do not move it to `done` yourself. Only a spec approval or
   a review the exit rule sent there reaches you; a ticket PR into `spec/<epic>` is
   Reviewer-merged. Never move human work into `in_progress`.
-- **Planner.** Apply the chosen labels to the epic at the kickoff, before moving the stage-1 spec
-  child to `spec_progress`. In that child's run, fork `spec/<epic>` from `main` at the spec sha,
-  write the spec recording `integration:`, and publish every delivery child in `backlog` with its
-  stage and its `Branch:` base, the final-stage release child last. Then link the spec PR,
-  targeted at `spec/<epic>`, to the child only. The merge approves the set and wakes you to
-  promote, not to slice: create no child after it. Move the epic to `epic_progress` in the run
-  that promotes the first delivery stage, and to `done` on acceptance. Promote the frontier by
-  the four-row table in `roles/planner.md`, applying `ready-for-agent`; keep later stages in
-  `backlog`. Before promoting a release, query open `spec/*` heads against `main` and park the
-  next release while another is in flight. Triage `blocked`, run the cancelled-epic sweep, and
-  accept the epic on evidence after the release merge.
+- **Planner.** Create the epic and the stage-1 spec child; at the kickoff apply the chosen labels
+  to the epic, record the chosen human seat on the epic, and move the stage-1 child to
+  `spec_progress` last. In that child's run, fork `spec/<epic>` from `main` at the spec sha, write
+  the spec recording `integration:`, and publish every delivery child in `backlog` with its stage
+  and its `Branch:` base, the final-stage release child last. Then link the spec PR, targeted at
+  `spec/<epic>`, to the child only. The merge approves the set and wakes you to promote, not to
+  slice: create no child after it. Move the epic to `epic_progress` in the run that promotes the
+  first delivery stage, and to `done` on acceptance. Promote the frontier by the four-row table in
+  `roles/planner.md`, applying `ready-for-agent`; keep later stages in `backlog`. Before promoting
+  a release, query open `spec/*` heads against `main` and park the next release while another is
+  in flight. Triage `blocked`, run the cancelled-epic sweep, and accept the epic on evidence after
+  the release merge.
 - **Reviewer.** Owns `spec_review`, `in_review`, `human_review` and `release_review`: one
   verdict at the exact head, evidence per criterion, then the move or the merge. Post the
   verdict first, at the reviewed head, before the status move or the merge: the move starts the
@@ -283,12 +287,16 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
 - **Release.** Owns `release_progress` into `release_review`; the procedure and the deploy-time
   `production:` approval live in `roles/release.md`.
 
+## The handoff is proved
 
 The linked pull request is the delivery handoff: entering a column reassigns the issue to that
-column's handler and starts their run; a member handler is assigned and runs nothing. Nothing
-advances a ticket when a run ends, so the handler always makes the next move; the link and the
-move are the whole handoff. The PR body is optional: it carries only what the diff cannot say,
-and an empty body is not a finding.
+column's handler and starts their run; a member handler is assigned and runs nothing. The link
+comes first: after a run opens a pull request it reads the ticket's linked pull requests and moves
+only when the PR is listed. An empty read is the operator's fix — the wrong key, a URL relink, or
+the repository integration — and a `blocked` move, never a started lane. Nothing advances a ticket
+when a run ends, so the handler always makes the next move; the link and the move are the whole
+handoff. The PR body is optional: it carries only what the diff cannot say, and an empty body is
+not a finding.
 
 ## Commits
 

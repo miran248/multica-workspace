@@ -151,15 +151,89 @@ test('code-review names the five delivery checks', () => {
   assert.equal([...section.matchAll(/^\d+\. /gm)].length, 5);
 });
 
-test('grilling ends on one handoff packet and creates nothing first', () => {
-  const grilling = read('skills/grilling/SKILL.md');
+// The gate closes on one question: the labels and the start are one yes, the labels stay the
+// last field, a human mode names the live `human` seat, and wayfinder is a separate explicit
+// method. A packet that only asks the labels never starts the factory.
+const PACKET = ['Destination', 'Slice outline', 'Mode labels'];
+
+function gateViolations(grilling) {
+  const violations = [];
   const fields = [...grilling.matchAll(/^- \*\*(.+?)\*\*/gm)].map(([, field]) => field);
-  assert.deepEqual(fields, ['Destination', 'Slice outline', 'Mode labels']);
-  assert.doesNotMatch(grilling, /\*\*Shape\*\*/);
-  assert.match(grilling, /The packet ends on the labels question/);
+  if (fields.join() !== PACKET.join()) violations.push('grilling: the packet fields are not Destination, Slice outline, Mode labels');
+  if (!/which of `has-human-implementer` and `has-human-release` to apply to the epic before the kickoff, or neither/.test(grilling))
+    violations.push('grilling: the labels field does not name the modes');
+  if (!/one close-and-start question: apply the chosen labels and start stage 1/.test(grilling))
+    violations.push('grilling: the packet does not end on one close-and-start question');
+  if (!/labels stay the last field/.test(grilling)) violations.push('grilling: the labels field is not last');
+  if (!/human seat[^.]*`human` role[^.]*handler/.test(grilling))
+    violations.push('grilling: a human mode does not name the seat read from the handler');
+  if (!/invoked explicitly and never tied to grilling/.test(grilling))
+    violations.push('grilling: wayfinder is not the explicit-invocation method');
+  if (!/answer starts nothing/.test(grilling)) violations.push('grilling: an answer inside a wayfinder ticket starts something');
+  if (/wayfinder map, not a factory shape/.test(grilling)) violations.push('grilling: a non-empty frontier selects a wayfinder map');
+  if (/\*\*Shape\*\*/.test(grilling)) violations.push('grilling: the packet carries a shape field');
+  return violations;
+}
+
+test('grilling ends on one close-and-start question and creates nothing first', () => {
+  const grilling = read('skills/grilling/SKILL.md');
+  assert.deepEqual(gateViolations(grilling), []);
+  // A packet that only asks the labels never starts the factory.
+  const labelsOnly = grilling.replace('one close-and-start question: apply the chosen labels and start stage 1', 'the labels question');
+  assert.notDeepEqual(gateViolations(labelsOnly), []);
+  // The sentence that let a frontier select a container the user never asked for.
+  assert.notDeepEqual(gateViolations(`${grilling} A non-empty frontier is a wayfinder map, not a factory shape.`), []);
+  // A wayfinder tied back to every grilling is the defect the sentence corrects.
+  assert.notDeepEqual(gateViolations(grilling.replace('invoked explicitly and never tied to grilling', 'invoked whenever the frontier is non-empty')), []);
   assert.match(grilling, /no epic, spec or ticket is a side effect/);
   assert.match(grilling, /No spec run starts and no slice is written before the user answers/);
   assert.match(grilling, /The slice freezes when the spec PR opens/);
+});
+
+// The link is proved, not assumed: shared `## Handoffs` states the read-back after the PR opens,
+// the operator fix and the blocked move; no role, skill or column instruction restates it.
+const READ_BACK = ['multica issue pull-requests', 'operator fix', 'started lane'];
+
+function readBackViolations({ shared, guide, catalog }) {
+  const violations = [];
+  const handoffs = /^## Handoffs\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
+  for (const phrase of READ_BACK) if (!handoffs.includes(phrase)) violations.push(`shared Handoffs: no ${phrase}`);
+  if (!/read `multica issue pull-requests <ticket>` after opening/.test(handoffs))
+    violations.push('shared Handoffs: the link is not read after the PR opens');
+  if (!/move or merge[^.]*only when listed/.test(handoffs)) violations.push('shared Handoffs: the move does not wait for the listing');
+  if (!/move to `blocked`/.test(handoffs)) violations.push('shared Handoffs: an empty read does not move to blocked');
+  if (!/The linked PR is the delivery handoff/.test(handoffs)) violations.push('shared Handoffs: the linked PR is not the handoff');
+  if (!/empty body is not a finding/.test(handoffs)) violations.push('shared Handoffs: an empty body became a finding');
+  if (!/linked pull requests[^.]*moves?\s+only when the PR is listed/.test(guide))
+    violations.push('docs/factory.md: the handoff section does not describe the read-back');
+  for (const [path, text] of Object.entries(catalog))
+    if (path !== 'shared/instructions.md' && text.includes('multica issue pull-requests'))
+      violations.push(`${path}: second copy of the read-back`);
+  if (guide.includes('multica issue pull-requests')) violations.push('docs/factory.md: second copy of the read-back');
+  return violations;
+}
+
+test('the linked PR is read back before the move, once in shared Handoffs', () => {
+  const contract = { shared: read('shared/instructions.md'), guide: read('docs/factory.md'), catalog: catalogText() };
+  assert.deepEqual(readBackViolations(contract), []);
+  // A contract that assumes the link is the defect the read-back exists to catch.
+  const noReadBack = {
+    ...contract,
+    shared: contract.shared.replace(/^- The linked PR is the delivery handoff:.*$/m, '- The linked PR is the delivery handoff.'),
+  };
+  assert.notDeepEqual(readBackViolations(noReadBack), []);
+  // A role that repeats the read-back is the third copy the contract removes.
+  const restated = {
+    ...contract,
+    catalog: {
+      ...contract.catalog,
+      'roles/implementer.md': `${contract.catalog['roles/implementer.md']} Read \`multica issue pull-requests <ticket>\` before the move.`,
+    },
+  };
+  assert.notDeepEqual(readBackViolations(restated), []);
+  // A guide that never describes the read-back leaves the human with the old assumption.
+  const silentGuide = { ...contract, guide: contract.guide.replace(/linked pull requests[^.]*listed\./, '') };
+  assert.notDeepEqual(readBackViolations(silentGuide), []);
 });
 
 test('the catalog declares no document and a declared document must have a file', t => {
