@@ -33,11 +33,12 @@ that way — that is what makes the catalog reusable and public.
 
 ## The sync contract
 
-`just sync` resolves workspace identity, owners, the online Dsh runtime and the `origin` URL
-live, then reconciles the catalog by name: match → update, archived agent → restore, absent →
-create. Absence is retirement, guarded by open issues, label usage, project-bound workflows
-and explicit autopilot events. Every write is read back; the journal lives under `.local/`.
-Nothing is committed: a converged run leaves Git untouched.
+`just sync` resolves workspace identity, owners, the one online runtime of the catalog's
+`defaults.required_provider` and the `origin` URL live, then reconciles the catalog by name:
+match → update, archived agent → restore, absent → create. Absence is retirement,
+guarded by open issues, label usage, project-bound workflows and explicit autopilot events.
+Every write is read back; the journal lives under `.local/`. Nothing is committed: a converged
+run leaves Git untouched.
 
 `just schedule` is operator state: it creates the `config-sync` autopilot if missing and
 ensures exactly one enabled schedule trigger. A sync refreshes the control's title, prompt and

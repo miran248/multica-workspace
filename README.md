@@ -41,18 +41,22 @@ the next run to check out. Everything else is resolved live:
 | --- | --- |
 | workspace id, name, slug | `multica workspace get` |
 | approval owner, report recipient | `multica workspace member list` (role `owner`, `user_id`) |
-| agent runtime | `multica runtime list` (the single online Dsh runtime) |
+| agent runtime | `multica runtime list` (exactly one online runtime of the catalog's `defaults.required_provider`) |
 | timezone | the catalog (`UTC`); `just schedule` passes it to the trigger |
 
+The runtime selector names no provider: `defaults.required_provider` accepts `pi`, `dsh` and
+`codex`, and every role binds to the single online runtime of that provider. Zero online
+runtimes, or two, refuses the run before any write — a second online runtime is a
+misconfiguration to stop, not a choice to make.
+
 `just sync --dry-run` prints the plan and writes nothing. `--keep-unmanaged` skips retirement
-for one run. `--runtime-id ID` (or `RUNTIME=ID`) chooses among several online Dsh runtimes.
-`--app-url URL` (or `MULTICA_APP_URL`) points the rendered issue-link base at a self-hosted
-app; it defaults to `https://multica.ai` and must be an https origin with no path.
+for one run. `--app-url URL` (or `MULTICA_APP_URL`) points the rendered issue-link base at a
+self-hosted app; it defaults to `https://multica.ai` and must be an https origin with no path.
 
 ## What a sync does
 
-1. Resolves the live binding and refuses on any ambiguity: no owner, no online Dsh runtime,
-   several runtimes without a choice, no `origin`, uncommitted source.
+1. Resolves the live binding and refuses on any ambiguity: no owner, not exactly one online
+   runtime of the catalog's required provider, no `origin`, uncommitted source.
 2. Plans by name against live state. A matching name is updated in place, an archived agent
    with a declared name is restored, an absent object is created.
 3. Retires what the catalog no longer declares, unless a guard blocks it: an agent that owns

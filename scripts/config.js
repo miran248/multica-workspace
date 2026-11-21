@@ -23,7 +23,16 @@ export function loadTemplate(name = 'default', root = ROOT) {
   return catalog;
 }
 
+/** The runtime provider family the catalog requires. The selector reads it here; no script
+ *  names a provider, and the default catalog never names a workspace. */
+export function requiredProvider(root = ROOT) {
+  return loadTemplate('default', root).defaults.required_provider;
+}
+
 export const ROLES = ['general', 'planner', 'implementer', 'reviewer', 'release'];
+/** Runtime provider families the selector may require. `dsh` stays valid for a workspace that
+ *  has not cut over; `pi` is the cut-over target. */
+export const PROVIDERS = ['pi', 'dsh', 'codex'];
 /** Operator state, not catalog content: the app origin issue references point at. A self-hosted
  *  consumer overrides it with --app-url / MULTICA_APP_URL; the slug is never committed. */
 export const DEFAULT_APP_URL = 'https://multica.ai';
@@ -81,12 +90,22 @@ export function canonical(value) {
   return JSON.stringify(value);
 }
 
+/** Family and effort cap only: the exact model id is catalog state (the id the pinned image
+ *  lists), so a model change is a catalog edit, not an image rebuild. */
 export function validateModelFamily({ model, thinking_level: effort }) {
   const efforts = ['', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
   if (typeof model !== 'string' || !model || !efforts.includes(effort)) throw new Error('Invalid model/effort');
   const deepseek = /deepseek/i.test(model), astra = /astra/i.test(model);
   if ((deepseek || astra) && !['off', 'minimal', 'low', 'medium', 'high'].includes(effort)) throw new Error('Model family effort cap requires explicit effort at most high');
-  if (deepseek && model !== 'deepseek-official/deepseek-flash') throw new Error('DeepSeek family requires Flash');
+}
+
+/** The `flash-first-v1` guard: high thinking, a DeepSeek-family model and a known provider
+ *  family. The provider value is the configured one, so `pi`, `dsh` and `codex` all pass. */
+function validateDefaults(defaults) {
+  validateModelFamily(defaults);
+  if (defaults.thinking_level !== 'high') throw new Error('flash-first-v1 requires high thinking; no fallback');
+  if (!/deepseek/i.test(defaults.model)) throw new Error('flash-first-v1 requires a DeepSeek-family model; no fallback');
+  if (!PROVIDERS.includes(defaults.required_provider)) throw new Error(`Unknown runtime provider: ${defaults.required_provider}`);
 }
 
 function sameKeys(actual, expected, label) {
@@ -196,8 +215,7 @@ export function resolve(binding, root = ROOT) {
 
 function resolveChecked(catalog, binding, root) {
   validateSchema(binding, 'binding', root);
-  validateModelFamily(catalog.defaults);
-  if (catalog.defaults.model !== 'deepseek-official/deepseek-flash' || catalog.defaults.thinking_level !== 'high' || catalog.defaults.required_provider !== 'dsh') throw new Error('flash-first-v1 requires Flash/high/Dsh defaults; no fallback');
+  validateDefaults(catalog.defaults);
   sameKeys(Object.keys(catalog.agents), ROLES, 'agents');
   sameKeys(Object.keys(catalog.autopilots), AUTOPILOTS, 'catalog autopilots');
   sameKeys(Object.keys(catalog.workflows), WORKFLOWS, 'catalog workflows');

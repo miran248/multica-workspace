@@ -15,7 +15,7 @@ const ensureStatuses = (state, parsed) => {
   }
 };
 export function initialState() {
-  return { workspace: { id: id(1), slug: 'fixture', name: 'Fixture' }, runtime: { id: id(2), workspace_id: id(1), provider: 'dsh', status: 'online' }, human: id(3), humanName: 'miran', agents: [], skills: [], squads: [], labels: [], autopilots: [], workflows: [], statuses: [], projectWorkflows: {}, projects: [], issues: [], calls: [], next: 10 };
+  return { workspace: { id: id(1), slug: 'fixture', name: 'Fixture' }, runtime: { id: id(2), workspace_id: id(1), provider: 'pi', status: 'online' }, human: id(3), humanName: 'miran', agents: [], skills: [], squads: [], labels: [], autopilots: [], workflows: [], statuses: [], projectWorkflows: {}, projects: [], issues: [], calls: [], next: 10 };
 }
 export function command(state, workspace, ...args) {
   state.calls.push([workspace, ...args]);
