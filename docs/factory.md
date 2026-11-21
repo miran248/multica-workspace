@@ -80,13 +80,14 @@ shares it. A label added later applies at the next PASS.
 
 ## The spec is a stage-1 child
 
-The Planner creates the spec as the epic's stage-1 child and keeps the epic at `todo` until it
-promotes the first delivery stage, when the epic moves to `epic_progress`. In that
-child's run the Planner writes the spec, forks `spec/<epic>` from `main` at the spec sha before
-the spec PR exists, publishes the whole slice with `to-tickets` — every delivery child under the
-epic, in `backlog`, in stage order, the final-stage release child last — then
-opens the spec PR carrying the proposed breakdown, against `spec/<epic>`, and links it only to
-the child, never the epic, and never after `Closes`, `Fixes` or `Resolves`.
+The Planner creates the spec as the epic's stage-1 child, in the project with the planned owner
+already named, and keeps the epic at `todo` until it promotes the first delivery stage, when the
+epic moves to `epic_progress`. In that child's run the Planner writes the spec, forks
+`spec/<epic>` from `main` at the spec sha before the spec PR exists, publishes the whole slice
+with `to-tickets` — every delivery child under the epic, in `backlog`, in stage order, the
+final-stage release child last — then opens the spec PR carrying the proposed breakdown, against
+`spec/<epic>`, and links it only to the child, never the epic, and never after `Closes`, `Fixes`
+or `Resolves`.
 The Reviewer leaves the PR open on PASS and moves the child to `awaiting_merge`; the human
 merges it, the workspace PR rule completes the child to `done`, and that completion wakes the
 Planner to promote the frontier — not to slice. The merge still approves the spec and the set:
@@ -293,10 +294,11 @@ and an empty body is not a finding.
 
 One pull request is one squash commit on the branch it targets, and the PR title is the
 subject: `type(scope): summary, TICKET` — Conventional Commits, then a comma, then the ticket
-key. GitHub appends the pull request number to the squash, `(#42)`; that is the only
-parenthesis in the subject and nobody types it. Never use a merge commit and never rewrite the
-squash subject. The PR body carries the detail; the subject carries the two identifiers and
-nothing else.
+key. The key is the delivering ticket's, never the epic's; the head branch carries it too, and a
+spec child's title names the change without repeating the epic key. GitHub appends the pull
+request number to the squash, `(#42)`; that is the only parenthesis in the subject and nobody
+types it. Never use a merge commit and never rewrite the squash subject. The PR body carries the
+detail; the subject carries the two identifiers and nothing else.
 
 ## Edge cases
 

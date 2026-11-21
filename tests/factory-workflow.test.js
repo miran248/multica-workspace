@@ -582,6 +582,9 @@ function guideViolations({ guide: text, apply, workflowFile }) {
     ['the stale sweep', /### The stale sweep/],
     ['the one topology', /Every grilling produces an epic/],
     ['the kickoff labels step', /kickoff[^.]*labels|labels[^.]*kickoff/i],
+    ['the owned create', /stage-1 child[^.]*project[^.]*planned owner/],
+    ['the delivering ticket key', /delivering ticket's, never the epic's/],
+    ['the spec child title', /spec child's title[^.]*repeating the epic key/],
     ['the epic state', /`epic_progress`/],
     ['the release lane', /`release_progress`/],
     ['the exit-rule pointer', /`skills\/code-review\/`/],
@@ -589,6 +592,7 @@ function guideViolations({ guide: text, apply, workflowFile }) {
   ]) if (!pattern.test(text)) violations.push(`docs/factory.md: no ${term}`);
   for (const term of DELETED_TOPOLOGY)
     if (text.includes(term)) violations.push('docs/factory.md: keeps the deleted topology');
+  if (/status entry reassigns natively|member handler binds it/.test(text)) violations.push('docs/factory.md: restates the creation rule');
   if (/N \+ 1/.test(text)) violations.push('docs/factory.md: keeps the N + 1 arithmetic');
   if (/single ticket defaults to/.test(text)) violations.push('docs/factory.md: keeps the single-ticket default');
   for (const [term, pattern] of [
