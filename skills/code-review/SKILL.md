@@ -24,6 +24,13 @@ Every review also enforces the shared delivery contract, as five checks:
 
 A breach is a blocking finding on the Standards axis.
 
+## The spec PASS set read
+
+A spec PASS begins by reading the epic's children at the exact head against shared
+`## Ownership`. Every child the spec run published must be in `backlog`, carry its planned owner
+and sit in a stage higher than the one before it; the one human-lane child may be unassigned,
+any other ownerless child is a blocking finding, and no PASS stands over one.
+
 ## The exit rule
 
 Apply at every PASS, after the verdict and before the move or merge. Read the base with
