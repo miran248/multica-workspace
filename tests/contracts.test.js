@@ -172,6 +172,9 @@ function gateViolations(grilling) {
   if (!/answer starts nothing/.test(grilling)) violations.push('grilling: an answer inside a wayfinder ticket starts something');
   if (/wayfinder map, not a factory shape/.test(grilling)) violations.push('grilling: a non-empty frontier selects a wayfinder map');
   if (/\*\*Shape\*\*/.test(grilling)) violations.push('grilling: the packet carries a shape field');
+  if (!/reslice window/.test(grilling)) violations.push('grilling: the change window is not named');
+  if (!/freezes at the first started child/.test(grilling)) violations.push('grilling: the freeze is not the first started child');
+  if (/freezes when the spec PR opens/.test(grilling)) violations.push('grilling: the slice freezes when the spec PR opens');
   return violations;
 }
 
@@ -187,7 +190,12 @@ test('grilling ends on one close-and-start question and creates nothing first', 
   assert.notDeepEqual(gateViolations(grilling.replace('invoked explicitly and never tied to grilling', 'invoked whenever the frontier is non-empty')), []);
   assert.match(grilling, /no epic, spec or ticket is a side effect/);
   assert.match(grilling, /No spec run starts and no slice is written before the user answers/);
-  assert.match(grilling, /The slice freezes when the spec PR opens/);
+  assert.match(grilling, /The slice stays changeable inside the reslice window/);
+  assert.match(grilling, /freezes at the first started child/);
+  assert.doesNotMatch(grilling, /freezes when the spec PR opens/);
+  // The old sentence is the one failure the corrected pin exists for: a slice that freezes on
+  // the spec PR instead of the first started child rejects the reslice window.
+  assert.notDeepEqual(gateViolations(grilling.replace('freezes at the first started child', 'freezes when the spec PR opens')), []);
 });
 
 // The link is proved, not assumed: shared `## Handoffs` states the read-back after the PR opens,
@@ -206,10 +214,12 @@ function readBackViolations({ shared, guide, catalog }) {
   if (!/empty body is not a finding/.test(handoffs)) violations.push('shared Handoffs: an empty body became a finding');
   if (!/linked pull requests[^.]*moves?\s+only when the PR is listed/.test(guide))
     violations.push('docs/factory.md: the handoff section does not describe the read-back');
+  // The unlink subcommand is a different operation from the read-back; strip it before the scan.
+  const readBackOnly = text => text.replace(/multica issue pull-requests\s+unlink/g, '');
   for (const [path, text] of Object.entries(catalog))
-    if (path !== 'shared/instructions.md' && text.includes('multica issue pull-requests'))
+    if (path !== 'shared/instructions.md' && readBackOnly(text).includes('multica issue pull-requests'))
       violations.push(`${path}: second copy of the read-back`);
-  if (guide.includes('multica issue pull-requests')) violations.push('docs/factory.md: second copy of the read-back');
+  if (readBackOnly(guide).includes('multica issue pull-requests')) violations.push('docs/factory.md: second copy of the read-back');
   return violations;
 }
 
@@ -234,6 +244,97 @@ test('the linked PR is read back before the move, once in shared Handoffs', () =
   // A guide that never describes the read-back leaves the human with the old assumption.
   const silentGuide = { ...contract, guide: contract.guide.replace(/linked pull requests[^.]*listed\./, '') };
   assert.notDeepEqual(readBackViolations(silentGuide), []);
+});
+
+// One open PR per delivering ticket is the link invariant: stated once in shared `## Delivery`,
+// read by the code-review check before the verdict, and never restated in a role or skill.
+const LINK_RULE = ['one open PR per delivering ticket', 'carrying its key'];
+
+function linkViolations({ shared, review, catalog }) {
+  const violations = [];
+  const delivery = /^## Delivery\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
+  for (const phrase of LINK_RULE) if (!new RegExp(phrase, 'i').test(delivery)) violations.push(`shared Delivery: no ${phrase}`);
+  const checks = /## Delivery checks\n\n([\s\S]*?)\n\n## /.exec(review)?.[1] ?? '';
+  if (!/linked pull requests before the verdict/.test(checks)) violations.push('code-review: no linked-PR read before the verdict');
+  if (!/second open link/.test(checks)) violations.push('code-review: a second open link is not a blocking finding');
+  if (!/linked to a ticket it does not deliver/.test(checks)) violations.push('code-review: a wrong-ticket link is not a blocking finding');
+  if (!/[Bb]locking finding/.test(checks)) violations.push('code-review: the link breach is not a blocking finding');
+  for (const [path, text] of Object.entries(catalog))
+    if (path !== 'shared/instructions.md' && path !== 'skills/code-review/SKILL.md')
+      for (const phrase of LINK_RULE)
+        if (new RegExp(phrase, 'i').test(text)) violations.push(`${path}: second copy of ${phrase}`);
+  return violations;
+}
+
+test('the one-open-PR rule lives once in shared Delivery and code-review reads the links', () => {
+  const contract = { shared: read('shared/instructions.md'), review: read('skills/code-review/SKILL.md'), catalog: catalogText() };
+  assert.deepEqual(linkViolations(contract), []);
+  // A Delivery without the open count is the rule's absence.
+  const noRule = { ...contract, shared: contract.shared.replace(/one open PR per delivering ticket/i, 'one PR per ticket') };
+  assert.notDeepEqual(linkViolations(noRule), []);
+  // A review that never reads the links cannot fail a second one.
+  const noRead = { ...contract, review: contract.review.replace('Read the ticket\'s linked pull requests before the verdict', 'Review the pull request') };
+  assert.notDeepEqual(linkViolations(noRead), []);
+  // A skill that restates the rule is the second copy.
+  const skillCopy = {
+    ...contract,
+    catalog: { ...contract.catalog, 'skills/to-tickets/SKILL.md': `${contract.catalog['skills/to-tickets/SKILL.md']} Keep one open PR per delivering ticket.` },
+  };
+  assert.notDeepEqual(linkViolations(skillCopy), []);
+});
+
+// The guide is what the human and the seats read: it names the change window, the freeze and
+// the live-data rule, and it sends the operator to the unlink command the CLI provides.
+const LIVE_DATA = ['records the rule, the named exceptions and the expected snapshot', 'acceptance is the\nexecuted set'];
+
+function guideViolationsForChange({ guide, glossary }) {
+  const violations = [];
+  for (const term of ['reslice window', 'revision PR', 'fresh PASS', 'freeze', 'new epic', 'superseded'])
+    if (!guide.includes(term)) violations.push(`docs/factory.md: no ${term}`);
+  for (const phrase of LIVE_DATA) if (!guide.includes(phrase)) violations.push(`docs/factory.md: no ${phrase}`);
+  if (!/multica issue pull-requests\s+unlink/.test(guide)) violations.push('docs/factory.md: no unlink command');
+  if (/There is no CLI unlink/.test(guide)) violations.push('docs/factory.md: keeps the stale no-unlink line');
+  if (!/actor who closes the PR owns the unlink/.test(guide)) violations.push('docs/factory.md: no owner for the unlink');
+  if (!/A close is not a workflow event/.test(guide)) violations.push('docs/factory.md: a close became a workflow event');
+  for (const adr of ['0019', '0020', '0021'])
+    if (!guide.includes(`adr/${adr}-`)) violations.push(`docs/factory.md: no ADR-${adr} link`);
+  for (const term of ['reslice window', 'frozen slice', 'revision PR', 'superseded', 'expected snapshot', 'executed set', 'started child'])
+    if (!glossary.includes(term)) violations.push(`GLOSSARY.md: no ${term}`);
+  if (!/freezes at the first started child/.test(glossary)) violations.push('GLOSSARY.md: the handoff gate does not freeze at the first started child');
+  if (/freezes when the spec PR opens/.test(glossary)) violations.push('GLOSSARY.md: the handoff gate keeps the old freeze sentence');
+  return violations;
+}
+
+test('the guide and the glossary name the change window, the freeze and the live-data rule', () => {
+  const contract = { guide: read('docs/factory.md'), glossary: read('GLOSSARY.md') };
+  assert.deepEqual(guideViolationsForChange(contract), []);
+  // A guide that keeps the manual unlink sends the operator to a page the CLI replaces.
+  assert.notDeepEqual(guideViolationsForChange({
+    ...contract,
+    guide: contract.guide.replace(/multica issue pull-requests\s+unlink/g, 'the issue page'),
+  }), []);
+  // A guide without the freeze leaves a running slice open to amendment.
+  assert.notDeepEqual(guideViolationsForChange({ ...contract, guide: contract.guide.replace(/freeze/g, 'gate') }), []);
+  // The glossary's handoff gate was the second home of the old freeze sentence.
+  assert.notDeepEqual(guideViolationsForChange({
+    ...contract,
+    glossary: `${contract.glossary}\nThe slice freezes when the spec PR opens.`,
+  }), []);
+});
+
+test('the stale freeze sentence and the stale no-unlink line fail a scan of every live carrier', () => {
+  const surfaces = [
+    ...catalogFiles(),
+    'docs/factory.md',
+    'GLOSSARY.md',
+    'README.md',
+    'AGENTS.md',
+  ];
+  for (const path of surfaces) {
+    const text = read(path);
+    assert.doesNotMatch(text, /freezes when the spec PR opens/, `${path} keeps the old freeze sentence`);
+    assert.doesNotMatch(text, /There is no CLI unlink/, `${path} keeps the stale no-unlink line`);
+  }
 });
 
 test('the catalog declares no document and a declared document must have a file', t => {

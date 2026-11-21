@@ -199,9 +199,10 @@ test('the sweep is the only stale-review guard and the 90m timer is gone', () =>
   }
   const planner = read('roles/planner.md');
   assert.match(planner, /`task\.failed` per issue/);
-  assert.match(planner, /--until-status cancelled/);
   assert.match(planner, /one `--until-children-done --stage N` barrier per promotion/);
   assert.match(planner, /replaced not duplicated/);
+  // The cancelled-epic condition is registered where the spec run reads it.
+  assert.match(steps.get('spec_progress').instructions, /--until-status cancelled/);
 });
 
 test('the guide carries the sweep, its threshold, its move and the human columns it skips', () => {
@@ -321,19 +322,24 @@ test('the slice is published in the spec run, before stage 1 closes', () => {
 // base, or a branchless escape hatch is a contract failure, not a wording preference.
 function specRunViolations({ planner, step, tickets, specSkill }) {
   const violations = [];
-  for (const [name, text] of [['roles/planner.md', planner], ['spec_progress', step]]) {
-    if (!/forks? `spec\/<epic>` from `main`/i.test(text)) violations.push(`${name}: no fork from main`);
-    if (!/gh pr list --base main --state open/.test(text)) violations.push(`${name}: no release query`);
-    if (!/`spec\/\*`/.test(text)) violations.push(`${name}: release query does not filter spec/*`);
-    if (!/--until-issue <release>/.test(text)) violations.push(`${name}: release query does not park on the release`);
-    for (const term of DELETED_TOPOLOGY)
-      if (text.includes(term)) violations.push(`${name}: reintroduces the deleted topology`);
-  }
-  // The run's own column instruction carries the base, so the role needs only the fork.
+  // The fork and the release query are carried by the spec_progress instruction the run reads;
+  // the Planner contract carries the promotion boundary without a second copy.
+  if (!/forks? `spec\/<epic>` from `main`/i.test(step)) violations.push('spec_progress: no fork from main');
+  if (!/gh pr list --base main --state open/.test(step)) violations.push('spec_progress: no release query');
+  if (!/`spec\/\*`/.test(step)) violations.push('spec_progress: release query does not filter spec/*');
+  if (!/--until-issue <release>/.test(step)) violations.push('spec_progress: release query does not park on the release');
+  if (!/`spec\/\*`/.test(planner)) violations.push('roles/planner.md: no release filter');
+  if (!/--until-issue <release>/.test(planner)) violations.push('roles/planner.md: no release park');
+  for (const term of DELETED_TOPOLOGY)
+    if (planner.includes(term)) violations.push('roles/planner.md: reintroduces the deleted topology');
+  for (const term of DELETED_TOPOLOGY)
+    if (step.includes(term)) violations.push('spec_progress: reintroduces the deleted topology');
+  // The run's own column instruction carries the base and the conditions it registers at
+  // approval; the role keeps the route and the promotion boundary.
   if (!/(spec PR|the PR) targets (it|that branch)/.test(step)) violations.push('spec_progress: spec PR is not targeted at the branch');
-  if (!/force-push/.test(step)) violations.push('spec_progress: a rework does not force-push');
+  if (!/[Ff]orce-push/.test(step)) violations.push('spec_progress: a rework does not force-push');
   if (!/epic-cancelled/.test(step)) violations.push('spec_progress: no cancelled-epic sweep');
-  if (!/--until-status cancelled/.test(planner)) violations.push('roles/planner.md: no cancelled-epic condition');
+  if (!/--until-status cancelled/.test(step)) violations.push('spec_progress: no cancelled-epic condition');
   if (!/never `main`/.test(step)) violations.push('spec_progress: an integration spec may target main');
   if (!/`Branch: spec\/<epic>`/.test(step)) violations.push('spec_progress: no Branch line');
   if (!/final-stage release child/.test(step)) violations.push('spec_progress: no final-stage release child');
@@ -376,10 +382,49 @@ test('the spec run forks, records and targets the integration branch', () => {
   assert.notDeepEqual(specRunViolations(mainOnly), []);
   const noBase = { ...contract, tickets: contract.tickets.replace(/^Branch: spec\/<epic-key>.*$/m, '') };
   assert.notDeepEqual(specRunViolations(noBase), []);
-  const noFork = { ...contract, planner: contract.planner.replace(/Fork `spec\/<epic>` from `main`\./, '') };
+  const noFork = { ...contract, step: contract.step.replace(/forks `spec\/<epic>` from `main`/, 'creates a branch') };
   assert.notDeepEqual(specRunViolations(noFork), []);
+  // The promotion boundary keeps its release park even though the query lives in the step.
+  const noPark = { ...contract, planner: contract.planner.replace('`--until-issue <release>`', '') };
+  assert.notDeepEqual(specRunViolations(noPark), []);
   const branchless = { ...contract, specSkill: `${contract.specSkill} A ${DELETED_TOPOLOGY[0]} spec records \`${DELETED_TOPOLOGY[1]}\`.` };
   assert.notDeepEqual(specRunViolations(branchless), []);
+});
+
+// The spec lane carries the change window and the freeze latch: the step instruction states
+// the in-place rework and the new-epic consequence, the review fails a second open spec PR or
+// a post-freeze revision, and the Planner contract names the route without a second copy.
+const SPEC_LANE = ['reslice window', 'revision PR', 'fresh PASS', 'freeze', 'new epic', 'superseded'];
+
+function changeWindowViolations({ step, review, planner }) {
+  const violations = [];
+  for (const term of [...SPEC_LANE, 'force-push', 'started status'])
+    if (!new RegExp(term, 'i').test(step)) violations.push(`spec_progress: no ${term}`);
+  if (!/no second spec (PR|pull request) is open/i.test(step)) violations.push('spec_progress: a second spec PR may be open');
+  if (!/superseded and cited/.test(step)) violations.push('spec_progress: the superseded acceptance is not cited');
+  if (!/no child is created after the merge that approves its set/.test(step))
+    violations.push('spec_progress: the child-set cut is not the approval merge');
+  if (/once the spec PR opens/.test(step)) violations.push('spec_progress: a child is still forbidden once the spec PR opens');
+  for (const term of ['second open spec', 'after the freeze', 'FAIL'])
+    if (!review.includes(term)) violations.push(`spec_review: no ${term}`);
+  for (const term of SPEC_LANE)
+    if (!new RegExp(term, 'i').test(planner)) violations.push(`roles/planner.md: no ${term}`);
+  return violations;
+}
+
+test('the spec lane names the reslice window, the freeze latch and the new-epic consequence', () => {
+  const contract = {
+    step: steps.get('spec_progress').instructions,
+    review: steps.get('spec_review').instructions,
+    planner: read('roles/planner.md'),
+  };
+  assert.deepEqual(changeWindowViolations(contract), []);
+  // A spec run without the window amends an approved set in the new-epic territory.
+  assert.notDeepEqual(changeWindowViolations({ ...contract, step: contract.step.replace(/reslice window/g, 'rework') }), []);
+  // A review that passes a second open spec PR leaves two live handoffs.
+  assert.notDeepEqual(changeWindowViolations({ ...contract, review: contract.review.replace('A second open spec pull request', 'A pull request') }), []);
+  // A Planner contract without the freeze arms the old open-ended slice.
+  assert.notDeepEqual(changeWindowViolations({ ...contract, planner: contract.planner.replace(/freeze/g, 'boundary') }), []);
 });
 
 // One kickoff: the packet closes on one question, the Planner creates the epic and its stage-1
