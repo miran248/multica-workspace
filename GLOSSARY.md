@@ -105,21 +105,24 @@ the next move. A member handler is assigned and runs nothing.
 **handoff gate** — the one question that ends grilling and starts the factory. The Planner
 presents the destination and the proposed slice outline, and ends on one question: apply the
 chosen mode labels and start stage 1. The labels are `has-human-implementer`,
-`has-human-release`, or neither, and they stay the last field; a human mode names the human seat
-the project's workflow binds to the `human` role, read from the handler and recorded on the epic
-as issue state. Every grilling produces an epic, so there is no shape field: a single ticket is
-the smallest epic. Wayfinder is invoked explicitly and never tied to grilling; grilling may
-answer a decision inside a wayfinder ticket, and that answer starts nothing. The epic opens in
-`todo` with its stage-1 spec child inert in `backlog`; the answer is the yes that starts the spec
-run. The change window is the reslice window, and the slice freezes at the first started child.
-One prose copy in `skills/grilling`; the Planner contract names the route.
+`has-human-release`, or neither, and they stay the last field; a human mode reads the one human
+seat from the workflow's `human` handler and records it on the epic as a readback. Every grilling
+produces an epic, so there is no shape field: a single ticket is the smallest epic. Wayfinder is
+invoked explicitly and never tied to grilling; grilling may answer a decision inside a wayfinder
+ticket, and that answer starts nothing. The epic is created in `backlog` with its stage-1 spec
+child inert in `backlog`; the answer is the yes that starts the spec run, and the kickoff moves
+the epic to `epic_progress` and the child to `spec_progress`. The change window is the reslice
+window, and the slice freezes at the first started child. One prose copy in `skills/grilling`; the
+Planner contract names the route.
 
 **planned owner** — the assignee an issue carries from creation: the role promotion will pick,
 paired with `--project` at create time. Status entry still reassigns natively, so the planned
-owner only has to be right until the first move. Every agent-created issue carries one; the
-human lane is the exception — the catalog cannot name a member, so the child is created
-unassigned and the `human_progress` member handler binds the member. One rule in shared
-`## Ownership`, read by the publisher's pre-flight and the `spec_review` PASS.
+owner only has to be right until the first move. Every agent-created issue carries one, and the
+Planner is the fallback when the catalog cannot name the seat. The human lane's planned owner is
+the live human seat — the member the workflow's `human` handler binds — read at create time; no
+ticket is unassigned, and the `human_progress` member handler still binds the member at promotion.
+One rule in shared `## Ownership`, read by the publisher's pre-flight and the `spec_review` PASS,
+with no human-lane exemption.
 
 **factory mode** — the epic-level choice of who implements, encoded by the
 `has-human-implementer` label before the spec run. With neither label the epic is autonomous;
@@ -153,14 +156,30 @@ in-flight move, each with its `issue timeline` evidence; the copy, the epics and
 archived when it is green.
 
 **spec child** — the epic's stage-1 child that carries the spec pull request, including the
-proposed breakdown and the published slice. The PR's base is the spec's integration branch.
-Its merge approves the spec, the breakdown and the set: the
+proposed breakdown and the published slice. The PR is headed by the spec child's key and targets
+the spec's integration branch. Its merge approves the spec, the breakdown and the set: the
 workspace PR rule completes the child, which wakes the Planner to promote the slice. The spec
 PR is never linked to the epic.
 
-**integration branch** — `spec/<epic-key>`, forked from `main` at the spec sha, and the base of
-the spec PR and of every delivery PR in that spec. It is scratch: unprotected, it deploys
-nothing, and the release merge deletes it.
+**integration branch** — the epic's key, forked from `main` at the spec sha, and the base of the
+spec PR and of every delivery PR in that spec. It is scratch: unprotected, it deploys nothing,
+and the release merge deletes it. It is never a pull request's head.
+
+**release branch** — the release child's key, forked from the integration branch at the release
+head and the head of the release PR into `main`. The release PR is the only path from the slice's
+integration branch to `main`, and the epic's key never heads it.
+
+**slice release** — the final-stage child and the one squash that carries the whole slice onto
+`main`. The release PR is its pre-merge gate; release order is the Reviewer's `mergeStateStatus`
+read, with the repository's up-to-date requirement as the expected operator state, never a
+`spec/*` query or a park. A package release such as release-please is outside the factory and is
+not the slice release.
+
+**rewrite/lease** — a rework adds a commit to the same head; a rewrite replaces the head only when
+the commits themselves must not remain, on your own PR head, after a fetch, with
+`git push --force-with-lease=<remote-ref>:<expected-sha>`, and never with `--force`, `-f`,
+`--mirror`, a `+` refspec, `main` or the integration branch. The lease, not a review, is what
+stops a rewrite from replacing a head another run pushed in between.
 
 **ticket kind** — delivery or release, the Planner's second promotion input beside the epic's
 labels. It is a stage read, not a body marker: the final-stage child is the release ticket and
@@ -168,17 +187,18 @@ every other child is delivery; a drill epic's kinds are its own table's, since i
 stage sits above the release.
 
 **release child** — the final-stage child of a published slice, handled by the release seat in
-`release_progress` and reviewed at `release_review`. Its pull request is `spec/<epic>` → `main`
-and merges as one squash commit on `main`; its `done` is the only proof the spec is released. It
-is linked to itself only, never to the epic.
+`release_progress` and reviewed at `release_review`. Its pull request is the release branch →
+`main` and merges as one squash commit on `main`; its `done` is the only proof the spec is
+released. It is linked to itself only, never to the epic.
 
-**epic state** — `epic_progress` marks an epic whose slice is approved and in flight; the
-Planner moves the epic there from `todo` when it promotes the first delivery stage, and to `done`
-on acceptance. It has no handler, so the move dispatches nobody.
+**epic_progress** — the epic's state from the kickoff: slice under way. The epic is created in
+`backlog` and moved here when the kickoff starts the stage-1 spec child; it stays here until the
+Planner's acceptance moves it to `done` on the release evidence. It has no handler, so neither
+move dispatches a run.
 
-**branch-scoped `done`** — a child's `done` means delivered and reviewed on `spec/<epic>`; the
-epic's `done` means the release squash is on `main`, and only the Planner's acceptance grants
-it.
+**branch-scoped `done`** — a child's `done` means delivered and reviewed on the integration
+branch; the epic's `done` means the release squash is on `main`, and only the Planner's acceptance
+grants it.
 
 **proposed breakdown** — the ticket list and blocking edges carried by the spec pull request.
 It is reviewed with the spec, and the merge that approves the spec approves the breakdown. The
@@ -192,11 +212,12 @@ not a started status, but a done child proves the freeze had already started; `b
 started, because the child was promoted and the set was committed to execution.
 
 **reslice window** — the one period a change is made in place: while the spec pull request is
-unmerged, or after its approval merge while no child has started. The Planner amends the open
-pull request at the same head and number, or — once the merge has landed — opens one revision PR
-on the same spec child, rewrites the child set and bodies, and returns the child to
-`spec_review` for a fresh PASS. No second spec PR is open at once, and the window closes at the
-first started child.
+unmerged, or after its approval merge while no child has started. The Planner adds a commit to
+the open pull request's head — its number, link and body survive — or, only when the commits
+themselves must not remain, leases a rewrite of that head; once the merge has landed the Planner
+opens one revision PR on the same spec child, rewrites the child set and bodies, and returns the
+child to `spec_review` for a fresh PASS. No second spec PR is open at once, and the window closes
+at the first started child.
 
 **frozen slice** — a slice whose spec has merged and whose first child has started. The freeze is
 a latch: once true it holds for the rest of the slice's life. A real change is a new epic; the
@@ -204,8 +225,8 @@ old epic runs to its release, the new epic owns the change, and the affected acc
 recorded as superseded and cited.
 
 **revision PR** — the spec pull request that carries a reslice after the approval merge while the
-slice is idle. It targets `spec/<epic>`, is reviewed at `spec_review`, and its merge re-approves
-the revised spec and set; it reopens the same spec child and is not a second epic.
+slice is idle. It targets the integration branch, is reviewed at `spec_review`, and its merge
+re-approves the revised spec and set; it reopens the same spec child and is not a second epic.
 
 **superseded** — an acceptance criterion the old epic no longer carries because a later epic owns
 the change. It is recorded and cited in the old epic's acceptance, never silently dropped; the
