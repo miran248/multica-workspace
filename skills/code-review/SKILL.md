@@ -17,7 +17,7 @@ The issue tracker and labels come from the workspace agent contract; work lives 
 Every review also enforces the shared delivery contract, as five checks:
 
 1. **One pull request, one ticket.** Read the ticket's linked pull requests before the verdict: one open link, to the ticket whose key the PR carries. A second open link, or a PR linked to a ticket it does not deliver, is a blocking finding. Read the live text too — the PR body, the proposed breakdown and spec comments — and fail a bare ticket key on Standards: each issue there is written as its workspace link.
-2. **The base.** The PR targets the ticket's `Branch:` line, or `main` when the line is absent.
+2. **The base.** The PR targets the ticket's `Branch:` line, or `main` when the line is absent; the release child's line is `main` and its PR targets it.
 3. **The scope.** Every changed path is inside the ticket's `## Touch`; an unlisted path is a finding.
 4. **The subject.** The PR title is `type(scope): summary, TICKET`, and the squash subject keeps that shape.
 5. **The merge.** The merge is one squash; nobody merges their own work and auto-merge is never enabled.

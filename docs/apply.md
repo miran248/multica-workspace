@@ -33,7 +33,7 @@ repository adopts the integration branch:
 
 | Prerequisite | State | Why |
 | --- | --- | --- |
-| integration branch protection | unprotected | the branch is the epic's key and scratch: its only PR is the spec approval, it deploys nothing, and the Planner deletes it on acceptance |
+| integration branch protection | unprotected | the branch is the epic's key and the base of the spec approval and every delivery PR; it deploys nothing, and the Planner deletes it on acceptance |
 | **Automatically delete head branches** | on | a merge from the GitHub UI does not delete the head branch itself, and the release merge deletes the release branch |
 | **Allow auto-merge** | off | an armed pull request merges on its checks and completes the linked ticket, bypassing the human gates |
 | **Require branches to be up to date** on `main` | on | release order is this requirement plus the Reviewer's `mergeStateStatus`; behind or dirty must fail |

@@ -125,10 +125,10 @@ function keyViolations({ shared, guide, catalog }) {
   const commits = /^## Commits\n\n([\s\S]*?)\n\n## /m.exec(guide)?.[1] ?? '';
   if (!/delivering ticket/.test(commits)) violations.push('docs/factory.md: the commits prose does not name the delivering ticket');
   if (!/never the epic/.test(commits)) violations.push('docs/factory.md: the commits prose allows the epic key');
-  // The workflow's spec_progress instruction is the run's copy of the base and the lease;
+  // The workflow's spec_progress instruction carries its instance, not the base and the lease;
   // shared Delivery is the one contract copy, and no other carrier restates the rule.
   for (const [path, text] of Object.entries(catalog))
-    if (path !== 'shared/instructions.md' && path !== 'templates/workflows/factory.json')
+    if (path !== 'shared/instructions.md')
       for (const phrase of RULE)
         if (text.includes(phrase)) violations.push(`${path}: second copy of ${phrase}`);
   return violations;
@@ -149,6 +149,12 @@ test('the head and rework rules live once in shared Delivery and the guide descr
     catalog: { ...contract.catalog, 'skills/to-tickets/SKILL.md': `${contract.catalog['skills/to-tickets/SKILL.md']} The integration branch is the epic's key.` },
   };
   assert.notDeepEqual(keyViolations(skillCopy), []);
+  // A column that restates the lease is the second copy the workflow carrier removes.
+  const columnCopy = {
+    ...contract,
+    catalog: { ...contract.catalog, 'templates/workflows/factory.json': `${contract.catalog['templates/workflows/factory.json']} ${REWORK_RULE[2]}` },
+  };
+  assert.notDeepEqual(keyViolations(columnCopy), []);
   // A guide that never names the key leaves the human reading the old subject alone.
   const silentGuide = { ...contract, guide: contract.guide.replace(/The key is the delivering ticket's[^.]*\./, '') };
   assert.notDeepEqual(keyViolations(silentGuide), []);

@@ -272,6 +272,9 @@ test('no column enables auto-merge; a PASS is the merge', () => {
   assert.doesNotMatch(guide, /arms auto-merge|PASS: auto-merge|auto-merged|deferred auto-merge/);
   assert.match(guide, /Auto-merge stays off/);
   assert.match(read('docs/apply.md'), /Leave \*\*Allow auto-merge\*\* off/);
+  const apply = read('docs/apply.md');
+  assert.match(apply, /base of the spec approval and every delivery PR/);
+  assert.doesNotMatch(apply, /its only PR is the spec approval/);
   const adr = read('docs/adr/0006-comment-first-merge-last.md');
   assert.match(adr, /The comment is the handoff/);
   assert.match(adr, /allow_auto_merge/);
@@ -330,17 +333,18 @@ test('the slice is published in the spec run, before stage 1 closes', () => {
 
 // One topology: the spec run forks and records the epic's key as the integration branch, heads
 // the spec PR with the spec child's key, and publishes every child with its planned owner. A
-// prefixed head, a children-done barrier, a spec/* query or a mandated force-push is a failure.
-function specRunViolations({ planner, step, tickets, specSkill }) {
+// prefixed head, a children-done barrier, a spec/* query or a restated force-push rule is a failure.
+function specRunViolations({ planner, step, tickets, specSkill, codeReview }) {
   const violations = [];
-  if (!/integration branch is the epic's key, forked from `main` at the spec sha/.test(step))
+  if (!/This spec's integration branch is the one it records/.test(step))
     violations.push('spec_progress: no ticket-id integration branch fork');
+  if (!/forked from `main` at the spec sha/.test(step)) violations.push('spec_progress: no fork from main');
   if (!/heads the spec child's key/.test(step)) violations.push('spec_progress: the PR head is not the spec child key');
   if (!/targets that branch, never `main`/.test(step)) violations.push('spec_progress: the spec PR may target main');
-  if (!/records `integration: <epic>`/.test(step)) violations.push('spec_progress: no integration record');
+  if (!/records \(`integration: <epic>`\)/.test(step)) violations.push('spec_progress: no integration record');
   if (!/added commit/.test(step)) violations.push('spec_progress: a rework is not additive');
-  if (!/force-with-lease=<remote-ref>:<expected-sha>/.test(step)) violations.push('spec_progress: no pinned lease');
-  if (!/never `--force`/.test(step)) violations.push('spec_progress: --force is allowed');
+  if (/force-with-lease|never `--force`|--mirror/.test(step)) violations.push('spec_progress: restates the rewrite flags');
+  if (!/shared `## Delivery`/.test(step)) violations.push('spec_progress: does not defer the rewrite rule to shared Delivery');
   if (!/planned owner/.test(step)) violations.push('spec_progress: the set has no planned owner');
   if (!/`Branch: <epic>`/.test(step)) violations.push('spec_progress: no ticket-id Branch line');
   if (!/final-stage release child/.test(step)) violations.push('spec_progress: no final-stage release child');
@@ -351,17 +355,22 @@ function specRunViolations({ planner, step, tickets, specSkill }) {
   if (step.includes('gh pr list --base main')) violations.push('spec_progress: queries main heads');
   if (step.includes(PREFIXED_HEAD)) violations.push('spec_progress: a prefixed head remains');
   for (const term of DELETED_TOPOLOGY) if (step.includes(term)) violations.push('spec_progress: reintroduces the deleted topology');
-  // The Planner contract carries the route and the promotion boundary, not a second copy.
-  for (const term of ['Slice in the spec run', 'stage wake promotes', 'wakeup list', 'wakeup update', 'release readback', 'cancelled sweep'])
+  // The Planner contract carries the three branch roles, the route and the promotion boundary.
+  for (const term of ['branches:', 'Slice in the spec run', 'stage wake promotes', 'wakeup list', 'wakeup update', 'release readback', 'cancelled sweep'])
     if (!planner.includes(term)) violations.push(`roles/planner.md: no ${term}`);
+  for (const term of ['integration', 'spec PR', 'release PR'])
+    if (!planner.includes(term)) violations.push(`roles/planner.md: no ${term} branch role`);
   if (planner.includes(BARRIER)) violations.push('roles/planner.md: arms a children-done barrier');
   if (planner.includes('gh pr list --base main')) violations.push('roles/planner.md: queries main heads');
   if (planner.includes(PREFIXED_HEAD)) violations.push('roles/planner.md: a prefixed head remains');
   if (!/final child is release/.test(planner)) violations.push('roles/planner.md: no release-kind read');
-  // The publisher writes the integration branch and every planned owner; the release is last.
+  // The publisher writes the integration branch and every planned owner; the release writes main.
   const body = /<issue-template>([\s\S]*?)<\/issue-template>/.exec(tickets)?.[1] ?? '';
   if (!/^Branch: <epic-key>/m.test(body)) violations.push('to-tickets: no ticket-id Branch line in the template');
   if (!/always present/.test(body)) violations.push('to-tickets: the Branch line is conditional');
+  if (!/release child writes `Branch: main`/.test(body)) violations.push('to-tickets: the release child base is not main');
+  if (!/its body writes `Branch: main`/.test(tickets)) violations.push('to-tickets: the release body base is not main');
+  if (!/release child's line is `main`/.test(codeReview)) violations.push('code-review: the release child base is not main');
   if (!/planned owner/.test(tickets)) violations.push('to-tickets: no planned owner');
   if (!/no child is unassigned/.test(tickets)) violations.push('to-tickets: a child may be unassigned');
   if (!/release child is the final publication: created last, in `backlog`, in the final stage/.test(tickets))
@@ -387,11 +396,12 @@ test('the spec run forks, records and targets the integration branch', () => {
     step: steps.get('spec_progress').instructions,
     tickets: read('skills/to-tickets/SKILL.md'),
     specSkill: read('skills/to-spec/SKILL.md'),
+    codeReview: read('skills/code-review/SKILL.md'),
   };
   assert.deepEqual(specRunViolations(contract), []);
   // The failures the matrix exists to catch: a spec PR on main, a body with no base, a
-  // prefixed head, a barrier, a main query and an ownerless child.
-  const mainOnly = { ...contract, step: contract.step.replace(/integration branch is the epic's key, forked from `main` at the spec sha/, 'targets the spec PR at `main`') };
+  // prefixed head, a barrier, a main query, a restated lease and an ownerless child.
+  const mainOnly = { ...contract, step: contract.step.replace(/This spec's integration branch is the one it records/, 'targets the spec PR at `main`') };
   assert.notDeepEqual(specRunViolations(mainOnly), []);
   const noBase = { ...contract, tickets: contract.tickets.replace(/^Branch: <epic-key>.*$/m, '') };
   assert.notDeepEqual(specRunViolations(noBase), []);
@@ -403,8 +413,12 @@ test('the spec run forks, records and targets the integration branch', () => {
   assert.notDeepEqual(specRunViolations(query), []);
   const prefixed = { ...contract, specSkill: `${contract.specSkill} A ${PREFIXED_HEAD} head.` };
   assert.notDeepEqual(specRunViolations(prefixed), []);
+  const lease = { ...contract, step: `${contract.step} git push --force-with-lease=<remote-ref>:<expected-sha>` };
+  assert.notDeepEqual(specRunViolations(lease), []);
   const unassigned = { ...contract, tickets: contract.tickets.replace(/no child is unassigned/g, 'the human lane may be unassigned') };
   assert.notDeepEqual(specRunViolations(unassigned), []);
+  const wrongBase = { ...contract, codeReview: contract.codeReview.replace("release child's line is `main`", "release child's line is the integration branch") };
+  assert.notDeepEqual(specRunViolations(wrongBase), []);
 });
 
 // The spec lane carries the change window and the freeze latch: the step instruction states
@@ -414,8 +428,11 @@ const SPEC_LANE = ['reslice window', 'revision PR', 'fresh PASS', 'freeze', 'new
 
 function changeWindowViolations({ step, review, planner }) {
   const violations = [];
-  for (const term of [...SPEC_LANE, 'force-with-lease', 'started status'])
+  for (const term of [...SPEC_LANE, 'started status'])
     if (!new RegExp(term, 'i').test(step)) violations.push(`spec_progress: no ${term}`);
+  // The flags and the fetch live once in shared Delivery; the column carries the route only.
+  if (/force-with-lease|never `--force`|--mirror/.test(step)) violations.push('spec_progress: restates the rewrite flags');
+  if (!/rewrite follows shared `## Delivery`/.test(step)) violations.push('spec_progress: the rewrite rule is not in shared Delivery');
   if (!/no second spec (PR|pull request) is open/i.test(step)) violations.push('spec_progress: a second spec PR may be open');
   if (!/superseded and cited/.test(step)) violations.push('spec_progress: the superseded acceptance is not cited');
   if (!/create no child after the merge that approves its set/.test(step))

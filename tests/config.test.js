@@ -76,8 +76,10 @@ test('no role launches foreground or focus-stealing work', t => {
   const f = fixture(t);
   for (const role of ROLES) {
     const text = render(role, f.binding, f.root);
+    assert.match(text, /^## Launching$/m, role);
     assert.match(text, /never foreground/, role);
     assert.match(text, /detached/, role);
+    assert.match(text, /windows non-activating and unfocused/, role);
   }
 });
 
