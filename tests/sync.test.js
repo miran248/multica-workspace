@@ -31,7 +31,7 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
     assert.equal(agent.runtime_id, id(2));
     assert.equal(agent.model, 'deepseek-official/deepseek-flash');
     assert.equal(agent.thinking_level, agent.name === 'release' ? 'low' : 'high');
-    assert.match(agent.instructions, /Use Conventional Commits/);
+    assert.match(agent.instructions, /Conventional Commits `type\(scope\): summary, TICKET`/);
     assert.match(agent.instructions, /github\.com\/example\/multica-workspace/);
   }
   const workflow = f.state.workflows[0];
