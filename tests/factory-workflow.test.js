@@ -17,6 +17,10 @@ const WORK = ['spec_progress', 'in_progress', 'human_progress', 'release_progres
 const PRESENTED = ['epic_progress', 'spec_progress', 'spec_review', 'human_progress', 'release_progress', 'human_review', 'release_review', 'awaiting_merge'];
 const COLUMNS = ['backlog', 'todo', 'epic_progress', 'spec_progress', 'spec_review', 'in_progress', 'human_progress', 'release_progress', 'in_review', 'human_review', 'release_review', 'awaiting_merge', 'blocked', 'done', 'cancelled'];
 const LABELS = /has-human-release|has-human-implementer|manual-merge|human-assigned/;
+const PREFIXED_HEAD = ['spec', '/<epic>'].join('');
+const PREFIXED_PREFIX = ['spec', '/*'].join('');
+const BARRIER = ['--until', '-children', '-done'].join('');
+const CANCELLED_CONDITION = ['--until', '-status', ' cancelled'].join('');
 // The deleted branchless topology lives only in the record that supersedes it. Build the
 // needles from parts so this suite never reintroduces the strings it forbids.
 const DELETED_TOPOLOGY = [['direct', 'to', 'main'].join('-'), ['integration: ', 'none'].join('')];
@@ -198,11 +202,18 @@ test('the sweep is the only stale-review guard and the 90m timer is gone', () =>
     assert.doesNotMatch(read(path), /comment\.created/, `${path} registers a comment.created wake`);
   }
   const planner = read('roles/planner.md');
-  assert.match(planner, /`task\.failed` per issue/);
-  assert.match(planner, /one `--until-children-done --stage N` barrier per promotion/);
-  assert.match(planner, /replaced not duplicated/);
-  // The cancelled-epic condition is registered where the spec run reads it.
-  assert.match(steps.get('spec_progress').instructions, /--until-status cancelled/);
+  assert.match(planner, /wakeup list/);
+  assert.match(planner, /wakeup update/);
+  assert.match(planner, /release readback/);
+  assert.match(planner, /cancelled sweep/);
+  assert.doesNotMatch(planner, /--until-children-done/);
+  // The platform's stage wake is the promotion; no barrier and no closing condition is armed.
+  const step = steps.get('spec_progress').instructions;
+  assert.match(step, /release readback/);
+  assert.match(step, /cancelled sweep/);
+  assert.doesNotMatch(step, /--until-children-done/);
+  assert.doesNotMatch(step, /--until-status cancelled/);
+  assert.doesNotMatch(step, /gh pr list --base main/);
 });
 
 test('the guide carries the sweep, its threshold, its move and the human columns it skips', () => {
@@ -246,8 +257,8 @@ test('the linked PR is the handoff and the move or merge comes last', () => {
   }
   const handoff = read('shared/instructions.md');
   assert.match(handoff, /^## Handoffs$/m);
-  assert.match(handoff, /The linked PR is the delivery handoff/);
-  assert.match(handoff, /empty body is not a finding/);
+  assert.match(handoff, /Linked PR is the handoff/);
+  assert.match(handoff, /empty body not a finding/);
   assert.doesNotMatch(handoff, /comment is the handoff/i);
 });
 
@@ -300,7 +311,7 @@ test('the spec PR carries the breakdown its merge approves', () => {
 test('the slice is published in the spec run, before stage 1 closes', () => {
   const planner = read('roles/planner.md');
   assert.match(planner, /Slice in the spec run/);
-  assert.match(planner, /the wake promotes/);
+  assert.match(planner, /stage wake promotes/);
   const tickets = read('skills/to-tickets/SKILL.md');
   assert.match(tickets, /before the spec PR leaves `spec_progress`/);
   assert.match(tickets, /--status backlog/);
@@ -309,62 +320,63 @@ test('the slice is published in the spec run, before stage 1 closes', () => {
   assert.doesNotMatch(tickets, /only the frontier is `todo`/);
   const step = steps.get('spec_progress').instructions;
   assert.match(step, /Publish the whole slice/);
-  assert.match(step, /create nothing after it/);
-  assert.match(step, /reconcile the existing children/);
+  assert.match(step, /create no child after the merge/);
+  assert.match(step, /existing children reconciled in place/);
   assert.match(guide, /Publishing before the child closes/);
   assert.match(guide, /No child is created after the merge/);
   const adr = read('docs/adr/0007-publish-the-slice-in-the-spec-run.md');
   assert.match(adr, /One barrier wake per epic/);
 });
 
-// One topology: the spec run always forks, records and targets `spec/<epic>`, and the body
-// always carries the base and the final-stage release child. A main-only spec, a body with no
-// base, or a branchless escape hatch is a contract failure, not a wording preference.
+// One topology: the spec run forks and records the epic's key as the integration branch, heads
+// the spec PR with the spec child's key, and publishes every child with its planned owner. A
+// prefixed head, a children-done barrier, a spec/* query or a mandated force-push is a failure.
 function specRunViolations({ planner, step, tickets, specSkill }) {
   const violations = [];
-  // The fork and the release query are carried by the spec_progress instruction the run reads;
-  // the Planner contract carries the promotion boundary without a second copy.
-  if (!/forks? `spec\/<epic>` from `main`/i.test(step)) violations.push('spec_progress: no fork from main');
-  if (!/gh pr list --base main --state open/.test(step)) violations.push('spec_progress: no release query');
-  if (!/`spec\/\*`/.test(step)) violations.push('spec_progress: release query does not filter spec/*');
-  if (!/--until-issue <release>/.test(step)) violations.push('spec_progress: release query does not park on the release');
-  if (!/`spec\/\*`/.test(planner)) violations.push('roles/planner.md: no release filter');
-  if (!/--until-issue <release>/.test(planner)) violations.push('roles/planner.md: no release park');
-  for (const term of DELETED_TOPOLOGY)
-    if (planner.includes(term)) violations.push('roles/planner.md: reintroduces the deleted topology');
-  for (const term of DELETED_TOPOLOGY)
-    if (step.includes(term)) violations.push('spec_progress: reintroduces the deleted topology');
-  // The run's own column instruction carries the base and the conditions it registers at
-  // approval; the role keeps the route and the promotion boundary.
-  if (!/(spec PR|the PR) targets (it|that branch)/.test(step)) violations.push('spec_progress: spec PR is not targeted at the branch');
-  if (!/[Ff]orce-push/.test(step)) violations.push('spec_progress: a rework does not force-push');
-  if (!/epic-cancelled/.test(step)) violations.push('spec_progress: no cancelled-epic sweep');
-  if (!/--until-status cancelled/.test(step)) violations.push('spec_progress: no cancelled-epic condition');
-  if (!/never `main`/.test(step)) violations.push('spec_progress: an integration spec may target main');
-  if (!/`Branch: spec\/<epic>`/.test(step)) violations.push('spec_progress: no Branch line');
+  if (!/integration branch is the epic's key, forked from `main` at the spec sha/.test(step))
+    violations.push('spec_progress: no ticket-id integration branch fork');
+  if (!/heads the spec child's key/.test(step)) violations.push('spec_progress: the PR head is not the spec child key');
+  if (!/targets that branch, never `main`/.test(step)) violations.push('spec_progress: the spec PR may target main');
+  if (!/records `integration: <epic>`/.test(step)) violations.push('spec_progress: no integration record');
+  if (!/added commit/.test(step)) violations.push('spec_progress: a rework is not additive');
+  if (!/force-with-lease=<remote-ref>:<expected-sha>/.test(step)) violations.push('spec_progress: no pinned lease');
+  if (!/never `--force`/.test(step)) violations.push('spec_progress: --force is allowed');
+  if (!/planned owner/.test(step)) violations.push('spec_progress: the set has no planned owner');
+  if (!/`Branch: <epic>`/.test(step)) violations.push('spec_progress: no ticket-id Branch line');
   if (!/final-stage release child/.test(step)) violations.push('spec_progress: no final-stage release child');
-  if (!/single-ticket breakdown is one delivery child plus the final-stage release/.test(step))
-    violations.push('spec_progress: a single-ticket breakdown is not one delivery child and the release');
-  if (!/final-stage child is release/.test(planner)) violations.push('roles/planner.md: no release-kind read');
-  if (!/records `integration: spec\/<epic>`/.test(step)) violations.push('spec_progress: no integration record');
-  if (!/kickoff[^.]*labels[^.]*before this move/i.test(step)) violations.push('spec_progress: the kickoff labels are not applied before the move');
-  if (!/integration: spec\/<epic/.test(specSkill)) violations.push('to-spec: no integration record');
-  if (!/never `main`/.test(specSkill)) violations.push('to-spec: the approval PR may target main');
-  if (!/single-ticket breakdown is the smallest epic/.test(specSkill)) violations.push('to-spec: no single-ticket epic');
-  if (!/forks that branch from `main` at the spec sha/.test(specSkill) || !/targets its approval PR at `spec\/<epic-key>`/.test(specSkill))
-    violations.push('to-spec: approval PR is not targeted at the recorded branch');
-  for (const term of DELETED_TOPOLOGY)
-    if (specSkill.includes(term)) violations.push('to-spec: reintroduces the deleted topology');
+  if (!/release readback/.test(step)) violations.push('spec_progress: no release readback');
+  if (!/cancelled sweep/.test(step)) violations.push('spec_progress: no cancelled sweep');
+  if (step.includes(BARRIER)) violations.push('spec_progress: arms a children-done barrier');
+  if (step.includes(CANCELLED_CONDITION)) violations.push('spec_progress: arms a closing condition');
+  if (step.includes('gh pr list --base main')) violations.push('spec_progress: queries main heads');
+  if (step.includes(PREFIXED_HEAD)) violations.push('spec_progress: a prefixed head remains');
+  for (const term of DELETED_TOPOLOGY) if (step.includes(term)) violations.push('spec_progress: reintroduces the deleted topology');
+  // The Planner contract carries the route and the promotion boundary, not a second copy.
+  for (const term of ['Slice in the spec run', 'stage wake promotes', 'wakeup list', 'wakeup update', 'release readback', 'cancelled sweep'])
+    if (!planner.includes(term)) violations.push(`roles/planner.md: no ${term}`);
+  if (planner.includes(BARRIER)) violations.push('roles/planner.md: arms a children-done barrier');
+  if (planner.includes('gh pr list --base main')) violations.push('roles/planner.md: queries main heads');
+  if (planner.includes(PREFIXED_HEAD)) violations.push('roles/planner.md: a prefixed head remains');
+  if (!/final child is release/.test(planner)) violations.push('roles/planner.md: no release-kind read');
+  // The publisher writes the integration branch and every planned owner; the release is last.
   const body = /<issue-template>([\s\S]*?)<\/issue-template>/.exec(tickets)?.[1] ?? '';
-  if (!/^Branch: spec\/<epic-key>/m.test(body)) violations.push('to-tickets: no Branch line in the ticket template');
+  if (!/^Branch: <epic-key>/m.test(body)) violations.push('to-tickets: no ticket-id Branch line in the template');
   if (!/always present/.test(body)) violations.push('to-tickets: the Branch line is conditional');
-  if (!/single-ticket breakdown is the smallest epic/.test(tickets)) violations.push('to-tickets: a single-ticket breakdown has no release');
+  if (!/planned owner/.test(tickets)) violations.push('to-tickets: no planned owner');
+  if (!/no child is unassigned/.test(tickets)) violations.push('to-tickets: a child may be unassigned');
   if (!/release child is the final publication: created last, in `backlog`, in the final stage/.test(tickets))
     violations.push('to-tickets: release child is not last, backlog and final stage');
   for (const clause of ['release procedure', 'base/source branch', 'included children', '`Touch:` union', 'Create no child after the merge that approves its set'])
     if (!tickets.includes(clause)) violations.push(`to-tickets: missing ${clause}`);
-  for (const term of DELETED_TOPOLOGY)
-    if (tickets.includes(term)) violations.push('to-tickets: reintroduces the deleted topology');
+  for (const term of DELETED_TOPOLOGY) if (tickets.includes(term)) violations.push('to-tickets: reintroduces the deleted topology');
+  if (tickets.includes(PREFIXED_HEAD)) violations.push('to-tickets: a prefixed head remains');
+  // The spec skill records and targets the integration branch, never main.
+  if (!/records `integration: <epic-key>`/.test(specSkill)) violations.push('to-spec: no integration record');
+  if (!/forks that integration branch from `main` at the spec sha/.test(specSkill)) violations.push('to-spec: no fork from main');
+  if (!/targets its approval PR at `<epic-key>`, never `main`/.test(specSkill)) violations.push('to-spec: the approval PR may target main');
+  if (!/single-ticket breakdown is the smallest epic/.test(specSkill)) violations.push('to-spec: no single-ticket epic');
+  for (const term of DELETED_TOPOLOGY) if (specSkill.includes(term)) violations.push('to-spec: reintroduces the deleted topology');
+  if (specSkill.includes(PREFIXED_HEAD)) violations.push('to-spec: a prefixed head remains');
   return violations;
 }
 
@@ -376,19 +388,22 @@ test('the spec run forks, records and targets the integration branch', () => {
     specSkill: read('skills/to-spec/SKILL.md'),
   };
   assert.deepEqual(specRunViolations(contract), []);
-  // The failures the matrix exists to catch: a spec PR on main, a body with no base, and a
-  // branchless spec reintroduced into the seat that writes the spec.
-  const mainOnly = { ...contract, step: contract.step.replace(/forks `spec\/<epic>`/, 'targets the spec PR at `main`') };
+  // The failures the matrix exists to catch: a spec PR on main, a body with no base, a
+  // prefixed head, a barrier, a main query and an ownerless child.
+  const mainOnly = { ...contract, step: contract.step.replace(/integration branch is the epic's key, forked from `main` at the spec sha/, 'targets the spec PR at `main`') };
   assert.notDeepEqual(specRunViolations(mainOnly), []);
-  const noBase = { ...contract, tickets: contract.tickets.replace(/^Branch: spec\/<epic-key>.*$/m, '') };
+  const noBase = { ...contract, tickets: contract.tickets.replace(/^Branch: <epic-key>.*$/m, '') };
   assert.notDeepEqual(specRunViolations(noBase), []);
-  const noFork = { ...contract, step: contract.step.replace(/forks `spec\/<epic>` from `main`/, 'creates a branch') };
+  const noFork = { ...contract, step: contract.step.replace('forked from `main` at the spec sha', 'created later') };
   assert.notDeepEqual(specRunViolations(noFork), []);
-  // The promotion boundary keeps its release park even though the query lives in the step.
-  const noPark = { ...contract, planner: contract.planner.replace('`--until-issue <release>`', '') };
-  assert.notDeepEqual(specRunViolations(noPark), []);
-  const branchless = { ...contract, specSkill: `${contract.specSkill} A ${DELETED_TOPOLOGY[0]} spec records \`${DELETED_TOPOLOGY[1]}\`.` };
-  assert.notDeepEqual(specRunViolations(branchless), []);
+  const barrier = { ...contract, step: `${contract.step} ${BARRIER}` };
+  assert.notDeepEqual(specRunViolations(barrier), []);
+  const query = { ...contract, step: `${contract.step} gh pr list --base main` };
+  assert.notDeepEqual(specRunViolations(query), []);
+  const prefixed = { ...contract, specSkill: `${contract.specSkill} A ${PREFIXED_HEAD} head.` };
+  assert.notDeepEqual(specRunViolations(prefixed), []);
+  const unassigned = { ...contract, tickets: contract.tickets.replace(/no child is unassigned/g, 'the human lane may be unassigned') };
+  assert.notDeepEqual(specRunViolations(unassigned), []);
 });
 
 // The spec lane carries the change window and the freeze latch: the step instruction states
@@ -398,11 +413,11 @@ const SPEC_LANE = ['reslice window', 'revision PR', 'fresh PASS', 'freeze', 'new
 
 function changeWindowViolations({ step, review, planner }) {
   const violations = [];
-  for (const term of [...SPEC_LANE, 'force-push', 'started status'])
+  for (const term of [...SPEC_LANE, 'force-with-lease', 'started status'])
     if (!new RegExp(term, 'i').test(step)) violations.push(`spec_progress: no ${term}`);
   if (!/no second spec (PR|pull request) is open/i.test(step)) violations.push('spec_progress: a second spec PR may be open');
   if (!/superseded and cited/.test(step)) violations.push('spec_progress: the superseded acceptance is not cited');
-  if (!/no child is created after the merge that approves its set/.test(step))
+  if (!/create no child after the merge that approves its set/.test(step))
     violations.push('spec_progress: the child-set cut is not the approval merge');
   if (/once the spec PR opens/.test(step)) violations.push('spec_progress: a child is still forbidden once the spec PR opens');
   for (const term of ['second open spec', 'after the freeze', 'FAIL'])
@@ -437,28 +452,29 @@ function kickoffViolations({ grilling, planner, step, guide }) {
   if (!/invoked explicitly and never tied to grilling/.test(grilling))
     violations.push('grilling: wayfinder is not the explicit-invocation method');
   if (/wayfinder map, not a factory shape/.test(grilling)) violations.push('grilling: a non-empty frontier selects a wayfinder map');
-  if (!/create epic and stage-1 child \(project, planned owner\)/i.test(planner))
-    violations.push('roles/planner.md: the kickoff creates without the project and the planned owner');
-  if (!/record the chosen human seat on the epic/.test(planner))
-    violations.push('roles/planner.md: the seat is not scoped to a chosen human mode and placed on the epic');
-  if (!/apply epic labels[^.]*move the stage-1 child to `spec_progress`/.test(planner))
-    violations.push('roles/planner.md: the labels are not applied before the move');
-  if (!/- Create epic and stage-1 child .*move the stage-1 child to `spec_progress`\.$/m.test(planner))
+  if (!/Create epic, stage-1 child in `backlog` \(project, planned owner\)/.test(planner))
+    violations.push('roles/planner.md: the kickoff does not create in backlog with the project and the planned owner');
+  if (!/record `human` readback/.test(planner))
+    violations.push('roles/planner.md: the seat is not recorded as a readback');
+  if (!/apply labels[^.]*move to `epic_progress`, child to `spec_progress`/.test(planner))
+    violations.push('roles/planner.md: the labels and the epic move are not before the child move');
+  if (!/- Create epic, stage-1 child .*child to `spec_progress`\.$/m.test(planner))
     violations.push('roles/planner.md: the move is not the kickoff last action');
   if (!/`done` at acceptance/.test(planner)) violations.push('roles/planner.md: the epic never reaches done');
   if (!/kickoff[^.]*labels[^.]*before this move/i.test(step)) violations.push('spec_progress: the kickoff labels are not applied before the move');
   const kickoff = /^## The kickoff labels step\n\n([\s\S]*?)\n\n## /m.exec(guide)?.[1] ?? '';
   if (!/one close-and-start question: apply the chosen mode labels and start\s+stage 1/.test(kickoff))
     violations.push('docs/factory.md: the kickoff has no close-and-start question');
-  if (!/human seat the project's workflow binds to the `human`\s+role, read from the handler/.test(kickoff))
+  if (!/human seat the project's workflow binds to the\s+`human`\s+role from the live handler/.test(kickoff))
     violations.push('docs/factory.md: the kickoff names no human seat');
-  if (!/creates the epic\s+and the stage-1\s+spec child with the project\s+and the planned owner/.test(kickoff))
+  if (!/creates\s+the epic in `backlog` and the stage-1 spec child with the project\s+and the planned owner/.test(kickoff))
     violations.push('docs/factory.md: the kickoff creates without an owner');
-  if (!/records the chosen human seat on the epic/.test(kickoff)) violations.push('docs/factory.md: the kickoff records no seat');
+  if (!/records the `human` seat on the epic as a readback/.test(kickoff)) violations.push('docs/factory.md: the kickoff records no seat readback');
   const mover = /^- \*\*Planner\.\*\*[\s\S]*?(?=\n- \*\*)/m.exec(guide)?.[0] ?? '';
-  if (!/Create the epic and the stage-1 spec child/.test(mover))
+  if (!/Create the epic in `backlog` and the stage-1 spec child/.test(mover))
     violations.push('docs/factory.md: the Planner section creates nothing');
-  if (!/record the chosen human seat on the epic/.test(mover)) violations.push('docs/factory.md: the Planner section records no seat on the epic');
+  if (!/record the one `human` seat from the live handler on the epic as a\s+readback/.test(mover))
+    violations.push('docs/factory.md: the Planner section records no seat readback');
   return violations;
 }
 
@@ -472,6 +488,8 @@ test('the grilling packet ends on one question and the kickoff creates, labels a
   assert.deepEqual(kickoffViolations(contract), []);
   assert.match(contract.grilling, /Every grilling produces an epic with its stage-1 spec child/);
   assert.match(contract.grilling, /a single ticket is the smallest epic/);
+  assert.match(contract.grilling, /opens in `backlog`/);
+  assert.doesNotMatch(contract.grilling, /opens in `todo`/);
   assert.doesNotMatch(contract.grilling, /\*\*Shape\*\*/);
   assert.doesNotMatch(contract.planner, new RegExp(DELETED_TOPOLOGY[0]));
   assert.doesNotMatch(contract.step, new RegExp(DELETED_TOPOLOGY[0]));
@@ -487,15 +505,39 @@ test('the grilling packet ends on one question and the kickoff creates, labels a
   }), []);
   assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('(project, planned owner)', '') }), []);
   // An unconditional or unplaced seat can be fabricated or recorded off the epic.
-  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('the chosen human seat on the epic', 'the human seat') }), []);
-  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('the chosen human seat on the epic', 'a chosen human seat') }), []);
+  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('`human` readback', 'the human seat') }), []);
+  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('`human` readback', 'a human seat') }), []);
   // An epic whose contract stops at epic_progress never reaches done on acceptance.
-  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('→`done` at acceptance', '') }), []);
+  assert.notDeepEqual(kickoffViolations({ ...contract, planner: contract.planner.replace('`done` at acceptance', '') }), []);
   // A reintroduced wayfinder-map sentence selects a container the user never asked for.
   assert.notDeepEqual(kickoffViolations({
     ...contract,
     grilling: `${contract.grilling} A non-empty frontier is a wayfinder map, not a factory shape.`,
   }), []);
+});
+
+test('no carrier keeps a prefixed head, a barrier, an open-head query, a conflicts re-arm or an unassigned lane', () => {
+  const surfaces = [
+    ...['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
+      readdirSync(join(ROOT, directory), { recursive: true })
+        .filter(name => /\.(md|json)$/.test(name))
+        .map(name => `${directory}/${name}`)),
+    'docs/factory.md',
+    'docs/apply.md',
+    'README.md',
+    'GLOSSARY.md',
+  ];
+  for (const path of surfaces) {
+    const text = read(path);
+    for (const [term, needle] of [
+      ['a prefixed head', PREFIXED_HEAD],
+      ['a spec/* prefix', PREFIXED_PREFIX],
+      ['a children-done barrier', BARRIER],
+      ['an open-head query', 'gh pr list --base main'],
+      ['a conflicts re-arm', 'wakeup create <ticket> --until-pr conflicts'],
+    ]) assert.ok(!text.includes(needle), `${path} keeps ${term}`);
+    assert.doesNotMatch(text, /human-lane child may be unassigned|only unassigned child|human lane is unassigned/, `${path} leaves the human lane unassigned`);
+  }
 });
 
 test('no catalog surface names the deleted topology', () => {
@@ -525,7 +567,7 @@ function deliveryViolations({ shared, implementer, reviewer, inProgress, humanPr
   const violations = [];
   if (!/`Branch:`/.test(shared)) violations.push('shared: no body-derived branch');
   if (!/absen[ct]e? means `main`/.test(shared)) violations.push('shared: main is not the default base');
-  if (!/(branch from it|PR into it)/.test(shared)) violations.push('shared: the PR is not targeted at the base');
+  if (!/Base: the ticket's `Branch:`/.test(shared)) violations.push('shared: the PR is not targeted at the base');
   if (!/[Mm]erge the base in before review/.test(shared)) violations.push('shared: the base is not merged before review');
   if (!/`## Touch`/.test(shared)) violations.push('shared: does not keep to Touch:');
   for (const [name, text] of [['roles/implementer.md', implementer], ['roles/reviewer.md', reviewer]])
@@ -584,13 +626,12 @@ test('the delivery contract, the base and the label read each have one home', ()
   assert.notDeepEqual(deliveryViolations(labelInColumn), []);
 });
 
-// D20: the conflicts condition is armed once, in code-review, and the mechanical/judgement
-// split is one paragraph in shared `## Delivery`. The platform mechanic is proved by one live
-// probe, never by this suite.
+// The conflicts condition is one rule, found with `wakeup list` and replaced with `wakeup
+// update`; the resolution contract keeps its one home in shared `## Delivery`. A re-arm with
+// `wakeup create` duplicates the rule, so the suite forbids it.
 const CONFLICT_HOMES = {
   '--until-pr conflicts': 'skills/code-review/SKILL.md',
-  'no agent resolves': 'shared/instructions.md',
-  'disjoint hunks': 'shared/instructions.md',
+  'Lockfile/disjoint hunks': 'shared/instructions.md',
   'Behind-but-clean': 'shared/instructions.md',
 };
 
@@ -598,16 +639,18 @@ function mergeableViolations({ shared, codeReview, catalog, columns }) {
   const violations = [];
   const review = codeReview.replace(/\s+/g, ' ');
   const delivery = /^## Delivery\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
-  if (!/[Aa]t every review/.test(review)) violations.push('code-review: the condition is not armed at every review');
-  if (!review.includes('multica issue wakeup create <ticket> --until-pr conflicts --mode continuous --agent-id <seat>'))
-    violations.push('code-review: no arming command');
-  if (!/replaces the configuration/.test(review)) violations.push('code-review: re-arming does not replace');
+  if (!/[Aa]t every review/.test(review)) violations.push('code-review: the condition is not kept at every review');
+  if (!review.includes('multica issue wakeup list <ticket>')) violations.push('code-review: no wakeup list');
+  if (!review.includes('multica issue wakeup update <ticket> --until-pr conflicts --mode continuous --agent-id <seat>'))
+    violations.push('code-review: no wakeup update');
+  if (!/replaces one rule|replace its whole configuration/.test(review)) violations.push('code-review: update does not replace');
+  if (/wakeup create <ticket> --until-pr conflicts --mode continuous/.test(review)) violations.push('code-review: re-arms with wakeup create');
   if (!/survives the PASS into `awaiting_merge`/.test(review)) violations.push('code-review: no surviving condition');
   for (const seat of ['Planner for a spec PR', 'Implementer for a delivery PR', 'Release seat for a release PR'])
     if (!review.includes(seat)) violations.push(`code-review: no ${seat}`);
   for (const phrase of ['A push after a PASS', "delta `H...H'`", 'fresh PASS', 'review column that PASSed it'])
     if (!review.includes(phrase)) violations.push(`code-review: no ${phrase}`);
-  for (const phrase of ['merge the base', 'resolve inside `## Touch`', "rerun the diff's check", 'no agent resolves', 'disjoint hunks', 'Behind-but-clean', 'human_progress', 'human_review', 'release_review', 'spec_review'])
+  for (const phrase of ['merge the base', 'resolve inside `## Touch`', 'rerun the check', 'Lockfile/disjoint hunks', 'changed meaning', 'Behind-but-clean'])
     if (!delivery.includes(phrase)) violations.push(`shared Delivery: no ${phrase}`);
   for (const [path, text] of Object.entries(catalog))
     for (const [phrase, home] of Object.entries(CONFLICT_HOMES))
@@ -618,7 +661,7 @@ function mergeableViolations({ shared, codeReview, catalog, columns }) {
   return violations;
 }
 
-test('the conflicts condition and the resolution contract each have one home', () => {
+test('the conflicts rule is found and updated in place, never re-created', () => {
   const catalog = ['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
     readdirSync(join(ROOT, directory), { recursive: true })
       .filter(name => /\.(md|json)$/.test(name))
@@ -630,14 +673,15 @@ test('the conflicts condition and the resolution contract each have one home', (
     columns: Object.fromEntries(workflow.steps.map(step => [step.status_key, step.instructions ?? ''])),
   };
   assert.deepEqual(mergeableViolations(contract), []);
-  // A column that arms the condition or restates the split is the second copy D20 removes.
+  // A column that restates the condition is the second copy the contract removes.
   const armedColumn = { ...contract, columns: { ...contract.columns, in_review: `${contract.columns.in_review} --until-pr conflicts` } };
   assert.notDeepEqual(mergeableViolations(armedColumn), []);
-  const splitInRole = { ...contract, catalog: { ...contract.catalog, 'roles/implementer.md': `${contract.catalog['roles/implementer.md']} no agent resolves` } };
+  const splitInRole = { ...contract, catalog: { ...contract.catalog, 'roles/implementer.md': `${contract.catalog['roles/implementer.md']} Lockfile/disjoint hunks` } };
   assert.notDeepEqual(mergeableViolations(splitInRole), []);
-  // Removing the one arming copy, or the delta re-review, breaks the contract.
-  const unarmed = { ...contract, codeReview: contract.codeReview.replace('--until-pr conflicts', '--until-pr checks') };
-  assert.notDeepEqual(mergeableViolations(unarmed), []);
+  // The old create-replaces command is the duplicate the update replaces.
+  const rearmed = { ...contract, codeReview: contract.codeReview.replace('multica issue wakeup update <ticket> --until-pr conflicts --mode continuous --agent-id <seat>', 'multica issue wakeup create <ticket> --until-pr conflicts --mode continuous --agent-id <seat>') };
+  assert.notDeepEqual(mergeableViolations(rearmed), []);
+  // Removing the delta re-review breaks the void-PASS contract.
   const fullReReview = { ...contract, codeReview: contract.codeReview.replace('delta `H...H\'`', 'full diff') };
   assert.notDeepEqual(mergeableViolations(fullReReview), []);
 });
@@ -666,23 +710,23 @@ test('the usage guide names every column, the labels and the promotion route', (
 function guideViolations({ guide: text, apply, workflowFile }) {
   const violations = [];
   for (const [term, pattern] of [
-    ['the integration branch', /`spec\/<epic>`/],
-    ['the fork at the spec sha', /forks? `spec\/<epic>` from `main` at the spec sha/],
-    ['the spec PR base', /spec PR targets (it|that branch)/],
-    ['the delivery base', /`Branch: spec\/<epic>`/],
+    ['the integration branch', /integration branch/],
+    ['the fork at the spec sha', /forks? the integration branch[^.]*from `main` at the spec sha/],
+    ['the spec PR base', /targets (it|that branch|the integration branch)/],
+    ['the delivery base', /`Branch: <epic-key>`/],
     ['the release child', /release child/],
     ['one squash', /one squash/],
-    ['spec scratch', /`spec\/\*`[^.]*scratch/],
+    ['integration branch scratch', /integration branch is scratch/],
     ['branch-scoped done', /branch-scoped `done`/],
     ['main-scoped epic acceptance', /`main`-scoped/],
     ['the two-merge has-human-release', /two human merges/],
-    ['release serialization', /serializ/i],
+    ['release order', /### Release order/],
     ['the cancelled-epic sweep', /cancelled-epic sweep/],
     ['the stale sweep', /### The stale sweep/],
     ['the one topology', /Every grilling produces an epic/],
     ['the one closing question', /one close-and-start question: apply the chosen mode labels and start\s+stage 1/],
-    ['the human seat', /human seat the project's workflow binds to the `human`\s+role, read from the handler/],
-    ['the kickoff record', /records the chosen human seat on the epic/],
+    ['the human seat', /human seat the project's workflow binds to the\s+`human`\s+role from the live handler/],
+    ['the kickoff record', /records the `human` seat on the epic as a readback/],
     ['the link read-back', /linked pull requests[^.]*moves?\s+only when the PR is listed/],
     ['the kickoff labels step', /kickoff[^.]*labels|labels[^.]*kickoff/i],
     ['the owned create', /stage-1\s+(spec\s+)?child[^.]*project[^.]*planned owner/],
@@ -699,7 +743,7 @@ function guideViolations({ guide: text, apply, workflowFile }) {
   if (/N \+ 1/.test(text)) violations.push('docs/factory.md: keeps the N + 1 arithmetic');
   if (/single ticket defaults to/.test(text)) violations.push('docs/factory.md: keeps the single-ticket default');
   for (const [term, pattern] of [
-    ['`spec/*` unprotected', /`spec\/\*`[^.\n]*unprotected/],
+    ['integration branch unprotected', /integration branch[^.\n]*unprotected/],
     ['Automatically delete head branches', /Automatically delete head branches/],
     ['Allow auto-merge off', /Allow auto-merge/],
     ['Require branches to be up to date on main', /Require branches to be up to date[^.\n]*`main`/],
@@ -719,10 +763,10 @@ test('the guide carries the integration topology and the narrowed routes', () =>
   };
   assert.deepEqual(guideViolations(contract), []);
   // A guide that still describes main-only delivery is the graph the topology replaces.
-  const noTopology = { ...contract, guide: contract.guide.replace(/`spec\/<epic>`/g, '`main`') };
+  const noTopology = { ...contract, guide: contract.guide.replace(/integration branch/g, 'branch') };
   assert.notDeepEqual(guideViolations(noTopology), []);
   // The integration topology must keep its human-merge cost: the spec and the release.
-  const noTwoMergeCost = { ...contract, guide: contract.guide.replace(/Under `has-human-release`,\s*one topology costs two human merges[^.]*\./, '') };
+  const noTwoMergeCost = { ...contract, guide: contract.guide.replace(/Under\s+`has-human-release`,\s*one topology costs two human merges[^.]*\./, '') };
   assert.notDeepEqual(guideViolations(noTwoMergeCost), []);
   // A guide that drops the read-back or the one question leaves the human on the old prose.
   assert.notDeepEqual(guideViolations({ ...contract, guide: contract.guide.replace(/linked pull requests[^.]*listed\./, '') }), []);

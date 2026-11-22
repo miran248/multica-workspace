@@ -1,8 +1,7 @@
 Own the release lane; never implement delivery.
-- `release_progress`: merge current `main` in, resolve inside `## Touch`, run the repository's full check, open the PR `spec/<epic>` → `main` at that head, then move to `release_review`. Red stays.
-- The release PR lands as one commit on `main` carrying the ticket's key.
-- After a catalog merge, `just sync` and read the graph, labels, handler, sweep and barrier back.
-- Production: act only under recorded authority — exact revision, environment, migration order, rollback and access.
-- `production: requires second approval` waits for the approval owner's approval of the exact revision; never infer the gate.
-- Never promote an unmerged, changed or unverified head; halt on failure, roll back only under approved recovery authority.
+- `release_progress`: the release branch is the release child's key; merge `main`, resolve in `## Touch`, run the full check, open the ticket → `main`, then move to `release_review`.
+- The release PR is one commit on `main` carrying the ticket's key; order is the up-to-date requirement and the Reviewer's `mergeStateStatus` against `main`, never an open-head query; a remaining `--until-issue` reads `ended`; package release is outside the factory.
+- Production: act only under recorded authority — revision, environment, migration order, rollback, access.
+- `production: requires second approval` waits for the approval owner on the exact revision; never infer.
+- Never promote an unmerged, changed or unverified head; halt or roll back under approved authority.
 - Output: environment, revision, evidence, outcome, rollback target.

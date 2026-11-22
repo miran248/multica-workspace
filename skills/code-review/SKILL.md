@@ -16,7 +16,7 @@ The issue tracker and labels come from the workspace agent contract; work lives 
 
 Every review also enforces the shared delivery contract, as five checks:
 
-1. **One pull request, one ticket.** Read the ticket's linked pull requests before the verdict: one open link, to the ticket whose key the PR carries. A second open link, or a PR linked to a ticket it does not deliver, is a blocking finding.
+1. **One pull request, one ticket.** Read the ticket's linked pull requests before the verdict: one open link, to the ticket whose key the PR carries. A second open link, or a PR linked to a ticket it does not deliver, is a blocking finding. Read the live text too — the PR body, the proposed breakdown and spec comments — and fail a bare ticket key on Standards: each issue there is written as its workspace link.
 2. **The base.** The PR targets the ticket's `Branch:` line, or `main` when the line is absent.
 3. **The scope.** Every changed path is inside the ticket's `## Touch`; an unlisted path is a finding.
 4. **The subject.** The PR title is `type(scope): summary, TICKET`, and the squash subject keeps that shape.
@@ -28,8 +28,8 @@ A breach is a blocking finding on the Standards axis.
 
 A spec PASS begins by reading the epic's children at the exact head against shared
 `## Ownership`. Every child the spec run published must be in `backlog`, carry its planned owner
-and sit in a stage higher than the one before it; the one human-lane child may be unassigned,
-any other ownerless child is a blocking finding, and no PASS stands over one.
+and sit in a stage higher than the one before it; the human lane's planned owner is the live
+`human` seat, so any ownerless child is a blocking finding and no PASS stands over one.
 
 ## The exit rule
 
@@ -39,7 +39,7 @@ Apply at every PASS, after the verdict and before the move or merge. Read the ba
 
 - A spec PR — one reviewed at `spec_review` — always moves to `awaiting_merge`: the human merge
   is the approval, in every mode.
-- A PR whose base is `spec/<epic>` is merged at the reviewed head.
+- A PR whose base is the integration branch — the epic's key — is merged at the reviewed head.
 - A PR whose base is `main` and whose epic carries `has-human-release` moves to
   `awaiting_merge`.
 - A PR whose base is `main` and whose epic carries no `has-human-release` is merged at the
@@ -50,14 +50,18 @@ move or the merge. Never enable auto-merge.
 
 ## The conflicts condition
 
-At every review, before the verdict, arm one continuous condition on the ticket:
+At every review, before the verdict, keep one continuous condition on the ticket. Run
 
-    multica issue wakeup create <ticket> --until-pr conflicts --mode continuous --agent-id <seat>
+    multica issue wakeup list <ticket>
 
-The command replaces the configuration, so re-arming is idempotent, and the condition survives
-the PASS into `awaiting_merge`. The seat is the one that owns the work column: the Planner for a
-spec PR, the Implementer for a delivery PR — including a human-authored one, since a member is
-not a wakeup target — and the Release seat for a release PR.
+and if the conflicts rule exists, replace its whole configuration with
+
+    multica issue wakeup update <ticket> --until-pr conflicts --mode continuous --agent-id <seat>
+
+`update` replaces one rule; use `create` only when no rule exists, never to re-arm. The condition
+survives the PASS into `awaiting_merge`. The seat is the one that owns the work column: the
+Planner for a spec PR, the Implementer for a delivery PR — including a human-authored one, since
+a member is not a wakeup target — and the Release seat for a release PR.
 
 ## The void PASS
 
