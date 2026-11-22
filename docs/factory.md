@@ -22,6 +22,13 @@ deletes the second topology and asks the labels at the kickoff. The change bound
 the unlink correction [ADR-0020](adr/0020-one-pr-links-to-one-ticket.md), and the
 rule/expected-snapshot/executed-set reading
 [ADR-0021](adr/0021-the-spec-records-the-rule-not-the-live-state.md).
+[ADR-0022](adr/0022-branch-names-are-ticket-ids.md) makes every branch a ticket id,
+[ADR-0023](adr/0023-a-rewrite-is-leased-and-never-required.md) leases a rewrite,
+[ADR-0024](adr/0024-every-ticket-names-a-planned-owner.md) names a planned owner,
+[ADR-0025](adr/0025-the-epic-is-in-progress-from-the-kickoff.md) starts the epic in progress,
+[ADR-0026](adr/0026-the-platform-wake-is-the-wake.md) makes the platform wake the promotion,
+[ADR-0027](adr/0027-the-release-lane-does-not-serialize.md) removes the release query and
+[ADR-0028](adr/0028-one-human-seat-per-workflow.md) names one human seat.
 
 ## Status graph
 
@@ -66,35 +73,37 @@ drawing. Any ticket can enter `blocked`; it is a triage column, never a parking 
 `cancelled` are terminal and hand off to nobody. A merge completes the linked ticket: that is
 the platform's PR rule, not a status edge. The four review columns all declare `awaiting_merge`
 as their `next`, so the unattended advance is the human and the merge is the handled exception.
-`epic_progress` is the epic's state and handles nobody: the Planner moves the epic there from
-`todo` when it promotes the first delivery stage, and to `done` on acceptance.
+`epic_progress` is the epic's state and handles nobody: the Planner creates the epic in
+`backlog`, moves it there at the kickoff when it starts the spec child, and moves it to `done`
+on acceptance.
 
 ## The kickoff labels step
 
 Every grilling produces an epic, so every published slice takes this one topology: a stage-1
-spec child, the `spec/<epic>` integration branch, the staged delivery children and a final-stage
-release child. A single-ticket breakdown is the smallest epic — one delivery child and the
-release — and a small task that never grills stays a regular ticket, the only PR into `main` with
-no slice behind it.
+spec child, the epic's key as the integration branch, the staged delivery children and a
+final-stage release child. A single-ticket breakdown is the smallest epic — one delivery child
+and the release — and a small task that never grills stays a regular ticket, the only PR into
+`main` with no slice behind it.
 
 The grilling packet ends on one close-and-start question: apply the chosen mode labels and start
 stage 1. The labels are `has-human-implementer`, `has-human-release`, or neither, and they stay
-the last field; a human mode names the human seat the project's workflow binds to the `human`
-role, read from the handler. The Planner applies the answer at the kickoff: it creates the epic
-and the stage-1 spec child with the project and the planned owner, applies the labels to the epic,
-records the chosen human seat on the epic, and then moves the stage-1 child to `spec_progress`.
-The labels are set before the spec PR exists, so the whole slice shares them; a label added later
-applies at the next PASS.
+the last field; a human mode reads the one human seat the project's workflow binds to the
+`human` role from the live handler. The Planner applies the answer at the kickoff: it creates
+the epic in `backlog` and the stage-1 spec child with the project and the planned owner, applies
+the labels to the epic, records the `human` seat on the epic as a readback, then moves the epic
+to `epic_progress` and the stage-1 child to `spec_progress`. The labels are set before the spec
+PR exists, so the whole slice shares them; a label added later applies at the next PASS.
 
 ## The spec is a stage-1 child
 
-The Planner creates the spec as the epic's stage-1 child and keeps the epic at `todo` until it
-promotes the first delivery stage, when the epic moves to `epic_progress`. In that child's run the
-Planner writes the spec, forks `spec/<epic>` from `main` at the spec sha before the spec PR
-exists, publishes the whole slice with `to-tickets` — every delivery child under the epic, in
-`backlog`, in stage order, the final-stage release child last — then opens the spec PR carrying
-the proposed breakdown, against `spec/<epic>`, and links it only to the child, never the epic, and
-never after `Closes`, `Fixes` or `Resolves`.
+The Planner creates the spec as the epic's stage-1 child in `backlog`, moves the epic to
+`epic_progress` at the kickoff, and starts the child. In that child's run the Planner writes the
+spec, forks the integration branch — the epic's key — from `main` at the spec sha before the spec
+PR exists, publishes the whole slice with `to-tickets` — every delivery child under the epic, in
+`backlog`, in stage order, each with its planned owner, the final-stage release child last — then
+opens the spec PR, headed by the spec child's key and carrying the proposed breakdown, against
+the integration branch, and links it only to the child, never the epic, and never after
+`Closes`, `Fixes` or `Resolves`.
 The Reviewer leaves the PR open on PASS and moves the child to `awaiting_merge`; the human
 merges it, the workspace PR rule completes the child to `done`, and that completion wakes the
 Planner to promote the frontier — not to slice. The merge still approves the spec and the set:
@@ -106,57 +115,61 @@ re-evaluates the stage condition whenever the child set changes.
 
 ## One integration branch per spec
 
-Each spec forks `spec/<epic>` from `main` at the spec sha, before the spec PR exists: a branch
-needs a commit. The spec PR targets that branch, and its merge approves the spec, its proposed
-breakdown and the published children exactly as before. Every delivery child opens its body
-with `Branch: spec/<epic>`; that line, not a promotion comment, is the base the Implementer
-reads. The stage is the dependency edge and the body carries no blockers. A final-stage release
-child owns the only path from the branch to `main`.
+Each spec forks its integration branch — the epic's key — from `main` at the spec sha, before the
+spec PR exists: a branch needs a commit. The spec PR heads the spec child's key and targets that
+branch, and its merge approves the spec, its proposed breakdown and the published children
+exactly as before. Every delivery child opens its body with `Branch: <epic-key>`; that line, not
+a promotion comment, is the base the Implementer reads. The stage is the dependency edge and the
+body carries no blockers. A final-stage release child owns the only path from the branch to
+`main`.
 
 ```text
-main ──fork at the spec sha──> spec/<epic>
+main ──fork at the spec sha──> <epic-key>
                                   │  spec PR (approval) ───────────┐
                                   │  ticket PRs (reviewed, merged) ┤
-                                  └── release child: spec → main ──┴──> one squash on main
+                                  └── release child: <release-key> → main ─┴──> one squash on main
 ```
 
-`spec/*` is scratch: it is unprotected, it deploys nothing, and the release merge deletes it.
-The branch's only jobs are to hold the reviewed spec until it is complete and to keep
-half-finished work off `main`.
+The integration branch is scratch: it is unprotected and it deploys nothing. The release merge
+deletes the release branch, and the Planner deletes the integration branch when it accepts the
+epic, so no scratch branch outlives the slice. The branch's only jobs are to hold the reviewed
+spec until it is complete and to keep half-finished work off `main`.
 
 ### The release child
 
 The release child is published in the spec run, last, in `backlog`, in the final stage. Its
 body carries its instance — base/source branch, included children and `Touch:` union; the
 procedure itself lives in `roles/release.md`. It runs in `release_progress` and is reviewed at
-`release_review`. Its PR is `spec/<epic>` → `main`: merge the current `main` in, resolve, run
-the full suite and open at that head. That merge is one squash commit on `main` whose subject
-carries the release ticket's key — no merge commit, no direct push — and it deletes the branch
-because **Automatically delete head branches** is on.
+`release_review`. Its PR heads the release child's key — the release branch — and targets
+`main`: merge the current `main` in, resolve, run the full suite and open at that head. That
+merge is one squash commit on `main` whose subject carries the release ticket's key — no merge
+commit, no direct push — and it deletes the release branch because **Automatically delete head
+branches** is on.
 
 CI runs at spec level: the release PR and the post-merge `main` push, two runs per spec
-independent of N. Ticket PRs into `spec/<epic>` run no check, which is why the per-ticket gate
-is the Implementer's local run of the check that covers the diff. A red release reworks on the
-release ticket at `release_progress`, on the branch, and re-runs at the refreshed head; children
-that are already `done` stay `done`.
+independent of N. Ticket PRs into the integration branch run no check, which is why the
+per-ticket gate is the Implementer's local run of the check that covers the diff. A red release
+reworks on the release ticket at `release_progress`, on the branch, and re-runs at the refreshed
+head; children that are already `done` stay `done`.
 
 ### `done` has two scopes
 
 `done` has two scopes: branch-scoped `done` for a child and `main`-scoped `done` for the epic.
-A child's `done` means it was delivered and reviewed on `spec/<epic>`. The epic's `done` is
-`main`-scoped: after the release merge completes the release child, the Planner verifies the
+A child's `done` means it was delivered and reviewed on the integration branch. The epic's `done`
+is `main`-scoped: after the release merge completes the release child, the Planner verifies the
 release squash is on `main` at the merged sha with the release PR's checks green and only then
 accepts the epic. The release child is the visible "this spec is not on `main` yet" marker; no
 new status is introduced for the meaning between the two.
 
-### Release serialization
+### Release order
 
-At most one release is merge-ready against `main` at a time. Before promoting a release the
-Planner runs `gh pr list --base main --state open`, filters the heads to `spec/*`, and while
-another release is open parks the next one on `--until-issue <release>`. A release whose
-`main` moves while it waits merges `main` in again and re-runs the suite: it never merges a
-stale tree. The Reviewer's `mergeStateStatus` check and the human's merge button are the second
-and third detectors.
+At most one release is merge-ready against `main` at a time. Release order is the repository's
+up-to-date requirement plus the Reviewer's `mergeStateStatus` read against `main` before the
+release PASS: behind or dirty is a FAIL. There is no open-head query and no `--until-issue <release>` park. A release whose `main` moves while it waits merges `main` in
+again and re-runs the suite: it never merges a stale tree. Where a dependency condition remains
+— a cross-epic wait — it reads `--until-issue-state ended`, so a cancelled dependency releases
+the wait. A package release such as release-please is outside the factory; the slice release is
+the merge on `main`.
 
 ### The stale sweep
 
@@ -177,21 +190,25 @@ hourly trigger back, and the first blocking move is the observable evidence.
 
 ### The cancelled-epic sweep
 
-At approval the Planner registers `--until-status cancelled` on the epic. If the epic is
-cancelled before its release merges, that sweep runs once and in order: close the open delivery
-and release PRs, delete `spec/<epic>`, cancel the children that are still open, and record what
-merged and what is abandoned. If the release already merged, do not cancel it: accept the epic,
-or open a follow-up spec — a revert is a new epic.
+The cancelled sweep runs in the run that cancels the epic, as part of that run: no condition's
+only trigger is a ticket's own closure. If the epic is cancelled before its release merges, the
+sweep runs once and in order: close the open delivery and release PRs, delete the integration
+branch, cancel the children that are still open, and record what merged and what is abandoned.
+If the release already merged, do not cancel it: accept the epic, or open a follow-up spec — a
+revert is a new epic.
 
 ## The reslice window and the freeze
 
 A change is made in place only inside the reslice window: while the spec PR is unmerged, or after
-its approval merge while no child has started. On an unmerged PR the Planner force-pushes the same
-head, so the number, link and body survive; after the merge it reopens the same spec child at
-`spec_progress` and opens one revision PR against `spec/<epic>`. Either way the child set and
-bodies are rewritten in place — list the children, create only the missing ones, edit the rest,
-cancel the dropped — and the child returns to `spec_review` for a fresh PASS. No second spec PR is
-open at once.
+its approval merge while no child has started. On an unmerged PR the Planner adds a commit to the
+same head, so the number, link and body survive; a rewrite replaces that head only when the
+commits themselves must not remain, on the Planner's own PR head, after a fetch, with
+`git push --force-with-lease=<remote-ref>:<expected-sha>`, and never with `--force`, `-f`,
+`--mirror`, `+`, `main` or the integration branch. After the merge it reopens the same spec child
+at `spec_progress` and opens one revision PR against the integration branch. Either way the child
+set and bodies are rewritten in place — list the children, create only the missing ones, edit the
+rest, cancel the dropped — and the child returns to `spec_review` for a fresh PASS. No second
+spec PR is open at once.
 
 The window closes when the spec has merged and any child is in a started status: anything but
 `backlog`, `todo`, `done` or `cancelled`. The freeze is a latch: once it holds, the slice stays
@@ -256,15 +273,16 @@ label and never cached in a lane:
 - `spec_review`: a PASS moves to `awaiting_merge` in every mode — the spec-approval exception
   (D4), read before the base and the label.
 - `in_review`, `human_review`, `release_review`: a PASS merges at the reviewed head when the base
-  is `spec/<epic>`, or when the base is `main` and the epic carries no `has-human-release`; it
-  moves to `awaiting_merge` when the base is `main` and the epic carries `has-human-release`.
+  is the integration branch, or when the base is `main` and the epic carries no
+  `has-human-release`; it moves to `awaiting_merge` when the base is `main` and the epic carries
+  `has-human-release`.
 
 A label added after the kickoff applies at the next PASS; a change to the slice's set still needs
 a spec re-approval. `has-human-release` is scoped to the boundaries, not to every ticket: it
 gates every pull request whose base is `main`, while the spec approval is the human merge in
-every mode. A ticket PR into `spec/<epic>` is Reviewer-merged in every mode, because the branch
-is scratch and the human already approved the set that produces it. Under `has-human-release`,
-one topology costs two human merges — the spec approval and the release.
+every mode. A ticket PR into the integration branch is Reviewer-merged in every mode, because
+the branch is scratch and the human already approved the set that produces it. Under
+`has-human-release`, one topology costs two human merges — the spec approval and the release.
 
 The smallest epic is the same topology: one delivery child and the release child.
 
@@ -283,21 +301,22 @@ alone starts nothing. `todo` is a waiting room, not a handoff.
   `has-human-implementer` ticket at `human_progress`, open its PR against the ticket's
   `Branch:` base, and move it to `human_review`. At `awaiting_merge`, merge the reviewed PR:
   the merge completes the ticket, so do not move it to `done` yourself. Only a spec approval or
-  a review the exit rule sent there reaches you; a ticket PR into `spec/<epic>` is
+  a review the exit rule sent there reaches you; a ticket PR into the integration branch is
   Reviewer-merged. Never move human work into `in_progress`.
-- **Planner.** Create the epic and the stage-1 spec child; at the kickoff apply the chosen labels
-  to the epic, record the chosen human seat on the epic, and move the stage-1 child to
-  `spec_progress` last. In that child's run, fork `spec/<epic>` from `main` at the spec sha, write
-  the spec recording `integration:`, and publish every delivery child in `backlog` with its stage
-  and its `Branch:` base, the final-stage release child last. Then link the spec PR, targeted at
-  `spec/<epic>`, to the child only. The merge approves the set and wakes you to promote, not to
-  slice: create no child after the merge that approves its set, and make a change inside the
-  reslice window a revision, after the freeze a new epic. Move the epic to `epic_progress` in the
-  run that promotes the first delivery stage, and to `done` on acceptance. Promote the frontier by
-  the four-row table in `roles/planner.md`, applying `ready-for-agent`; keep later stages in
-  `backlog`. Before promoting a release, query open `spec/*` heads against `main` and park the next
-  release while another is in flight. Triage `blocked`, run the cancelled-epic sweep, and accept
-  the epic on evidence after the release merge.
+- **Planner.** Create the epic in `backlog` and the stage-1 spec child; at the kickoff apply the
+  chosen labels to the epic, record the one `human` seat from the live handler on the epic as a
+  readback, move the epic to `epic_progress`, and move the stage-1 child to `spec_progress` last.
+  In that child's run, fork the integration branch — the epic's key — from `main` at the spec sha,
+  write the spec recording `integration:`, and publish every delivery child in `backlog` with its
+  planned owner, its stage and its `Branch:` base, the final-stage release child last. Then link
+  the spec PR, targeted at the integration branch, to the child only. The merge approves the set
+  and wakes you to promote, not to slice: create no child after the merge that approves its set,
+  and make a change inside the reslice window a revision, after the freeze a new epic. Promote
+  the frontier by the four-row table in `roles/planner.md`, applying `ready-for-agent`; keep later
+  stages in `backlog`. Release order is the repository's up-to-date requirement and the Reviewer's
+  `mergeStateStatus`, so there is no open-head query and no park. Triage `blocked`, accept the epic
+  on evidence after the release merge with the release readback, delete the integration branch,
+  and run the cancelled sweep in the run that cancels the epic.
 - **Reviewer.** Owns `spec_review`, `in_review`, `human_review` and `release_review`: one
   verdict at the exact head, evidence per criterion, then the move or the merge. Post the
   verdict first, at the reviewed head, before the status move or the merge: the move starts the
@@ -356,9 +375,9 @@ detail; the subject carries the two identifiers and nothing else.
   spec merge approved the set, and the release adds no criteria of its own. A red release
   reworks on the release ticket at `release_progress`; its `done` children stay `done`.
 - **A cancelled epic is swept once.** The sweep in "The cancelled-epic sweep" is mechanical:
-  close the open delivery and release PRs, delete `spec/<epic>`, cancel the remaining children
-  and record what merged and what is abandoned. It runs from the `--until-status cancelled`
-  condition, not from a comment.
+  close the open delivery and release PRs, delete the integration branch, cancel the remaining
+  children and record what merged and what is abandoned. It runs in the run that cancels the
+  epic, never from a condition whose only trigger is that closure.
 - **Auto-merge stays off.** Leave **Allow auto-merge** off on every Factory repository. Auto-merge
   is a pull-request setting, not a ticket status: an armed PR merges as soon as its checks pass,
   and the platform completes the linked ticket on merge — including an
@@ -377,8 +396,8 @@ detail; the subject carries the two identifiers and nothing else.
   the ticket to that column's back status. This is a precondition on entry, not a reaction to
   a close — nothing in the graph fires on one.
 - **Spec approval.** The spec child is approved by merging its PR, which completes the child
-  and wakes the Planner. The PR targets `spec/<epic>`, and carries the proposed breakdown and
-  the published children, so the merge approves both;
+  and wakes the Planner. The PR heads the spec child's key and targets the integration branch,
+  and carries the proposed breakdown and the published children, so the merge approves both;
   the children already exist in `backlog`, and the wake promotes the frontier. A spec PR is
   reviewed at `spec_review`, never at `in_review`, and the Reviewer never merges or enables
   auto-merge on it.
@@ -392,17 +411,16 @@ detail; the subject carries the two identifiers and nothing else.
   not a ticket section: the ticket stays in `blocked` until that condition clears.
 - **Cancel and duplicate.** Move to `cancelled`; use `--duplicate-of` so the original lists it.
 - **Branch cleanup.** Enable **Automatically delete head branches** on the repository. Every
-  delivery merge deletes its head branch, and the release merge deletes `spec/<epic>`; a merge
-  from the GitHub UI relies on that setting, and the catalog cannot set it. Auto-merge is off,
-  so no deferred merge exists.
+  delivery merge deletes its head branch and the release merge deletes the release branch; the
+  Planner deletes the integration branch on acceptance. A merge from the GitHub UI relies on that
+  setting, and the catalog cannot set it. Auto-merge is off, so no deferred merge exists.
 - **Issue outside a project.** The workspace Default workflow accepts every status and hands
   off to nobody. The Factory promotion above does not apply until the issue is in a project.
 - **Manual override.** Any member can move a ticket to any column; the move is the handoff and
   the new handler takes over. A named workflow refuses a status it does not declare.
 - **Stage barriers.** A stage is a parallel barrier group, not a position label: serial
   tickets get distinct stages, the spec run creates every later stage in `backlog`, and the
-  closing stage wakes the parent. The slicing rules live in `roles/planner.md` and the
-  `to-tickets` skill.
+  platform's parent stage wake promotes the frontier — no children-done condition is armed. The slicing rules live in `roles/planner.md` and the `to-tickets` skill.
 
 ## Live acceptance
 
@@ -412,11 +430,18 @@ with a repository resource and the Factory workflow bound.
 
 | Scenario | Shape | Expected evidence |
 | --- | --- | --- |
-| autonomous | epic, spec child + three parallel children + one serial child | the whole slice already exists in `backlog` when the spec PR is reviewed; the human merge completes the child and a **single** Planner wake promotes the parallel stage (no child is created after the merge); each PASS is posted before its delivery PR merges and closes the ticket; the epic shows `todo` → `epic_progress` |
-| integration topology | the same slice with the fork, the release child and filtered triggers | the spec PR and every delivery PR target `spec/<epic>`; a child's PASS merges into the branch and completes the child, with no CI run started for the branch; the release child runs in `release_progress`, is reviewed at `release_review`, runs the repository's checks and lands as one squash on `main`, deleting the branch; the Planner then accepts the epic on evidence |
-| release serialization | two integration epics with a release ready | only one release PR is open against `main`; the second release stays `backlog` until the first closes, then merges the moved `main` in and re-runs before its PR opens |
-| cancelled epic | an integration epic cancelled before its release merges | the open delivery and release PRs close, `spec/<epic>` is deleted, the remaining children are cancelled, and the record says what merged and what is abandoned |
-| smallest epic | a single-ticket breakdown | the slice publishes one delivery child and the release, all `backlog`; the spec PR and the delivery PR target `spec/<epic>`, and the release is the only path to `main` |
+| ticket-id link | a spec child and a delivery child whose PR heads are their own keys | each PR links to its own ticket; the merge completes that ticket; the title and the head name the same key |
+| bare-key review | a PR body, a proposed breakdown or a spec comment with a bare ticket key | the review reads the live text in its link check and fails it on Standards; the author links the key; no PASS stands over a bare key |
+| no epic link | a spec merge and a release merge with the epic still open | the epic holds no linked PR; the release child holds its release PR; the epic's state moves only by the Planner's hand |
+| native wake | a stage whose children all close while a later stage waits | one Planner run starts from the platform's parent wake and promotes the frontier; no children-done condition exists |
+| one conflicts rule | a reviewed PR revisited twice | `wakeup list` shows one conflicts rule; `wakeup update` replaces it in place; a second rule is never created |
+| no unassigned | a published set with a human-lane child | every child carries a planned owner, the human lane's being the live `human` handler's member; the spec PASS finds no ownerless child |
+| no serialization | two slices with a release each | no open-head query runs; the second release waits on the Reviewer's `mergeStateStatus` read, with the up-to-date requirement where the repository carries it; a missing requirement is reported as an operator delta, not filled by a park |
+| release readback | the release merge completes the release child | the Planner's acceptance run reads the squash on `main`, the checks and the applied catalog back; no wakeup on the release child is registered |
+| cancelled sweep | an epic cancelled before its release merges | the run that cancels the epic closes its open PRs, deletes the integration branch, cancels the remaining children and records what merged and what is abandoned |
+| autonomous | epic, spec child + three parallel children + one serial child | the whole slice already exists in `backlog` when the spec PR is reviewed; the human merge completes the child and a **single** Planner wake promotes the parallel stage (no child is created after the merge); each PASS is posted before its delivery PR merges and closes the ticket |
+| integration topology | the same slice with the fork, the release child and filtered triggers | the spec PR and every delivery PR target the integration branch; a child's PASS merges into the branch and completes the child, with no CI run started for the branch; the release child runs in `release_progress`, is reviewed at `release_review`, runs the repository's checks and lands as one squash on `main`, deleting the release branch; the Planner then deletes the integration branch on acceptance |
+| smallest epic | a single-ticket breakdown | the slice publishes one delivery child and the release, all `backlog`; the spec PR and the delivery PR target the integration branch, and the release is the only path to `main` |
 | spec rework | a spec FAIL after the slice is published | the children stay `backlog`; the spec run reconciles them to the revised breakdown; no run starts |
 | human merge | `has-human-release` epic | PASS lands at `awaiting_merge`; the human merges and the merge completes the ticket |
 | human implements | `has-human-implementer` epic | the ticket sits in `human_progress` assigned to the human; its PR is reviewed at `human_review`, the PASS is posted, then merged |

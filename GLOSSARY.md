@@ -163,7 +163,7 @@ PR is never linked to the epic.
 
 **integration branch** — the epic's key, forked from `main` at the spec sha, and the base of the
 spec PR and of every delivery PR in that spec. It is scratch: unprotected, it deploys nothing,
-and the release merge deletes it. It is never a pull request's head.
+and the Planner deletes it when it accepts the epic. It is never a pull request's head.
 
 **release branch** — the release child's key, forked from the integration branch at the release
 head and the head of the release PR into `main`. The release PR is the only path from the slice's
@@ -171,8 +171,8 @@ integration branch to `main`, and the epic's key never heads it.
 
 **slice release** — the final-stage child and the one squash that carries the whole slice onto
 `main`. The release PR is its pre-merge gate; release order is the Reviewer's `mergeStateStatus`
-read, with the repository's up-to-date requirement as the expected operator state, never a
-`spec/*` query or a park. A package release such as release-please is outside the factory and is
+read, with the repository's up-to-date requirement as the expected operator state, never an
+open-head query or a park. A package release such as release-please is outside the factory and is
 not the slice release.
 
 **rewrite/lease** — a rework adds a commit to the same head; a rewrite replaces the head only when

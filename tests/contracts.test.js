@@ -16,7 +16,7 @@ const catalogFiles = () => ['roles', 'shared', 'skills', 'templates'].flatMap(di
 const catalogText = () => Object.fromEntries(catalogFiles().map(path => [path, read(path)]));
 
 test('a ticket body is Branch: plus What, Acceptance and Touch', () => {
-  assert.match(ticket, /^Branch: spec\/<epic-key>/m);
+  assert.match(ticket, /^Branch: <epic-key>/m);
   assert.deepEqual([...ticket.matchAll(/^## (.+)$/gm)].map(([, heading]) => heading), ['What', 'Acceptance', 'Touch']);
   assert.doesNotMatch(ticket, /^## Parent$/m);
   assert.doesNotMatch(ticket, /^## Blocked by$/m);
@@ -41,7 +41,7 @@ test('no role repeats a delivery rule', () => {
 // A create names the project and the role promotion will pick, once, in shared `## Ownership`.
 // The publisher and the spec PASS act on that copy; a role, skill or column carrying the rule
 // again is the third copy the contract removes.
-const CREATION_RULE = ['`--project`', "the planned owner's `--assignee`", 'status entry still reassigns natively', 'member handler binds it'];
+const CREATION_RULE = ['Every ticket has its planned owner', '`--project`', "the planned owner's `--assignee`", 'status entry reassigns natively', 'Planner is the fallback', 'the human lane\'s planned owner is the live `human` seat', 'none unassigned'];
 // A create command that passes a flag uses the rule; a file carrying two or more of its
 // sentences restates it.
 const ruleCopy = text => CREATION_RULE.filter(phrase => text.includes(phrase));
@@ -64,11 +64,11 @@ test('the creation rule lives once in shared Ownership', () => {
   // A role that restates the create rule is the second copy the contract removes.
   const roleCopy = {
     ...contract,
-    catalog: { ...contract.catalog, 'roles/implementer.md': `${contract.catalog['roles/implementer.md']} Create with \`--project\`; status entry still reassigns natively.` },
+    catalog: { ...contract.catalog, 'roles/implementer.md': `${contract.catalog['roles/implementer.md']} Create with \`--project\` and the planned owner's \`--assignee\`; status entry reassigns natively.` },
   };
   assert.notDeepEqual(ownershipViolations(roleCopy), []);
   // A shared contract without the create rule is no rule at all.
-  const noRule = { ...contract, shared: contract.shared.replace(/^- Create with[\s\S]*?binds it\.$/m, '') };
+  const noRule = { ...contract, shared: contract.shared.replace(/^- Every ticket has[\s\S]*?none unassigned\.$/m, '') };
   assert.notDeepEqual(ownershipViolations(noRule), []);
 });
 
@@ -81,14 +81,15 @@ function readerViolations({ tickets, review }) {
   if (!/shared\s+`## Ownership`/.test(tickets)) violations.push('to-tickets: does not act on shared Ownership');
   if (!/project and its planned owner/.test(tickets)) violations.push('to-tickets: the project and planned owner are not checked');
   if (!/fails the publish/.test(tickets)) violations.push('to-tickets: a broken child does not fail the publish');
-  if (!/unassigned/.test(tickets)) violations.push('to-tickets: the unassigned child is not checked');
+  if (!/no child is unassigned/.test(tickets)) violations.push('to-tickets: an unassigned child is not checked');
   if (!/`--project`/.test(tickets)) violations.push('to-tickets: the create call omits the project');
   if (!/shared\s+`## Ownership`/.test(review)) violations.push('code-review: does not act on shared Ownership');
   if (!/exact head/.test(pass)) violations.push('code-review: the set is not read at the exact head');
   if (!/`backlog`/.test(pass)) violations.push('code-review: the set states are not read');
   if (!/stage higher/.test(pass)) violations.push('code-review: the stage order is not read');
   if (!/ownerless/.test(pass)) violations.push('code-review: an ownerless child is not a blocking finding');
-  if (!/human-lane child may be unassigned/.test(pass)) violations.push('code-review: the human-lane child is not excepted');
+  if (!/human lane's planned owner is the live/.test(pass)) violations.push('code-review: the human lane owner is not the live seat');
+  if (/human-lane child may be unassigned/.test(pass)) violations.push('code-review: the human lane is exempted from the owner read');
   return violations;
 }
 
@@ -99,45 +100,53 @@ test('the publisher pre-flights the set and the spec PASS reads it', () => {
   assert.notDeepEqual(readerViolations(noPreflight), []);
   const noSetRead = { ...contract, review: contract.review.replace(/^## The spec PASS set read\n\n[\s\S]*?\n\n## /m, '## ') };
   assert.notDeepEqual(readerViolations(noSetRead), []);
-  // A set read that blocks every unassigned child fails a valid human-mode set.
-  const noException = { ...contract, review: contract.review.replace('; the one human-lane child may be unassigned,', ',') };
-  assert.notDeepEqual(readerViolations(noException), []);
+  // A set read that exempts the human lane leaves the one ownerless child unchecked.
+  const exception = { ...contract, review: contract.review.replace("the human lane's planned owner is the live\n`human` seat, so any ownerless child", 'the one human-lane child may be unassigned; any other ownerless child') };
+  assert.notDeepEqual(readerViolations(exception), []);
   // A publish instruction without the project creates an issue outside the Factory graph.
   const noProject = { ...contract, tickets: contract.tickets.replace('with `--project`, ', 'with ') };
   assert.notDeepEqual(readerViolations(noProject), []);
 });
 
-// The delivering ticket's key is in the title and the head branch, never the epic's; the rule
-// has one home, and the guide describes it without copying it.
-const KEY_RULE = ["delivering ticket's key only", "never the epic's"];
+// The head and rework rules have one home: shared `## Delivery`. The integration branch is the
+// epic's key, every PR head is the delivering ticket's key, and a rewrite is leased, never a
+// mandated force-push. The guide describes the key without copying the rule.
+const HEAD_RULE = ["The integration branch is the epic's key", "every PR head is the delivering ticket's key", 'the epic never heads a PR', 'holds no link'];
+const REWORK_RULE = ['A rework adds a commit to the same head', 'only when the commits must not remain', '--force-with-lease=<remote-ref>:<expected-sha>', 'never `--force`, `-f`, `--mirror`, `+`, `main` or the integration branch'];
+const RULE = [...HEAD_RULE, ...REWORK_RULE];
 
 function keyViolations({ shared, guide, catalog }) {
   const violations = [];
   const delivery = /^## Delivery\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
-  for (const phrase of KEY_RULE)
+  for (const phrase of RULE)
     if (!delivery.includes(phrase)) violations.push(`shared Delivery: no ${phrase}`);
-  if (!/head branch/.test(delivery)) violations.push('shared Delivery: no head branch');
-  if (!/spec child's title omits it/.test(delivery)) violations.push('shared Delivery: no spec child title rule');
+  if (!/never heads a PR/.test(delivery)) violations.push('shared Delivery: no head rule');
+  if (/force-push the same head/i.test(delivery)) violations.push('shared Delivery: mandates a force-push rework');
   const commits = /^## Commits\n\n([\s\S]*?)\n\n## /m.exec(guide)?.[1] ?? '';
   if (!/delivering ticket/.test(commits)) violations.push('docs/factory.md: the commits prose does not name the delivering ticket');
   if (!/never the epic/.test(commits)) violations.push('docs/factory.md: the commits prose allows the epic key');
+  // The workflow's spec_progress instruction is the run's copy of the base and the lease;
+  // shared Delivery is the one contract copy, and no other carrier restates the rule.
   for (const [path, text] of Object.entries(catalog))
-    if (path !== 'shared/instructions.md')
-      for (const phrase of KEY_RULE)
+    if (path !== 'shared/instructions.md' && path !== 'templates/workflows/factory.json')
+      for (const phrase of RULE)
         if (text.includes(phrase)) violations.push(`${path}: second copy of ${phrase}`);
   return violations;
 }
 
-test('the key rule lives once in shared Delivery and the guide describes it', () => {
+test('the head and rework rules live once in shared Delivery and the guide describes the key', () => {
   const contract = { shared: read('shared/instructions.md'), guide: read('docs/factory.md'), catalog: catalogText() };
   assert.deepEqual(keyViolations(contract), []);
-  // The epic's key in the rule is the defect the rule exists to prevent.
-  const epicKey = { ...contract, shared: contract.shared.replace("delivering ticket's key only", "epic's key only") };
-  assert.notDeepEqual(keyViolations(epicKey), []);
+  // The epic's key in the head rule is the defect the rule exists to prevent.
+  const epicHead = { ...contract, shared: contract.shared.replace("every PR head is the delivering ticket's key", "every PR head is the epic's key") };
+  assert.notDeepEqual(keyViolations(epicHead), []);
+  // A mandated force-push is the old default the additive rework replaces.
+  const force = { ...contract, shared: contract.shared.replace('A rework adds a commit to the same head.', 'A rework force-pushes the same head.') };
+  assert.notDeepEqual(keyViolations(force), []);
   // A skill that restates the rule is the second copy.
   const skillCopy = {
     ...contract,
-    catalog: { ...contract.catalog, 'skills/to-tickets/SKILL.md': `${contract.catalog['skills/to-tickets/SKILL.md']} The head branch carries the delivering ticket's key only.` },
+    catalog: { ...contract.catalog, 'skills/to-tickets/SKILL.md': `${contract.catalog['skills/to-tickets/SKILL.md']} The integration branch is the epic's key.` },
   };
   assert.notDeepEqual(keyViolations(skillCopy), []);
   // A guide that never names the key leaves the human reading the old subject alone.
@@ -167,6 +176,11 @@ function gateViolations(grilling) {
   if (!/labels stay the last field/.test(grilling)) violations.push('grilling: the labels field is not last');
   if (!/human seat[^.]*`human` role[^.]*handler/.test(grilling))
     violations.push('grilling: a human mode does not name the seat read from the handler');
+  if (!/readback/.test(grilling)) violations.push('grilling: the seat is not a readback');
+  if (/per-epic choice/.test(grilling) && !/never a per-epic choice/.test(grilling))
+    violations.push('grilling: the seat is a per-epic choice');
+  if (!/opens in `backlog`/.test(grilling)) violations.push('grilling: the epic does not open in backlog');
+  if (/opens in `todo`/.test(grilling)) violations.push('grilling: the epic opens in todo');
   if (!/invoked explicitly and never tied to grilling/.test(grilling))
     violations.push('grilling: wayfinder is not the explicit-invocation method');
   if (!/answer starts nothing/.test(grilling)) violations.push('grilling: an answer inside a wayfinder ticket starts something');
@@ -209,9 +223,9 @@ function readBackViolations({ shared, guide, catalog }) {
   if (!/read `multica issue pull-requests <ticket>` after opening/.test(handoffs))
     violations.push('shared Handoffs: the link is not read after the PR opens');
   if (!/move or merge[^.]*only when listed/.test(handoffs)) violations.push('shared Handoffs: the move does not wait for the listing');
-  if (!/move to `blocked`/.test(handoffs)) violations.push('shared Handoffs: an empty read does not move to blocked');
-  if (!/The linked PR is the delivery handoff/.test(handoffs)) violations.push('shared Handoffs: the linked PR is not the handoff');
-  if (!/empty body is not a finding/.test(handoffs)) violations.push('shared Handoffs: an empty body became a finding');
+  if (!/`blocked` move/.test(handoffs)) violations.push('shared Handoffs: an empty read does not move to blocked');
+  if (!/Linked PR is the handoff/.test(handoffs)) violations.push('shared Handoffs: the linked PR is not the handoff');
+  if (!/empty body not a finding/.test(handoffs)) violations.push('shared Handoffs: an empty body became a finding');
   if (!/linked pull requests[^.]*moves?\s+only when the PR is listed/.test(guide))
     violations.push('docs/factory.md: the handoff section does not describe the read-back');
   // The unlink subcommand is a different operation from the read-back; strip it before the scan.
@@ -229,7 +243,7 @@ test('the linked PR is read back before the move, once in shared Handoffs', () =
   // A contract that assumes the link is the defect the read-back exists to catch.
   const noReadBack = {
     ...contract,
-    shared: contract.shared.replace(/^- The linked PR is the delivery handoff:.*$/m, '- The linked PR is the delivery handoff.'),
+    shared: contract.shared.replace(/^- Linked PR is the handoff:.*$/m, '- Linked PR is the handoff.'),
   };
   assert.notDeepEqual(readBackViolations(noReadBack), []);
   // A role that repeats the read-back is the third copy the contract removes.
@@ -248,7 +262,7 @@ test('the linked PR is read back before the move, once in shared Handoffs', () =
 
 // One open PR per delivering ticket is the link invariant: stated once in shared `## Delivery`,
 // read by the code-review check before the verdict, and never restated in a role or skill.
-const LINK_RULE = ['one open PR per delivering ticket', 'carrying its key'];
+const LINK_RULE = ['one open PR per delivering ticket'];
 
 function linkViolations({ shared, review, catalog }) {
   const violations = [];
@@ -345,4 +359,129 @@ test('the catalog declares no document and a declared document must have a file'
   const path = join(f.root, 'templates/default.json');
   writeFileSync(path, JSON.stringify({ ...catalog, documents: { missing: 'templates/missing.md' } }));
   assert.throws(() => resolve(f.binding, f.root), /ENOENT|missing\.md/);
+});
+
+// The live text links every ticket. Shared `## Ownership` names the three places and the
+// catalog's anonymity; the review's existing link check reads them and fails a bare key on
+// Standards. The catalog's own Markdown keeps bare keys and never a workspace URL.
+const LIVE_TEXT = ['PR bod', 'proposed breakdown', 'spec comment'];
+
+function liveTextViolations({ shared, review, tickets, catalog }) {
+  const violations = [];
+  const ownership = /^## Ownership\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
+  for (const phrase of LIVE_TEXT) if (!ownership.includes(phrase)) violations.push(`shared Ownership: no ${phrase}`);
+  if (!/workspace URL/i.test(ownership)) violations.push('shared Ownership: no workspace URL');
+  if (!/anonymous/.test(ownership)) violations.push('shared Ownership: the catalog is not anonymous');
+  if (!/bare keys/.test(ownership)) violations.push('shared Ownership: the catalog may carry a URL');
+  const checks = /## Delivery checks\n\n([\s\S]*?)\n\n## /.exec(review)?.[1] ?? '';
+  for (const phrase of LIVE_TEXT) if (!checks.includes(phrase)) violations.push(`code-review: does not read ${phrase}`);
+  if (!/bare ticket key/.test(checks)) violations.push('code-review: a bare key does not fail');
+  if (!/Standards/.test(checks)) violations.push('code-review: a bare key is not a Standards finding');
+  if (!/workspace URL/.test(tickets) || !/bare key/.test(tickets)) violations.push('to-tickets: the template does not point at the live-text rule');
+  for (const [path, text] of Object.entries(catalog))
+    if (path !== 'shared/instructions.md' && text.includes('{{workspace_url}}')) violations.push(`${path}: a catalog file embeds a workspace URL`);
+  return violations;
+}
+
+test('the live text links every ticket and the review reads the three places', () => {
+  const contract = { shared: read('shared/instructions.md'), review: read('skills/code-review/SKILL.md'), tickets: read('skills/to-tickets/SKILL.md'), catalog: catalogText() };
+  assert.deepEqual(liveTextViolations(contract), []);
+  // A shared rule that omits the comments leaves the spec text unreviewed.
+  assert.notDeepEqual(liveTextViolations({ ...contract, shared: contract.shared.replace('spec comments', 'comments') }), []);
+  // A review that stops at the PR body lets a bare key through the other two places.
+  assert.notDeepEqual(liveTextViolations({ ...contract, review: contract.review.replace(', the proposed breakdown and spec comments', '') }), []);
+  // A template without the pointer leaves every published body without the read.
+  assert.notDeepEqual(liveTextViolations({ ...contract, tickets: contract.tickets.replace('workspace URL, never a bare key', 'key') }), []);
+  // A catalog file that embeds the live base breaks the anonymity rule.
+  assert.notDeepEqual(liveTextViolations({
+    ...contract,
+    catalog: { ...contract.catalog, 'roles/release.md': `${contract.catalog['roles/release.md']} {{workspace_url}}` },
+  }), []);
+});
+
+// One conflicts rule per ticket: `wakeup list` finds it and `wakeup update` replaces it. A second
+// `wakeup create` re-arms a duplicate, which the platform adds rather than replaces.
+function conflictViolations({ review, catalog }) {
+  const violations = [];
+  if (!/wakeup list <ticket>/.test(review)) violations.push('code-review: no wakeup list');
+  if (!/wakeup update <ticket> <wakeup-id> --until-pr conflicts --mode continuous/.test(review)) violations.push('code-review: no wakeup update');
+  if (!/update.*replaces one rule|update replaces one rule/s.test(review)) violations.push('code-review: update does not replace');
+  if (!/create.*only when no rule exists/s.test(review)) violations.push('code-review: create is not the absent-rule case');
+  if (/wakeup create <ticket> --until-pr conflicts --mode continuous/.test(review)) violations.push('code-review: re-arms with wakeup create');
+  for (const [path, text] of Object.entries(catalog))
+    if (path !== 'skills/code-review/SKILL.md' && /wakeup (create|update) <ticket>( <wakeup-id>)? --until-pr conflicts/.test(text))
+      violations.push(`${path}: second conflicts arming`);
+  return violations;
+}
+
+test('the conflicts rule is found and updated in place, never re-created', () => {
+  const contract = { review: read('skills/code-review/SKILL.md'), catalog: catalogText() };
+  assert.deepEqual(conflictViolations(contract), []);
+  // The old create-replaces sentence is the duplicate the update replaces.
+  assert.notDeepEqual(conflictViolations({
+    ...contract,
+    review: contract.review.replace('wakeup update <ticket> <wakeup-id> --until-pr conflicts --mode continuous', 'wakeup create <ticket> --until-pr conflicts --mode continuous'),
+  }), []);
+  // A second arming copy in another carrier is the duplicate rule.
+  assert.notDeepEqual(conflictViolations({
+    ...contract,
+    catalog: { ...contract.catalog, 'roles/reviewer.md': `${contract.catalog['roles/reviewer.md']} wakeup update <ticket> <wakeup-id> --until-pr conflicts --mode continuous` },
+  }), []);
+});
+
+// The glossary carries the changed terms, the new rewrite/lease entry and the corrected handoff
+// gate: the epic opens in `backlog`, the seat is a readback, and the release is a merge on main.
+function glossaryViolations(glossary) {
+  const violations = [];
+  for (const term of ['integration branch', 'release branch', 'slice release', 'planned owner', 'epic_progress', 'rewrite/lease'])
+    if (!glossary.includes(`**${term}**`)) violations.push(`GLOSSARY.md: no ${term} term`);
+  if (!/epic's key, forked from `main`/.test(glossary)) violations.push('GLOSSARY.md: the integration branch is not the epic key');
+  if (!/release child's key, forked from the integration branch/.test(glossary)) violations.push('GLOSSARY.md: the release branch is not the release child key');
+  if (!/created in\n?`backlog`/.test(glossary)) violations.push('GLOSSARY.md: the epic is not created in backlog');
+  if (!/readback/.test(glossary)) violations.push('GLOSSARY.md: the seat is not a readback');
+  if (/created in `todo`/.test(glossary)) violations.push('GLOSSARY.md: the epic is created in todo');
+  if (!/never an\n?open-head query/.test(glossary)) violations.push('GLOSSARY.md: the slice release still serializes');
+  return violations;
+}
+
+test('the glossary carries the changed terms and the corrected handoff gate', () => {
+  const glossary = read('GLOSSARY.md');
+  assert.deepEqual(glossaryViolations(glossary), []);
+  // An old epic-`todo` entry is the stale handoff gate.
+  assert.notDeepEqual(glossaryViolations(glossary.replace('created in `backlog`', 'created in `todo`')), []);
+  // A missing rewrite/lease entry leaves the rewrite rule unnamed.
+  assert.notDeepEqual(glossaryViolations(glossary.replace('**rewrite/lease**', '**rewrite**')), []);
+});
+
+// The release lane is the whole-slice gate: the release branch is the release child's key, the
+// order gate is `mergeStateStatus` against `main`, a remaining condition reads `ended`, and a
+// package release is outside the factory. The old prefix query and park are the negatives.
+const RELEASE_LANE = ["release branch is the release child's key", 'mergeStateStatus', 'against `main`', '`ended`', 'package release', 'outside the factory'];
+
+function releaseLaneViolations({ release, catalog }) {
+  const violations = [];
+  const text = release.replace(/\s+/g, ' ');
+  for (const phrase of RELEASE_LANE) if (!text.includes(phrase)) violations.push(`roles/release.md: no ${phrase}`);
+  if (!/--until-issue/.test(text)) violations.push('roles/release.md: no remaining condition');
+  if (/spec\/\*|gh pr list --base main|--until-issue <release>/.test(text)) violations.push('roles/release.md: keeps the serialization query or park');
+  for (const [path, body] of Object.entries(catalog))
+    if (path !== 'roles/release.md' && body.includes("release branch is the release child's key"))
+      violations.push(`${path}: second release-branch rule`);
+  return violations;
+}
+
+test('the release contract names the release branch, the order gate, ended and the package boundary', () => {
+  const contract = { release: read('roles/release.md'), catalog: catalogText() };
+  assert.deepEqual(releaseLaneViolations(contract), []);
+  // A release contract without the release branch is the old prefix head.
+  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: contract.release.replace("release branch is the release child's key", 'release branch is the integration branch') }), []);
+  // A contract without `ended` hangs a cancelled dependency.
+  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: contract.release.replace('`ended`', '`done`') }), []);
+  // A prefix query or a park is the serialization the lane removes.
+  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: `${contract.release} gh pr list --base main` }), []);
+  // A second carrier of the release-branch rule is the duplicate the contract removes.
+  assert.notDeepEqual(releaseLaneViolations({
+    ...contract,
+    catalog: { ...contract.catalog, 'roles/planner.md': `${contract.catalog['roles/planner.md']} The release branch is the release child's key.` },
+  }), []);
 });

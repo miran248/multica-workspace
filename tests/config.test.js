@@ -15,18 +15,18 @@ test('the shared contract reaches every role and the linked PR owns the handoff'
     const text = render(role, f.binding, f.root);
     assert.match(text, /^## Delivery$/m, role);
     assert.match(text, /^## Handoffs$/m, role);
-    assert.match(text, /Use Conventional Commits/, role);
+    assert.match(text, /Conventional Commits `type\(scope\): summary, TICKET`/, role);
     assert.match(text, /summary, TICKET/, role);
-    assert.match(text, /The linked PR is the delivery handoff/, role);
-    assert.match(text, /empty body is not a finding/, role);
-    assert.match(text, /last action/, role);
+    assert.match(text, /Linked PR is the handoff/, role);
+    assert.match(text, /empty body not a finding/, role);
+    assert.match(text, /move or merge last/, role);
     assert.doesNotMatch(text, /[Aa]rm auto-merge/, role);
   }
   assert.match(render('reviewer', f.binding, f.root), /a moved head or a moved base invalidates the verdict/);
   assert.match(render('reviewer', f.binding, f.root), /exit rule/);
   assert.doesNotMatch(render('reviewer', f.binding, f.root), /awaiting_merge/);
-  assert.match(render('planner', f.binding, f.root), /epic to acceptance/);
-  assert.match(render('planner', f.binding, f.root), /move the stage-1 child to `spec_progress`/);
+  assert.match(render('planner', f.binding, f.root), /Own the epic/);
+  assert.match(render('planner', f.binding, f.root), /child to `spec_progress`/);
   assert.match(render('planner', f.binding, f.root), /\| any \| spec child \| `spec_progress` \|/);
   assert.match(render('implementer', f.binding, f.root), /reviewable PR/);
   for (const role of ROLES) assert.doesNotMatch(readFileSync(join(ROOT, `roles/${role}.md`), 'utf8'), /Coordinator|squad/, role);
@@ -51,7 +51,7 @@ test('the rendered shared contract links issue references to the workspace base'
   for (const role of ROLES) {
     const text = render(role, binding);
     assert.match(text, /https:\/\/multica\.ai\/validation\/issues\/MIR-123/, role);
-    assert.match(text, /bare identifiers only in a commit subject, PR title or branch name/, role);
+    assert.match(text, /bare keys only in a commit subject, PR title or branch/, role);
     assert.doesNotMatch(text, /workspace get|workspace member/, role);
   }
   const selfHosted = render('general', { ...binding, app_url: 'https://app.example.test' });
@@ -76,8 +76,8 @@ test('no role launches foreground or focus-stealing work', t => {
   const f = fixture(t);
   for (const role of ROLES) {
     const text = render(role, f.binding, f.root);
-    assert.match(text, /never in a turn's foreground/, role);
-    assert.match(text, /non-activating and unfocused/, role);
+    assert.match(text, /never foreground/, role);
+    assert.match(text, /detached/, role);
   }
 });
 

@@ -30,11 +30,22 @@ test('every relative link in the catalog documentation resolves', () => {
   assert.deepEqual(dangling, []);
 });
 
-test('the caps table states the contract, role and comment caps', () => {
+test('the caps table keeps the binding caps and drops the review-comment caps', () => {
   const caps = read('README.md');
   assert.match(caps, /^## Brevity caps$/m);
-  for (const cap of ['340 words', '130 words', '10 rendered lines and 1 KB', '1 KB', '800 bytes'])
+  for (const cap of ['340 words', '130 words', '100 characters', '1 KB', '800 bytes'])
     assert.ok(caps.includes(cap), `README.md omits the ${cap} cap`);
+  assert.doesNotMatch(caps, /10 rendered lines/);
+  assert.doesNotMatch(caps, /findings list|evidence table/i);
+  // The shared contract carries the same two caps and no comment cap.
+  const shared = read('shared/instructions.md');
+  assert.match(shared, /finding 1 KB/);
+  assert.match(shared, /packet 800 bytes/);
+  assert.doesNotMatch(shared, /10 rendered lines/);
+  assert.doesNotMatch(shared, /findings list|evidence table/i);
+  // The review keeps its three headings and one-line findings.
+  for (const heading of ['## What', '## Evidence', '## Next']) assert.ok(shared.includes(heading), `shared omits ${heading}`);
+  assert.match(shared, /one-line findings/);
 });
 
 test('every ADR is numbered and one decision long', () => {

@@ -33,17 +33,17 @@ repository adopts the integration branch:
 
 | Prerequisite | State | Why |
 | --- | --- | --- |
-| `spec/*` branch protection | unprotected | the integration branch is scratch: its only PR is the spec approval, it deploys nothing, and the release merge deletes it |
-| **Automatically delete head branches** | on | a merge from the GitHub UI does not delete the head branch itself, and the release merge deletes `spec/<epic>` |
+| integration branch protection | unprotected | the branch is the epic's key and scratch: its only PR is the spec approval, it deploys nothing, and the Planner deletes it on acceptance |
+| **Automatically delete head branches** | on | a merge from the GitHub UI does not delete the head branch itself, and the release merge deletes the release branch |
 | **Allow auto-merge** | off | an armed pull request merges on its checks and completes the linked ticket, bypassing the human gates |
-| **Require branches to be up to date** on `main` | on | the release PASS is a claim about the tree that merges, so behind or dirty must fail |
+| **Require branches to be up to date** on `main` | on | release order is this requirement plus the Reviewer's `mergeStateStatus`; behind or dirty must fail |
 
 The CI trigger shape is part of the same operator state:
 
 | Trigger | Shape | Why |
 | --- | --- | --- |
 | `push` | `branches: [main]` | the post-merge run is the only check of the merged tree and the deploy/bookkeeping point |
-| `pull_request` | `branches: [main]` | the release PR is the first automated check of the integrated tree; the spec PR and the ticket PRs into `spec/<epic>` cost no run |
+| `pull_request` | `branches: [main]` | the release PR is the first automated check of the integrated tree; the spec PR and the ticket PRs into the integration branch cost no run |
 
 `.github/workflows/validate.yml` in this repository is the reference implementation: it runs on
 `push: branches: [main]` and on `pull_request: branches: [main]`. Filtering an N-ticket spec to
@@ -67,7 +67,9 @@ those triggers reduces it from `2N + 2` runs to two — the release PR and the p
   enabled schedule trigger and refuses when it finds more than one.
 - Repository settings are operator state. Apply the four prerequisites above on every repository
   a Factory project uses: the catalog cannot set repository settings, and a merge from the
-  GitHub UI does not delete the head branch itself.
+  GitHub UI does not delete the head branch itself. Release order is the up-to-date requirement
+  and the Reviewer's `mergeStateStatus` read; there is no open-head query and no release park, so
+  a repository without the requirement is an operator delta to report, not a gap to fill.
 - Leave **Allow auto-merge** off. Auto-merge is a pull-request setting, not a ticket status: an
   armed pull request merges as soon as its checks pass, and the platform completes the linked
   ticket on merge — including an `awaiting_merge` ticket and a spec child.

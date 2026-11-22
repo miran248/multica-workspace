@@ -91,16 +91,18 @@ credentials or network needed. `just test` runs the suite.
 
 ## Brevity caps
 
-Every contract is capped; a comment over its cap is a blocking review finding.
+Every contract is capped; a finding or packet over its cap is a blocking review finding.
 
 | Cap | Applies to | Checked by |
 | --- | --- | --- |
 | 340 words | `shared/instructions.md` | `tests/brevity.test.js` |
 | 130 words | each `roles/<role>.md` | `tests/brevity.test.js` |
 | 100 characters | a template description | `tests/brevity.test.js` |
-| 10 rendered lines and 1 KB | a comment (verdict, finding, sweep note) | review, per the shared `## Handoffs` |
-| 1 KB | a findings list or an evidence table | review, per the shared `## Handoffs` |
+| 1 KB | a single finding | review, per the shared `## Handoffs` |
 | 800 bytes | a human-facing decision packet | review, per the shared `## Handoffs` |
+
+The review comment itself carries no line or byte cap: its `## What` / `## Evidence` /
+`## Next` shape and its one-line findings stay, and the evidence is written for the finding.
 
 ## Skills and provenance
 
