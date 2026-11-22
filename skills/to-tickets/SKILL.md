@@ -56,7 +56,7 @@ Publish one Multica child issue per ticket in stage order. Create every child `-
 - **Every child is created `--status backlog`; the promotion wake starts the frontier by the four-row mapping in `roles/planner.md`.** A non-backlog status on an agent-assigned issue enqueues its assignee at create time, so a started child would begin work before the merge approved it. Never create a child `todo`, `in_progress`, `human_progress` or `release_progress` in the spec run.
 - **Publish the whole set before the spec child closes.** The platform re-evaluates the stage barrier when the child set changes; a set that is final before stage 1 closes wakes the Planner once. Creating delivery children after the merge is what produces the duplicate wake.
 
-**Record the base in every ticket body.** Write `Branch: <epic-key>` at the top of the body: every published child targets the slice's integration branch, so the line is always present. A branch name, never a sha: the tip moves as tickets merge, and the body is what a fresh Implementer run opens. Every published slice takes the one topology, and its release child is the final publication: created last, in `backlog`, in the final stage, never in a started status. A single-ticket breakdown is the smallest epic — one delivery child and the release. The release body carries only its instance — the base/source branch `<epic-key>` → `main`, the included children with their keys and merged PRs, and the `Touch:` union; the release procedure lives once in `roles/release.md`. Create no child after the merge that approves its set.
+**Record the base in every ticket body.** Write `Branch: <epic-key>` at the top of the body: every published child targets the slice's integration branch, so the line is always present. A branch name, never a sha: the tip moves as tickets merge, and the body is what a fresh Implementer run opens. Every published slice takes the one topology, and its release child is the final publication: created last, in `backlog`, in the final stage, never in a started status. A single-ticket breakdown is the smallest epic — one delivery child and the release. The release body carries only its instance — the release branch `<release-key>` → `main`, the included children with their keys and merged PRs, and the `Touch:` union; the release procedure lives once in `roles/release.md`. Create no child after the merge that approves its set.
 
 Check the staged layout with `multica issue children <parent-id>` before opening the spec PR: every child must be `backlog`, and every later stage must be higher than the stage that precedes it.
 
@@ -65,6 +65,8 @@ Do NOT close or modify any parent issue.
 <issue-template>
 
 Branch: <epic-key> — the integration branch this ticket's pull request targets; always present on a published child.
+
+Link every issue this body names as its workspace URL, never a bare key; the review reads the PR body, the proposed breakdown and the comments.
 
 ## What
 

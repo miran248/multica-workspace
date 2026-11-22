@@ -366,7 +366,7 @@ test('the catalog declares no document and a declared document must have a file'
 // Standards. The catalog's own Markdown keeps bare keys and never a workspace URL.
 const LIVE_TEXT = ['PR bod', 'proposed breakdown', 'spec comment'];
 
-function liveTextViolations({ shared, review, catalog }) {
+function liveTextViolations({ shared, review, tickets, catalog }) {
   const violations = [];
   const ownership = /^## Ownership\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
   for (const phrase of LIVE_TEXT) if (!ownership.includes(phrase)) violations.push(`shared Ownership: no ${phrase}`);
@@ -377,18 +377,21 @@ function liveTextViolations({ shared, review, catalog }) {
   for (const phrase of LIVE_TEXT) if (!checks.includes(phrase)) violations.push(`code-review: does not read ${phrase}`);
   if (!/bare ticket key/.test(checks)) violations.push('code-review: a bare key does not fail');
   if (!/Standards/.test(checks)) violations.push('code-review: a bare key is not a Standards finding');
+  if (!/workspace URL/.test(tickets) || !/bare key/.test(tickets)) violations.push('to-tickets: the template does not point at the live-text rule');
   for (const [path, text] of Object.entries(catalog))
     if (path !== 'shared/instructions.md' && text.includes('{{workspace_url}}')) violations.push(`${path}: a catalog file embeds a workspace URL`);
   return violations;
 }
 
 test('the live text links every ticket and the review reads the three places', () => {
-  const contract = { shared: read('shared/instructions.md'), review: read('skills/code-review/SKILL.md'), catalog: catalogText() };
+  const contract = { shared: read('shared/instructions.md'), review: read('skills/code-review/SKILL.md'), tickets: read('skills/to-tickets/SKILL.md'), catalog: catalogText() };
   assert.deepEqual(liveTextViolations(contract), []);
   // A shared rule that omits the comments leaves the spec text unreviewed.
   assert.notDeepEqual(liveTextViolations({ ...contract, shared: contract.shared.replace('spec comments', 'comments') }), []);
   // A review that stops at the PR body lets a bare key through the other two places.
   assert.notDeepEqual(liveTextViolations({ ...contract, review: contract.review.replace(', the proposed breakdown and spec comments', '') }), []);
+  // A template without the pointer leaves every published body without the read.
+  assert.notDeepEqual(liveTextViolations({ ...contract, tickets: contract.tickets.replace('workspace URL, never a bare key', 'key') }), []);
   // A catalog file that embeds the live base breaks the anonymity rule.
   assert.notDeepEqual(liveTextViolations({
     ...contract,
@@ -401,12 +404,12 @@ test('the live text links every ticket and the review reads the three places', (
 function conflictViolations({ review, catalog }) {
   const violations = [];
   if (!/wakeup list <ticket>/.test(review)) violations.push('code-review: no wakeup list');
-  if (!/wakeup update <ticket> --until-pr conflicts --mode continuous/.test(review)) violations.push('code-review: no wakeup update');
+  if (!/wakeup update <ticket> <wakeup-id> --until-pr conflicts --mode continuous/.test(review)) violations.push('code-review: no wakeup update');
   if (!/update.*replaces one rule|update replaces one rule/s.test(review)) violations.push('code-review: update does not replace');
   if (!/create.*only when no rule exists/s.test(review)) violations.push('code-review: create is not the absent-rule case');
   if (/wakeup create <ticket> --until-pr conflicts --mode continuous/.test(review)) violations.push('code-review: re-arms with wakeup create');
   for (const [path, text] of Object.entries(catalog))
-    if (path !== 'skills/code-review/SKILL.md' && /wakeup (create|update) <ticket> --until-pr conflicts/.test(text))
+    if (path !== 'skills/code-review/SKILL.md' && /wakeup (create|update) <ticket>( <wakeup-id>)? --until-pr conflicts/.test(text))
       violations.push(`${path}: second conflicts arming`);
   return violations;
 }
@@ -417,12 +420,12 @@ test('the conflicts rule is found and updated in place, never re-created', () =>
   // The old create-replaces sentence is the duplicate the update replaces.
   assert.notDeepEqual(conflictViolations({
     ...contract,
-    review: contract.review.replace('wakeup update <ticket> --until-pr conflicts --mode continuous', 'wakeup create <ticket> --until-pr conflicts --mode continuous'),
+    review: contract.review.replace('wakeup update <ticket> <wakeup-id> --until-pr conflicts --mode continuous', 'wakeup create <ticket> --until-pr conflicts --mode continuous'),
   }), []);
   // A second arming copy in another carrier is the duplicate rule.
   assert.notDeepEqual(conflictViolations({
     ...contract,
-    catalog: { ...contract.catalog, 'roles/reviewer.md': `${contract.catalog['roles/reviewer.md']} wakeup update <ticket> --until-pr conflicts --mode continuous` },
+    catalog: { ...contract.catalog, 'roles/reviewer.md': `${contract.catalog['roles/reviewer.md']} wakeup update <ticket> <wakeup-id> --until-pr conflicts --mode continuous` },
   }), []);
 });
 
@@ -448,4 +451,37 @@ test('the glossary carries the changed terms and the corrected handoff gate', ()
   assert.notDeepEqual(glossaryViolations(glossary.replace('created in `backlog`', 'created in `todo`')), []);
   // A missing rewrite/lease entry leaves the rewrite rule unnamed.
   assert.notDeepEqual(glossaryViolations(glossary.replace('**rewrite/lease**', '**rewrite**')), []);
+});
+
+// The release lane is the whole-slice gate: the release branch is the release child's key, the
+// order gate is `mergeStateStatus` against `main`, a remaining condition reads `ended`, and a
+// package release is outside the factory. The old prefix query and park are the negatives.
+const RELEASE_LANE = ["release branch is the release child's key", 'mergeStateStatus', 'against `main`', '`ended`', 'package release', 'outside the factory'];
+
+function releaseLaneViolations({ release, catalog }) {
+  const violations = [];
+  const text = release.replace(/\s+/g, ' ');
+  for (const phrase of RELEASE_LANE) if (!text.includes(phrase)) violations.push(`roles/release.md: no ${phrase}`);
+  if (!/--until-issue/.test(text)) violations.push('roles/release.md: no remaining condition');
+  if (/spec\/\*|gh pr list --base main|--until-issue <release>/.test(text)) violations.push('roles/release.md: keeps the serialization query or park');
+  for (const [path, body] of Object.entries(catalog))
+    if (path !== 'roles/release.md' && body.includes("release branch is the release child's key"))
+      violations.push(`${path}: second release-branch rule`);
+  return violations;
+}
+
+test('the release contract names the release branch, the order gate, ended and the package boundary', () => {
+  const contract = { release: read('roles/release.md'), catalog: catalogText() };
+  assert.deepEqual(releaseLaneViolations(contract), []);
+  // A release contract without the release branch is the old prefix head.
+  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: contract.release.replace("release branch is the release child's key", 'release branch is the integration branch') }), []);
+  // A contract without `ended` hangs a cancelled dependency.
+  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: contract.release.replace('`ended`', '`done`') }), []);
+  // A prefix query or a park is the serialization the lane removes.
+  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: `${contract.release} gh pr list --base main` }), []);
+  // A second carrier of the release-branch rule is the duplicate the contract removes.
+  assert.notDeepEqual(releaseLaneViolations({
+    ...contract,
+    catalog: { ...contract.catalog, 'roles/planner.md': `${contract.catalog['roles/planner.md']} The release branch is the release child's key.` },
+  }), []);
 });

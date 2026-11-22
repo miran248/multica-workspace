@@ -366,10 +366,11 @@ function specRunViolations({ planner, step, tickets, specSkill }) {
   if (!/no child is unassigned/.test(tickets)) violations.push('to-tickets: a child may be unassigned');
   if (!/release child is the final publication: created last, in `backlog`, in the final stage/.test(tickets))
     violations.push('to-tickets: release child is not last, backlog and final stage');
-  for (const clause of ['release procedure', 'base/source branch', 'included children', '`Touch:` union', 'Create no child after the merge that approves its set'])
+  for (const clause of ['release procedure', 'release branch', 'included children', '`Touch:` union', 'Create no child after the merge that approves its set'])
     if (!tickets.includes(clause)) violations.push(`to-tickets: missing ${clause}`);
   for (const term of DELETED_TOPOLOGY) if (tickets.includes(term)) violations.push('to-tickets: reintroduces the deleted topology');
   if (tickets.includes(PREFIXED_HEAD)) violations.push('to-tickets: a prefixed head remains');
+  if (!tickets.includes('release branch `<release-key>` → `main`')) violations.push('to-tickets: the release head is not the release key');
   // The spec skill records and targets the integration branch, never main.
   if (!/records `integration: <epic-key>`/.test(specSkill)) violations.push('to-spec: no integration record');
   if (!/forks that integration branch from `main` at the spec sha/.test(specSkill)) violations.push('to-spec: no fork from main');
@@ -641,7 +642,7 @@ function mergeableViolations({ shared, codeReview, catalog, columns }) {
   const delivery = /^## Delivery\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
   if (!/[Aa]t every review/.test(review)) violations.push('code-review: the condition is not kept at every review');
   if (!review.includes('multica issue wakeup list <ticket>')) violations.push('code-review: no wakeup list');
-  if (!review.includes('multica issue wakeup update <ticket> --until-pr conflicts --mode continuous --agent-id <seat>'))
+  if (!review.includes('multica issue wakeup update <ticket> <wakeup-id> --until-pr conflicts --mode continuous --agent-id <seat>'))
     violations.push('code-review: no wakeup update');
   if (!/replaces one rule|replace its whole configuration/.test(review)) violations.push('code-review: update does not replace');
   if (/wakeup create <ticket> --until-pr conflicts --mode continuous/.test(review)) violations.push('code-review: re-arms with wakeup create');
@@ -679,7 +680,7 @@ test('the conflicts rule is found and updated in place, never re-created', () =>
   const splitInRole = { ...contract, catalog: { ...contract.catalog, 'roles/implementer.md': `${contract.catalog['roles/implementer.md']} Lockfile/disjoint hunks` } };
   assert.notDeepEqual(mergeableViolations(splitInRole), []);
   // The old create-replaces command is the duplicate the update replaces.
-  const rearmed = { ...contract, codeReview: contract.codeReview.replace('multica issue wakeup update <ticket> --until-pr conflicts --mode continuous --agent-id <seat>', 'multica issue wakeup create <ticket> --until-pr conflicts --mode continuous --agent-id <seat>') };
+  const rearmed = { ...contract, codeReview: contract.codeReview.replace('multica issue wakeup update <ticket> <wakeup-id> --until-pr conflicts --mode continuous --agent-id <seat>', 'multica issue wakeup create <ticket> --until-pr conflicts --mode continuous --agent-id <seat>') };
   assert.notDeepEqual(mergeableViolations(rearmed), []);
   // Removing the delta re-review breaks the void-PASS contract.
   const fullReReview = { ...contract, codeReview: contract.codeReview.replace('delta `H...H\'`', 'full diff') };
@@ -715,6 +716,8 @@ function guideViolations({ guide: text, apply, workflowFile }) {
     ['the spec PR base', /targets (it|that branch|the integration branch)/],
     ['the delivery base', /`Branch: <epic-key>`/],
     ['the release child', /release child/],
+    ['the release head', /release child: <release-key> → main/],
+    ['integration branch cleanup', /Planner deletes the integration branch when it accepts/],
     ['one squash', /one squash/],
     ['integration branch scratch', /integration branch is scratch/],
     ['branch-scoped done', /branch-scoped `done`/],

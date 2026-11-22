@@ -54,9 +54,10 @@ At every review, before the verdict, keep one continuous condition on the ticket
 
     multica issue wakeup list <ticket>
 
-and if the conflicts rule exists, replace its whole configuration with
+and read the conflicts rule's id from the list. If the rule exists, replace its whole
+configuration with
 
-    multica issue wakeup update <ticket> --until-pr conflicts --mode continuous --agent-id <seat>
+    multica issue wakeup update <ticket> <wakeup-id> --until-pr conflicts --mode continuous --agent-id <seat>
 
 `update` replaces one rule; use `create` only when no rule exists, never to re-arm. The condition
 survives the PASS into `awaiting_merge`. The seat is the one that owns the work column: the

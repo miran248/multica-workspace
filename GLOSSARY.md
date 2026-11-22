@@ -163,7 +163,7 @@ PR is never linked to the epic.
 
 **integration branch** — the epic's key, forked from `main` at the spec sha, and the base of the
 spec PR and of every delivery PR in that spec. It is scratch: unprotected, it deploys nothing,
-and the release merge deletes it. It is never a pull request's head.
+and the Planner deletes it when it accepts the epic. It is never a pull request's head.
 
 **release branch** — the release child's key, forked from the integration branch at the release
 head and the head of the release PR into `main`. The release PR is the only path from the slice's
