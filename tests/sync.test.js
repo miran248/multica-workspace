@@ -30,7 +30,7 @@ test('apply creates the five-role roster and the factory workflow, binds the pro
   assert.equal(f.state.projectWorkflows[project], f.state.workflows[0].id);
   for (const agent of f.state.agents) {
     assert.equal(agent.runtime_id, id(2));
-    assert.equal(agent.model, 'deepseek-official/deepseek-flash');
+    assert.equal(agent.model, 'deepseek/deepseek-flash');
     assert.equal(agent.thinking_level, agent.name === 'release' ? 'low' : 'high');
     assert.match(agent.instructions, /Conventional Commits `type\(scope\): summary, TICKET`/);
     assert.match(agent.instructions, /github\.com\/example\/multica-workspace/);
@@ -145,7 +145,7 @@ test('a partial run re-plans from live state and corrects third-state drift', t 
   assert.throws(() => apply(f, { runner }), /stop/);
   f.state.agents[0].model = 'drifted';
   apply(f);
-  assert.equal(f.state.agents[0].model, 'deepseek-official/deepseek-flash');
+  assert.equal(f.state.agents[0].model, 'deepseek/deepseek-flash');
   assert.equal(journal(f).status, 'verified');
 });
 

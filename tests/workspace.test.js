@@ -6,13 +6,13 @@ import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { resolveWorkspace, normalizeRepository, selectRuntime, resolveOwners } from '../scripts/workspace.js';
 import { deploy, stateDirectory, withWorkspaceLock, sourceIdentity } from '../scripts/deploy.js';
-import { ROLES } from '../scripts/config.js';
+import { ROLES, readJSON } from '../scripts/config.js';
 import { fixture, apply, writes } from './support/helpers.js';
 import { id } from './support/platform.js';
 
 const runner = f => (...args) => f.runner(...args);
 
-test('the live binding uses the member user_id, one online Dsh runtime for every role and the origin URL', t => {
+test('the live binding uses the member user_id, the single online catalog-provider runtime for every role and the origin URL', t => {
   const f = fixture(t);
   const { binding, runtime, owners } = resolveWorkspace({ root: f.root, runner: runner(f), repository: 'https://github.com/acme/catalog' });
   assert.equal(binding.workspace_id, id(1));
@@ -21,20 +21,33 @@ test('the live binding uses the member user_id, one online Dsh runtime for every
   assert.equal(binding.identity.workspace_slug, 'fixture');
   assert.equal(binding.repository, 'https://github.com/acme/catalog');
   assert.equal(runtime.id, id(2));
+  assert.equal(runtime.provider, 'pi');
   assert.deepEqual(Object.keys(binding.agent_runtimes).sort(), [...ROLES].sort());
   for (const role of ROLES) assert.equal(binding.agent_runtimes[role], id(2));
   assert.equal(owners[0].name, 'miran');
 });
 
-test('runtime selection is provider- and status-scoped', () => {
-  const online = { id: id(2), workspace_id: id(1), provider: 'dsh', status: 'online' };
-  const offline = { id: id(3), workspace_id: id(1), provider: 'dsh', status: 'offline' };
-  const codex = { id: id(4), workspace_id: id(1), provider: 'codex', status: 'online' };
-  const other = { id: id(5), workspace_id: id(9), provider: 'dsh', status: 'online' };
-  assert.equal(selectRuntime([online, offline, codex, other], id(1)).id, online.id);
-  assert.throws(() => selectRuntime([offline, codex, other], id(1)), /No online Dsh runtime/);
-  assert.throws(() => selectRuntime([online, { ...online, id: id(6) }], id(1)), /Multiple online Dsh runtimes/);
-  assert.equal(selectRuntime([online, { ...online, id: id(6) }], id(1), id(6)).id, id(6));
+test('the runtime selector requires exactly one online runtime of the configured provider', () => {
+  const pi = { id: id(2), workspace_id: id(1), provider: 'pi', status: 'online' };
+  const piOffline = { id: id(3), workspace_id: id(1), provider: 'pi', status: 'offline' };
+  const dsh = { id: id(4), workspace_id: id(1), provider: 'dsh', status: 'online' };
+  const codex = { id: id(5), workspace_id: id(1), provider: 'codex', status: 'online' };
+  const foreign = { id: id(6), workspace_id: id(9), provider: 'pi', status: 'online' };
+  assert.equal(selectRuntime([pi, piOffline, dsh, codex, foreign], id(1), 'pi').id, pi.id);
+  assert.equal(selectRuntime([pi, dsh], id(1), 'dsh').id, dsh.id);
+  assert.throws(() => selectRuntime([piOffline, dsh, codex, foreign], id(1), 'pi'), /No online pi runtime/);
+  assert.throws(() => selectRuntime([pi, { ...pi, id: id(7) }], id(1), 'pi'), /Multiple online pi runtimes/);
+  assert.throws(() => selectRuntime([pi], id(1)), /No required runtime provider/);
+});
+
+test('the selector takes the provider from the catalog, so a pre-cutover dsh workspace still resolves', t => {
+  const f = fixture(t);
+  const path = join(f.root, 'templates/default.json'), catalog = readJSON(path);
+  catalog.defaults.required_provider = 'dsh';
+  catalog.defaults.model = 'deepseek-official/deepseek-flash';
+  writeFileSync(path, JSON.stringify(catalog));
+  f.state.runtime.provider = 'dsh';
+  assert.equal(resolveWorkspace({ root: f.root, runner: runner(f) }).runtime.provider, 'dsh');
 });
 
 test('owners come from role=owner and user_id, sorted for determinism', () => {

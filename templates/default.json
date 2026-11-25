@@ -50,8 +50,8 @@
     "config-sync": "templates/autopilots/config-sync.json"
   },
   "defaults": {
-    "model": "deepseek-official/deepseek-flash",
-    "required_provider": "dsh",
+    "model": "deepseek/deepseek-flash",
+    "required_provider": "pi",
     "thinking_level": "high"
   },
   "documents": {},

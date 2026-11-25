@@ -91,7 +91,8 @@ export function buildPlan(binding, { root = ROOT, runner, keepUnmanaged = false 
   if (current.id !== binding.workspace_id) throw new Error('Workspace changed during the run; start again from the target runtime');
   const call = (...args) => runner(binding.workspace_id, ...args);
   const runtimes = unpack(call('runtime', 'list'), 'runtimes');
-  for (const [role, id] of Object.entries(binding.agent_runtimes)) if (!runtimes.some(r => r.id === id && r.workspace_id === binding.workspace_id && (!r.provider || r.provider === 'dsh'))) throw new Error(`Runtime outside target workspace: ${role}`);
+  const provider = resolved.shared.catalog.defaults.required_provider;
+  for (const [role, id] of Object.entries(binding.agent_runtimes)) if (!runtimes.some(r => r.id === id && r.workspace_id === binding.workspace_id && (r.provider ?? 'dsh') === provider)) throw new Error(`Runtime outside target workspace: ${role}`);
   const members = unpack(call('workspace', 'member', 'list'), 'members');
   if (!members.some(m => (m.user_id ?? m.id) === binding.human_user_id)) throw new Error('Approval owner is not a member of the target workspace');
   const live = discover(call);

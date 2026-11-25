@@ -27,8 +27,8 @@ platform floor:
 | Refusal | Fix |
 | --- | --- |
 | no owner | add an owner to the workspace |
-| no online Dsh runtime | start the Dsh runtime |
-| several online Dsh runtimes | `just sync --runtime-id <id>` or `RUNTIME=<id>` |
+| no online runtime of the catalog's provider | start the runtime for `defaults.required_provider` (`pi`, `dsh` or `codex`) |
+| more than one online runtime of that provider | stop all but one; the selector requires exactly one and offers no `--runtime-id` override |
 | no `origin` | `git remote add origin <url>`; the rendered prompt uses it |
 | app not on `https://multica.ai` | `just sync --app-url <origin>` or `MULTICA_APP_URL=<origin>`; an https origin, no path, query, fragment or credentials |
 | CLI or runtime below the floor | upgrade both to Multica 0.13.0 or newer; the refusal names the syncing CLI version and the bound runtime's `metadata.cli_version` |

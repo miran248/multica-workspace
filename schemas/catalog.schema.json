@@ -27,6 +27,7 @@
         },
         "required_provider": {
           "enum": [
+            "pi",
             "dsh",
             "codex"
           ]

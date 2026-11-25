@@ -163,3 +163,27 @@ test('duplicate label names and duplicate workflow names refuse offline', t => {
   writeFileSync(path, JSON.stringify(catalog));
   assert.throws(() => resolve(f.binding, f.root), /Duplicate label name/);
 });
+
+test('the catalog defaults name the Pi provider and the model id the pinned image lists', () => {
+  const defaults = readJSON(join(ROOT, 'templates/default.json')).defaults;
+  assert.equal(defaults.required_provider, 'pi');
+  assert.equal(defaults.model, 'deepseek/deepseek-flash');
+  assert.equal(defaults.thinking_level, 'high');
+  assert.doesNotMatch(readFileSync(join(ROOT, 'templates/default.json'), 'utf8'), /deepseek-official/);
+});
+
+test('the flash-first guard asserts the configured provider and the model family, not a literal', t => {
+  const f = fixture(t);
+  const path = join(f.root, 'templates/default.json');
+  const edit = mutate => { const catalog = readJSON(path); mutate(catalog.defaults); writeFileSync(path, JSON.stringify(catalog)); };
+  edit(defaults => { defaults.required_provider = 'dsh'; defaults.model = 'deepseek-official/deepseek-flash'; });
+  assert.doesNotThrow(() => resolve(f.binding, f.root));
+  edit(defaults => { defaults.model = 'deepseek/deepseek-v4-pro'; });
+  assert.doesNotThrow(() => resolve(f.binding, f.root));
+  edit(defaults => { defaults.model = 'openai/gpt-5'; });
+  assert.throws(() => resolve(f.binding, f.root), /DeepSeek-family/);
+  edit(defaults => { defaults.model = 'deepseek/deepseek-flash'; defaults.thinking_level = 'low'; });
+  assert.throws(() => resolve(f.binding, f.root), /high thinking/);
+  edit(defaults => { defaults.thinking_level = 'high'; defaults.required_provider = 'ollama'; });
+  assert.throws(() => resolve(f.binding, f.root), /Invalid catalog/);
+});
