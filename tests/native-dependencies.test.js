@@ -137,6 +137,13 @@ test('the stale sweep is gone from every carrier and explicit in the ledger', ()
   const pins = readdirSync(join(ROOT, 'tests')).filter(name => name.endsWith('.js') && name !== 'native-dependencies.test.js')
     .filter(name => /stale-sweep|Stale sweep|stale-review guard/.test(read(`tests/${name}`)));
   assert.deepEqual(pins, []);
+  // The standard and the ledger guide state the wildcard exception the event relies on; a
+  // slug-only rule is the contradiction the first review found.
+  for (const path of ['AGENTS.md', 'migrations/README.md']) {
+    assert.match(read(path), /renders identically\s+in\s+every workspace/, `${path} omits the wildcard's condition`);
+    assert.match(read(path), /anonymous catalog cannot name/, `${path} omits why the wildcard is needed`);
+    assert.ok(read(path).includes('"*"'), `${path} does not show the wildcard scope`);
+  }
 });
 
 test('the catalog declares one platform floor and the resolver refuses below it', () => {
