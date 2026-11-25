@@ -127,9 +127,9 @@ Describe what the platform does, keep the approved direction, and let the contra
 `--blocked-by` relation. A promoted ticket with an open blocker starts nothing; it stays in its
 lane, or in `backlog` until promoted, and the platform starts the assignee when the last blocker
 ends. `blocked` is triage only: missing information or an external condition. The rule lives once
-in shared `## Handoffs` or `## Delivery` as the owner of waits, with the workflow's `blocked`
-instruction and the Planner's triage route acting on it; no carrier parks a dependency in
-`blocked`, and no carrier registers a condition for it.
+in shared `## Delivery`; the workflow's `blocked` instruction, the guide and `roles/planner.md`
+act on it and do not restate it. No carrier parks a dependency in `blocked`, and no carrier
+registers a condition for it.
 
 **D2 — The dependency names an epic, on the delivery children that need it.** The edge is the
 other slice's epic — the group, the integration identity and the place whose `done` lands after
@@ -212,8 +212,8 @@ set, `tests/docs.test.js` reads the knowledge layer and `tests/anonymity.test.js
 catalog free of live identity. The tests assert the contract a run renders and the guide a human
 reads, never the bytes of a spec or an internal helper.
 
-- **The blocker rule is pinned where it is read.** Shared carries the wait carrier and the
-  triage-only `blocked`; the workflow's `blocked` instruction names the blocker and no
+- **The blocker rule is pinned where it is read.** Shared `## Delivery` carries the wait carrier
+  and the triage-only `blocked`; the workflow's `blocked` instruction names the blocker and no
   `--until-issue`; the guide's blocked and dependency rows say the ticket stays in its lane. A
   carrier that parks a dependency in `blocked`, or a column that registers a condition for it,
   fails the suite.

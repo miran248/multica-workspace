@@ -47,7 +47,7 @@ A wait on another issue is a **blocker**, and the blocker is the only carrier:
   carried for it. What remains in the release order is the repository's up-to-date requirement and
   the Reviewer's `mergeStateStatus` read against `main`; behind or dirty is a FAIL.
 
-The rule lives once in shared `## Handoffs` or `## Delivery`; the workflow's `blocked` instruction,
+The rule lives once in shared `## Delivery`; the workflow's `blocked` instruction,
 `roles/planner.md`, `roles/implementer.md`, `skills/to-tickets`, `roles/release.md` and the guide
 act on it and do not restate it.
 
