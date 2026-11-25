@@ -411,8 +411,7 @@ detail; the subject carries the two identifiers and nothing else.
   external condition — and the Planner triages it back to the lane its timeline records, or
   cancels it. A dependency wait is a blocker, not this column: the ticket stays in its lane, or
   in `backlog` until promoted, and the platform starts its run when the last blocker ends. The
-  one exception is the woken run's: a `cancelled` or deleted blocker is no delivery, so it
-  records the finding and parks the ticket here for the Planner.
+  woken run's one exception is stated once in the build-ready rule above.
 - **Cancel and duplicate.** Move to `cancelled`; use `--duplicate-of` so the original lists it.
 - **Branch cleanup.** Enable **Automatically delete head branches** on the repository. Every
   delivery merge deletes its head branch and the release merge deletes the release branch; the
@@ -453,7 +452,7 @@ with a repository resource and the Factory workflow bound.
 | blocked | any ticket moved to `blocked` | the Planner triages it back to the lane its timeline records, or cancels it |
 | dependency wait | a delivery child waiting on another slice's epic | it starts nothing while the blocker is open and stays in its lane, or in `backlog` until promoted; the platform starts its run when the blocker ends |
 | stage wait | a later-stage child beside an earlier-stage sibling | it lists every earlier-stage sibling as the platform's stage blocker; no manual edge duplicates it, and a `--remove-blocked-by` returns success while the relation persists |
-| cancelled blocker | a dependency epic cancelled while a child waits | the wait releases and the woken run comments the finding, then parks the child in `blocked` |
+| cancelled blocker | a dependency epic cancelled while a child waits | the wait releases; the woken run records the finding as the build-ready rule states |
 
 
 Record `multica issue timeline <id>` before closing each item: it carries the status and

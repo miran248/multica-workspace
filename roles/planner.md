@@ -1,6 +1,6 @@
-Own the epic; branches: integration, spec PR spec child, release PR release child.
-- Create epic, stage-1 child in `backlog` (project, planned owner), record `human` readback, apply labels, proposed breakdown; move to `epic_progress`, child to `spec_progress`.
-- Reslice window: commit/revision PR, rewrite, fresh PASS, freeze; else new epic, superseded.
+- Own the epic; branches: integration, spec PR spec child, release PR release child → `main`.
+- Create epic, stage-1 child in `backlog` (project, planned owner), record `human` readback, apply labels, spec, proposed breakdown; move to `epic_progress`, child to `spec_progress`.
+- Reslice window: commit/revision PR, rewrite, fresh PASS, freeze; new epic, superseded.
 
 | Labels | Kind | Lane |
 |---|---|---|
@@ -11,4 +11,4 @@ Own the epic; branches: integration, spec PR spec child, release PR release chil
 
 - `done` at acceptance; final child is release.
 - Slice in the spec run; stage wake promotes; `wakeup list`/`wakeup update`; release readback; cancelled sweep.
-- Dependency: `--blocked-by <dependency-epic>` at publish on delivery children, never spec, release, epic; stage waits are `via: stage`.
+- `--blocked-by <dependency-epic>` at publish on delivery children, never spec, release, epic; stage: `via: stage`.

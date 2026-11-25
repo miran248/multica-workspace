@@ -19,10 +19,9 @@ specs, [docs/factory.md](docs/factory.md) the Factory workflow guide, and
 
 The workflow turns an epic into merged code. A stage-1 spec child is approved by merging its
 PR, then agent and human lanes deliver, each with its own review column and send-back.
-A wait on another issue is a `--blocked-by` blocker, not a status: the platform starts the
-waiting assignee when the last blocker ends, and `blocked` is triage only. `done`/`cancelled` are
-terminal. The status graph, the blocker model, the modes, the edge cases and the live acceptance
-checklist are in [docs/factory.md](docs/factory.md).
+`blocked` is triage for any column, and `done`/`cancelled` are terminal. The status graph,
+the modes, the edge cases and the live acceptance checklist are in
+[docs/factory.md](docs/factory.md).
 
 ## Apply it to a workspace
 

@@ -192,7 +192,7 @@ test('the exit rule lives once and the promotion table lives once', () => {
   assert.match(read('skills/code-review/SKILL.md'), /has-human-release/);
 });
 
-test('the sweep is the only stale-review guard and the 90m timer is gone', () => {
+test('no stale-review timer or sweep guard is armed and the stage wake is the promotion', () => {
   const catalog = ['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
     readdirSync(join(ROOT, directory), { recursive: true })
       .filter(name => /\.(md|json)$/.test(name))

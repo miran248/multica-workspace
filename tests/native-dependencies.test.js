@@ -37,7 +37,7 @@ function waitViolations({ shared, implementer, planner, release, tickets, specSk
   if (!/release[^.]*`main`/.test(implementer)) violations.push('roles/implementer.md: no release verification');
   for (const phrase of ['fetch', 'ancestor-check', 'merge `main`', 'retry once'])
     if (!implementer.includes(phrase)) violations.push(`roles/implementer.md: no ${phrase}`);
-  if (!/`cancelled` blocker/.test(implementer)) violations.push('roles/implementer.md: a cancelled blocker is not parked');
+  if (!/`cancelled` or deleted blocker/.test(implementer)) violations.push('roles/implementer.md: a cancelled or deleted blocker is not parked');
   if (!/`blocked`/.test(implementer)) violations.push('roles/implementer.md: the cancelled blocker has no parking move');
 
   if (!/--blocked-by <dependency-epic>/.test(planner)) violations.push('roles/planner.md: no epic-named edge');
@@ -68,6 +68,7 @@ function waitViolations({ shared, implementer, planner, release, tickets, specSk
     if (!guide.includes(phrase)) violations.push(`docs/factory.md: no ${phrase}`);
   if (!/Multica 0\.13\.0 or newer/.test(guide)) violations.push('docs/factory.md: no platform floor');
   if (!/refuses a lower version before any plan or write/.test(guide)) violations.push('docs/factory.md: no floor refusal');
+  if (/--until-issue/.test(guide)) violations.push('docs/factory.md: keeps the retired condition');
   // The guide describes the model once: no second copy of the rule inside it.
   for (const phrase of ['`--blocked-by <dependency-epic>`', '`via: stage`'])
     if (guide.split(phrase).length - 1 !== 1) violations.push(`docs/factory.md: ${phrase} is not stated once`);
@@ -130,11 +131,11 @@ test('the stale sweep is gone from every carrier and explicit in the ledger', ()
   for (const path of ['docs/factory.md', 'README.md', 'GLOSSARY.md', 'docs/apply.md']) {
     // A link to the retiring ADR is history, not a carrier; the guide may cite it once.
     const prose = read(path).replace(/\]\([^)]*\)/g, '');
-    assert.doesNotMatch(prose, /stale-sweep|Stale sweep|### The stale sweep|two or more hours/, `${path} keeps a sweep carrier`);
+    assert.doesNotMatch(prose, /stale-sweep|Stale sweep|### The stale sweep|two or more hours|stale-review guard/, `${path} keeps a sweep carrier`);
   }
   // No offline pin keeps the retired autopilot alive.
   const pins = readdirSync(join(ROOT, 'tests')).filter(name => name.endsWith('.js') && name !== 'native-dependencies.test.js')
-    .filter(name => /stale-sweep|Stale sweep/.test(read(`tests/${name}`)));
+    .filter(name => /stale-sweep|Stale sweep|stale-review guard/.test(read(`tests/${name}`)));
   assert.deepEqual(pins, []);
 });
 
