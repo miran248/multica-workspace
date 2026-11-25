@@ -15,7 +15,14 @@ just sync
 just schedule           # optional: install the daily sync
 ```
 
-`just sync` refuses before any write when it cannot resolve an unambiguous binding:
+The catalog's platform floor is Multica 0.13.0 or newer, declared once in
+`templates/default.json`. The resolver refuses a lower version before any plan or write —
+`--dry-run` included — against both the CLI that runs the sync and the bound runtime's
+`metadata.cli_version`, and a version it cannot read refuses rather than passing. Upgrade the CLI
+and the runtime together: a matching CLI can still dispatch to an older runtime.
+
+`just sync` refuses before any write when it cannot resolve an unambiguous binding or the
+platform floor:
 
 | Refusal | Fix |
 | --- | --- |
@@ -24,6 +31,7 @@ just schedule           # optional: install the daily sync
 | several online Dsh runtimes | `just sync --runtime-id <id>` or `RUNTIME=<id>` |
 | no `origin` | `git remote add origin <url>`; the rendered prompt uses it |
 | app not on `https://multica.ai` | `just sync --app-url <origin>` or `MULTICA_APP_URL=<origin>`; an https origin, no path, query, fragment or credentials |
+| CLI or runtime below the floor | upgrade both to Multica 0.13.0 or newer; the refusal names the syncing CLI version and the bound runtime's `metadata.cli_version` |
 | uncommitted source | commit or stash the checkout |
 
 ## Repository prerequisites

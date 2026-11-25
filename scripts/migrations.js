@@ -14,7 +14,9 @@ export function loadLedger(root) {
   });
 }
 
-const applies = (event, scope) => !event.workspaces || event.workspaces.includes(scope);
+/** `*` scopes an event whose title renders identically in every workspace; a named slug scopes
+ *  one that can differ. The catalog itself carries neither a slug nor a rendered title. */
+const applies = (event, scope) => !event.workspaces || event.workspaces.includes('*') || event.workspaces.includes(scope);
 
 /** Validate the ledger against one workspace's resolved catalog.
  *  Events scoped elsewhere are ignored here; an event must name a declared end state,

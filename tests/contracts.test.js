@@ -3,17 +3,11 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, readJSON, resolve } from '../scripts/config.js';
-import { fixture } from './support/helpers.js';
+import { catalogFiles, catalogText, fixture, read } from './support/helpers.js';
 
 // Two shapes, each authored once: a ticket body from to-tickets, a comment from the shared
 // contract. Everything else either names the shape or carries its own rule.
-const read = path => readFileSync(join(ROOT, path), 'utf8');
 const ticket = /<issue-template>([\s\S]*?)<\/issue-template>/.exec(read('skills/to-tickets/SKILL.md'))[1];
-const catalogFiles = () => ['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
-  readdirSync(join(ROOT, directory), { recursive: true })
-    .filter(name => /\.(md|json)$/.test(name))
-    .map(name => `${directory}/${name}`));
-const catalogText = () => Object.fromEntries(catalogFiles().map(path => [path, read(path)]));
 
 test('a ticket body is Branch: plus What, Acceptance and Touch', () => {
   assert.match(ticket, /^Branch: <epic-key>/m);
@@ -112,7 +106,7 @@ test('the publisher pre-flights the set and the spec PASS reads it', () => {
 // epic's key, every PR head is the delivering ticket's key, and a rewrite is leased, never a
 // mandated force-push. The guide describes the key without copying the rule.
 const HEAD_RULE = ["The integration branch is the epic's key", "every PR head is the delivering ticket's key", 'the epic never heads a PR', 'holds no link'];
-const REWORK_RULE = ['A rework adds a commit to the same head', 'only when the commits must not remain', '--force-with-lease=<remote-ref>:<expected-sha>', 'never `--force`, `-f`, `--mirror`, `+`, `main` or the integration branch'];
+const REWORK_RULE = ['A rework commits to the same head', 'only when they must not remain', '--force-with-lease=<remote-ref>:<expected-sha>', 'never `--force`, `-f`, `--mirror`, `+`, `main` or integration branch'];
 const RULE = [...HEAD_RULE, ...REWORK_RULE];
 
 function keyViolations({ shared, guide, catalog }) {
@@ -141,7 +135,7 @@ test('the head and rework rules live once in shared Delivery and the guide descr
   const epicHead = { ...contract, shared: contract.shared.replace("every PR head is the delivering ticket's key", "every PR head is the epic's key") };
   assert.notDeepEqual(keyViolations(epicHead), []);
   // A mandated force-push is the old default the additive rework replaces.
-  const force = { ...contract, shared: contract.shared.replace('A rework adds a commit to the same head.', 'A rework force-pushes the same head.') };
+  const force = { ...contract, shared: contract.shared.replace('A rework commits to the same head', 'A rework force-pushes the same head') };
   assert.notDeepEqual(keyViolations(force), []);
   // A skill that restates the rule is the second copy.
   const skillCopy = {
@@ -158,6 +152,22 @@ test('the head and rework rules live once in shared Delivery and the guide descr
   // A guide that never names the key leaves the human reading the old subject alone.
   const silentGuide = { ...contract, guide: contract.guide.replace(/The key is the delivering ticket's[^.]*\./, '') };
   assert.notDeepEqual(keyViolations(silentGuide), []);
+});
+
+// The cap rewrite must not trade a rule for a word: these are the meanings a trimmed draft
+// dropped, and each has a pin so the next rewrite cannot lose it silently.
+const RESTORED = ['GitHub appends `(#N)`', 'own PR head, after a fetch', 'Report configured/verified/pending/deployed', 'link every ticket', 'self-merge, auto-merge', 'an open blocker starts nothing', 'stop for the human lane'];
+
+function restoredMissing(shared) {
+  return RESTORED.filter(phrase => !shared.includes(phrase));
+}
+
+test('the shared contract keeps the rules and qualifiers its cap rewrite restores', () => {
+  const shared = read('shared/instructions.md');
+  assert.deepEqual(restoredMissing(shared), []);
+  // Dropping the quantifier or the human-lane stop is the regression this pin catches.
+  assert.deepEqual(restoredMissing(shared.replace('link every ticket', 'link tickets')), ['link every ticket']);
+  assert.deepEqual(restoredMissing(shared.replace('stop for the human lane', 'human')), ['stop for the human lane']);
 });
 
 test('code-review names the five delivery checks', () => {
@@ -460,30 +470,31 @@ test('the glossary carries the changed terms and the corrected handoff gate', ()
 });
 
 // The release lane is the whole-slice gate: the release branch is the release child's key, the
-// order gate is `mergeStateStatus` against `main`, a remaining condition reads `ended`, and a
-// package release is outside the factory. The old prefix query and park are the negatives.
-const RELEASE_LANE = ["release branch is the release child's key", 'mergeStateStatus', 'against `main`', '`ended`', 'package release', 'outside the factory'];
+// order gate is the up-to-date requirement plus `mergeStateStatus` against `main`, and a package
+// release is outside the factory. The retired condition, the old prefix query and the park are
+// the negatives.
+const RELEASE_LANE = ["release branch is the release child's key", 'up-to-date requirement', 'mergeStateStatus', 'against `main`', 'package release', 'outside the factory'];
 
 function releaseLaneViolations({ release, catalog }) {
   const violations = [];
   const text = release.replace(/\s+/g, ' ');
   for (const phrase of RELEASE_LANE) if (!text.includes(phrase)) violations.push(`roles/release.md: no ${phrase}`);
-  if (!/--until-issue/.test(text)) violations.push('roles/release.md: no remaining condition');
-  if (/spec\/\*|gh pr list --base main|--until-issue <release>/.test(text)) violations.push('roles/release.md: keeps the serialization query or park');
+  if (/--until-issue|`ended`/.test(text)) violations.push('roles/release.md: keeps the retired condition');
+  if (/spec\/\*|gh pr list --base main/.test(text)) violations.push('roles/release.md: keeps the serialization query');
   for (const [path, body] of Object.entries(catalog))
     if (path !== 'roles/release.md' && body.includes("release branch is the release child's key"))
       violations.push(`${path}: second release-branch rule`);
   return violations;
 }
 
-test('the release contract names the release branch, the order gate, ended and the package boundary', () => {
+test('the release contract names the release branch, the up-to-date order gate and the package boundary', () => {
   const contract = { release: read('roles/release.md'), catalog: catalogText() };
   assert.deepEqual(releaseLaneViolations(contract), []);
   // A release contract without the release branch is the old prefix head.
   assert.notDeepEqual(releaseLaneViolations({ ...contract, release: contract.release.replace("release branch is the release child's key", 'release branch is the integration branch') }), []);
-  // A contract without `ended` hangs a cancelled dependency.
-  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: contract.release.replace('`ended`', '`done`') }), []);
-  // A prefix query or a park is the serialization the lane removes.
+  // A contract that keeps the retired condition parks a release the platform already wakes.
+  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: `${contract.release} A remaining \`--until-issue\` reads \`ended\`.` }), []);
+  // A prefix query is the serialization the lane removes.
   assert.notDeepEqual(releaseLaneViolations({ ...contract, release: `${contract.release} gh pr list --base main` }), []);
   // A second carrier of the release-branch rule is the duplicate the contract removes.
   assert.notDeepEqual(releaseLaneViolations({

@@ -169,7 +169,7 @@ test('the exit rule lives once and the promotion table lives once', () => {
   assert.equal([...rule.matchAll(/^- /gm)].length, 4);
 
   const planner = read('roles/planner.md');
-  const rows = planner.split('\n').filter(line => /^\|/.test(line)).filter(line => !/^\| ---/.test(line)).slice(1);
+  const rows = planner.split('\n').filter(line => /^\|/.test(line)).filter(line => !/^\|[- |]+$/.test(line)).slice(1);
   assert.deepEqual(rows, [
     '| any | spec child | `spec_progress` |',
     '| neither or `has-human-release` | delivery | `in_progress` |',
@@ -192,7 +192,7 @@ test('the exit rule lives once and the promotion table lives once', () => {
   assert.match(read('skills/code-review/SKILL.md'), /has-human-release/);
 });
 
-test('the sweep is the only stale-review guard and the 90m timer is gone', () => {
+test('no stale-review timer is armed and the stage wake is the promotion', () => {
   const catalog = ['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
     readdirSync(join(ROOT, directory), { recursive: true })
       .filter(name => /\.(md|json)$/.test(name))
@@ -216,14 +216,15 @@ test('the sweep is the only stale-review guard and the 90m timer is gone', () =>
   assert.doesNotMatch(step, /gh pr list --base main/);
 });
 
-test('the guide carries the sweep, its threshold, its move and the human columns it skips', () => {
-  const section = /### The stale sweep\n\n([\s\S]*?)\n\n### /.exec(guide)?.[1] ?? '';
-  for (const column of REVIEWS) assert.ok(section.includes(`\`${column}\``), `the sweep section does not read ${column}`);
-  assert.match(section, /two or more hours/);
-  assert.match(section, /moves to `blocked`/);
-  assert.match(section, /`human_progress`/);
-  assert.match(section, /`awaiting_merge`/);
-  assert.match(section, /first live run is the acceptance/);
+test('the guide carries the blocker model once and no retired sweep section', () => {
+  assert.doesNotMatch(guide, /### The stale sweep/);
+  assert.doesNotMatch(guide, /two or more hours/);
+  const section = /^## One integration branch per spec\n\n([\s\S]*?)\n\n```text/m.exec(guide)?.[1] ?? '';
+  assert.match(section, /`--blocked-by <dependency-epic>`/);
+  assert.match(section, /`via: stage`/);
+  assert.match(section, /no manual intra-epic edge/);
+  assert.match(section, /release squash is on `main`/);
+  assert.match(section, /parks the\n?ticket in `blocked`/);
 });
 
 test('no skill or glossary carries a gate twin or the deleted promotion lanes', () => {
@@ -442,6 +443,9 @@ function changeWindowViolations({ step, review, planner }) {
     if (!review.includes(term)) violations.push(`spec_review: no ${term}`);
   for (const term of SPEC_LANE)
     if (!new RegExp(term, 'i').test(planner)) violations.push(`roles/planner.md: no ${term}`);
+  if (!/branches: epic integration/.test(planner)) violations.push('roles/planner.md: the integration branch is not the epic key');
+  // The new epic is the route after the freeze, not part of the in-window sequence.
+  if (!/freeze; else new epic, superseded/.test(planner)) violations.push('roles/planner.md: the new epic is not conditional');
   return violations;
 }
 
@@ -458,6 +462,10 @@ test('the spec lane names the reslice window, the freeze latch and the new-epic 
   assert.notDeepEqual(changeWindowViolations({ ...contract, review: contract.review.replace('A second open spec pull request', 'A pull request') }), []);
   // A Planner contract without the freeze arms the old open-ended slice.
   assert.notDeepEqual(changeWindowViolations({ ...contract, planner: contract.planner.replace(/freeze/g, 'boundary') }), []);
+  // Dropping `else` folds the new epic back into the in-window sequence ADR-0019 forbids.
+  assert.notDeepEqual(changeWindowViolations({ ...contract, planner: contract.planner.replace('freeze; else new epic', 'freeze; new epic') }), []);
+  // A bare `integration` loses the qualifier shared and the guide define as the epic's key.
+  assert.notDeepEqual(changeWindowViolations({ ...contract, planner: contract.planner.replace('branches: epic integration', 'branches: integration') }), []);
 });
 
 // One kickoff: the packet closes on one question, the Planner creates the epic and its stage-1
@@ -742,7 +750,11 @@ function guideViolations({ guide: text, apply, workflowFile }) {
     ['the two-merge has-human-release', /two human merges/],
     ['release order', /### Release order/],
     ['the cancelled-epic sweep', /cancelled-epic sweep/],
-    ['the stale sweep', /### The stale sweep/],
+    ['the blocker carrier', /`--blocked-by <dependency-epic>`/],
+    ['the stage wait', /`via: stage`/],
+    ['no manual intra-epic edge', /no manual intra-epic edge/],
+    ['the platform floor', /Multica 0\.13\.0 or newer/],
+    ['the floor refusal', /refuses a lower version before any plan or write/],
     ['the one topology', /Every grilling produces an epic/],
     ['the one closing question', /one close-and-start question: apply the chosen mode labels and start\s+stage 1/],
     ['the human seat', /human seat the project's workflow binds to the\s+`human`\s+role from the live handler/],

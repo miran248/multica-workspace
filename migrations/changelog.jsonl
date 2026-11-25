@@ -1,2 +1,3 @@
 {"kind":"rename","entity":"label","from":"human-assigned","to":"has-human-implementer"}
 {"kind":"rename","entity":"label","from":"manual-merge","to":"has-human-release"}
+{"kind":"retire","entity":"autopilot","name":"Stale sweep","workspaces":["*"],"note":"ADR-0031 retires the stale sweep; the title renders identically in every workspace"}

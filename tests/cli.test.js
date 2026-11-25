@@ -31,7 +31,15 @@ test('sync applies in a clean checkout and converges; failures propagate', t => 
   assert.match(first.stdout, /"status": "verified"/);
   assert.match(first.stdout, /"operations": [1-9]/);
   assert.match(first.stdout, /just schedule/);
+  // The plan reports the floor and the two versions the resolver read, for later acceptance.
+  assert.match(first.stdout, /"floor": "0\.13\.0"/);
+  assert.match(first.stdout, /"cli": "0\.13\.0"/);
+  assert.match(first.stdout, /"runtime": "0\.13\.0"/);
   assert.ok(!JSON.parse(readFileSync(statePath, 'utf8')).skills.some(skill => skill.name === 'retired-method'));
+  const dryRun = invoke('node', ['scripts/sync.js', '--dry-run']);
+  assert.equal(dryRun.status, 0, dryRun.stderr + dryRun.stdout);
+  assert.match(dryRun.stdout, /"platform_floor": "0\.13\.0"/);
+  assert.match(dryRun.stdout, /"versions": \{\s*"cli": "0\.13\.0",\s*"runtime": "0\.13\.0"\s*\}/s);
   const second = invoke('node', ['scripts/sync.js']);
   assert.equal(second.status, 0, second.stderr + second.stdout);
   assert.match(second.stdout, /"operations": 0/);
