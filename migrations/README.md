@@ -7,12 +7,14 @@ cannot infer. One JSON object per line, applied in order before anything is comp
 {"kind":"rename","entity":"label","from":"ready-for-agent","to":"agent-ready"}
 {"kind":"retire","entity":"label","name":"in-use","note":"detach after the migration"}
 {"kind":"retire","entity":"autopilot","name":"Legacy sweep","workspaces":["your-workspace"]}
+{"kind":"retire","entity":"autopilot","name":"Nightly digest","workspaces":["*"]}
 ```
 
 - `entity` is `agent`, `autopilot`, `label`, `skill`, `squad` or `workflow`.
 - `rename` keeps the live object's identity; `retire` authorizes a guarded deletion.
-- `workspaces` limits an event to named workspace slugs. Autopilot events require it because
-  the same title exists in every workspace.
+- `workspaces` limits an event to named workspace slugs, or to `["*"]` when the title renders
+  identically in every workspace; the anonymous catalog cannot name a consumer slug. Autopilot
+  events always require it because the same title exists in every workspace.
 - Validation is offline and fails closed: a rename whose target is neither declared nor
   renamed later, or whose source is still declared, blocks every run.
 - Once every workspace has passed an event, delete the line. Git keeps the audit.

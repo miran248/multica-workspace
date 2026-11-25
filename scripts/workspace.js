@@ -42,16 +42,26 @@ export function resolveOwners(members) {
   return owners;
 }
 
-export function bindingFor({ workspace, owners, runtime, repository, appUrl = process.env.MULTICA_APP_URL ?? DEFAULT_APP_URL }) {
+export function bindingFor({ workspace, owners, runtime, repository, versions, appUrl = process.env.MULTICA_APP_URL ?? DEFAULT_APP_URL }) {
   return {
     workspace_id: workspace.id,
     human_user_id: owners[0].user_id,
     owner_ids: owners.map(owner => owner.user_id),
     app_url: appUrl,
+    versions,
     identity: { workspace_name: workspace.name ?? workspace.slug, workspace_slug: workspace.slug, human_name: owners[0].name },
     agent_runtimes: Object.fromEntries(ROLES.map(role => [role, runtime.id])),
     repository,
   };
+}
+
+/** The two platform facts the floor check reads: the CLI that applies this catalog and the
+ *  bound runtime's `metadata.cli_version`, which executes the runs it dispatches. */
+export function platformVersions(runtime, runner = run) {
+  // A read that fails leaves the fact unreadable, which the resolver refuses and names.
+  let cli = null;
+  try { cli = runner('', 'version')?.version ?? null; } catch { cli = null; }
+  return { cli, runtime: runtime?.metadata?.cli_version ?? null };
 }
 
 export function resolveWorkspace({ root = process.cwd(), runner = run, runtimeId, appUrl, repository = sourceRepository(root) } = {}) {
@@ -61,5 +71,6 @@ export function resolveWorkspace({ root = process.cwd(), runner = run, runtimeId
   const owners = resolveOwners(members);
   const runtimes = unpack(runner(workspace.id, 'runtime', 'list'), 'runtimes');
   const runtime = selectRuntime(runtimes, workspace.id, runtimeId ?? process.env.RUNTIME);
-  return { workspace, owners, runtime, repository, binding: bindingFor({ workspace, owners, runtime, repository, appUrl }) };
+  const versions = platformVersions(runtime, runner);
+  return { workspace, owners, runtime, repository, versions, binding: bindingFor({ workspace, owners, runtime, repository, versions, appUrl }) };
 }

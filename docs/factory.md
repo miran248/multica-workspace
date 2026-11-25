@@ -27,8 +27,11 @@ rule/expected-snapshot/executed-set reading
 [ADR-0024](adr/0024-every-ticket-names-a-planned-owner.md) names a planned owner,
 [ADR-0025](adr/0025-the-epic-is-in-progress-from-the-kickoff.md) starts the epic in progress,
 [ADR-0026](adr/0026-the-platform-wake-is-the-wake.md) makes the platform wake the promotion,
-[ADR-0027](adr/0027-the-release-lane-does-not-serialize.md) removes the release query and
-[ADR-0028](adr/0028-one-human-seat-per-workflow.md) names one human seat.
+[ADR-0027](adr/0027-the-release-lane-does-not-serialize.md) removes the release query,
+[ADR-0028](adr/0028-one-human-seat-per-workflow.md) names one human seat,
+[ADR-0029](adr/0029-a-dependency-wait-is-a-blocker.md) makes a wait a blocker,
+[ADR-0030](adr/0030-the-catalog-declares-a-platform-floor.md) declares the platform floor and
+[ADR-0031](adr/0031-the-stale-sweep-retires.md) retires the stale sweep.
 
 ## Status graph
 
@@ -119,9 +122,25 @@ Each spec forks its integration branch — the epic's key — from `main` at the
 spec PR exists: a branch needs a commit. The spec PR heads the spec child's key and targets that
 branch, and its merge approves the spec, its proposed breakdown and the published children
 exactly as before. Every delivery child opens its body with `Branch: <epic-key>`; that line, not
-a promotion comment, is the base the Implementer reads. The stage is the dependency edge and the
-body carries no blockers. A final-stage release child owns the only path from the branch to
-`main`.
+a promotion comment, is the base the Implementer reads.
+
+Inside an epic the stage is the wait: the platform materialises the stage barrier as a blocker
+with `via: stage` on every later-stage child, and the catalog adds no manual intra-epic edge — a
+same-stage dependency is a slicing defect, fixed by distinct stages, never by a relation. Across
+epics the dependency is a blocker too: `--blocked-by <dependency-epic>` on every delivery child
+whose work needs it, set at publish, and never on the spec child, the release child or the epic.
+The edge names the epic — the group whose `done` lands after its release merge — never the
+release child, and a dependency on a slice that is not yet filed is filed first. The ticket body
+carries no blocker list.
+
+A run the platform wakes when a blocker ends is build-ready before it works: it verifies the
+dependency's release squash is on `main`, then fetches, ancestor-checks, merges `main` into the
+integration branch and resolves inside `## Touch`, with one retry on a rejected push. A
+`cancelled` or deleted blocker is not a delivery: the run comments the finding and parks the
+ticket in `blocked` for the Planner. A promoted ticket with an open blocker starts nothing and
+stays in its lane, or in `backlog` until promoted.
+
+A final-stage release child owns the only path from the branch to `main`.
 
 ```text
 main ──fork at the spec sha──> <epic-key>
@@ -165,28 +184,10 @@ new status is introduced for the meaning between the two.
 
 At most one release is merge-ready against `main` at a time. Release order is the repository's
 up-to-date requirement plus the Reviewer's `mergeStateStatus` read against `main` before the
-release PASS: behind or dirty is a FAIL. There is no open-head query and no `--until-issue <release>` park. A release whose `main` moves while it waits merges `main` in
-again and re-runs the suite: it never merges a stale tree. Where a dependency condition remains
-— a cross-epic wait — it reads `--until-issue-state ended`, so a cancelled dependency releases
-the wait. A package release such as release-please is outside the factory; the slice release is
-the merge on `main`.
-
-### The stale sweep
-
-`stale-sweep` is the catalog's one stale-review guard: an hourly `0 * * * *` UTC autopilot in
-the Planner role, mode `run_only`. It reads the four reviewer-handled columns — `spec_review`,
-`in_review`, `human_review` and `release_review` — and dates each ticket from its `issue
-timeline`, never from its last comment. A ticket two or more hours into its column gets one
-`## What` / `## Evidence` / `## Next` comment carrying the age and the last actor, and then
-moves to `blocked`; the comment is written first and the move is the last action.
-
-It never sweeps `human_progress` or `awaiting_merge`: those wait indefinitely for the human, and
-no agent may un-gate a human step. It never mentions anyone, never closes or cancels a ticket
-and never runs on a `blocked` ticket. Triage restores the lane the timeline records; a second
-sweep leaves a swept ticket in `blocked` for the human.
-
-The first live run is the acceptance: the release reads the autopilot and its single enabled
-hourly trigger back, and the first blocking move is the observable evidence.
+release PASS: behind or dirty is a FAIL. There is no open-head query and no release park. A
+release whose `main` moves while it waits merges `main` in again and re-runs the suite: it never
+merges a stale tree. A package release such as release-please is outside the factory; the slice
+release is the merge on `main`.
 
 ### The cancelled-epic sweep
 
@@ -406,9 +407,11 @@ detail; the subject carries the two identifiers and nothing else.
   a proposed set, not approved work: all `backlog`, none in a running status, no
   `ready-for-agent` until the promotion wake. On a spec FAIL the spec run reconciles them to the
   revised breakdown; if the epic is abandoned, cancel them with it.
-- **Blocked.** Any seat can move a ticket to `blocked`. The Planner triages it back to the lane
-  its timeline records, or cancels it. A cross-epic dependency is an `--until-issue` condition,
-  not a ticket section: the ticket stays in `blocked` until that condition clears.
+- **Blocked.** Any seat can move a ticket to `blocked` for triage — a missing input or an
+  external condition — and the Planner triages it back to the lane its timeline records, or
+  cancels it. A dependency wait is a blocker, not this column: the ticket stays in its lane, or
+  in `backlog` until promoted, and the platform starts its run when the last blocker ends. The
+  woken run's one exception is stated once in the build-ready rule above.
 - **Cancel and duplicate.** Move to `cancelled`; use `--duplicate-of` so the original lists it.
 - **Branch cleanup.** Enable **Automatically delete head branches** on the repository. Every
   delivery merge deletes its head branch and the release merge deletes the release branch; the
@@ -447,7 +450,9 @@ with a repository resource and the Factory workflow bound.
 | human implements | `has-human-implementer` epic | the ticket sits in `human_progress` assigned to the human; its PR is reviewed at `human_review`, the PASS is posted, then merged |
 | human implements and merges | both labels | `human_progress` to `human_review` to `awaiting_merge`; the human merges |
 | blocked | any ticket moved to `blocked` | the Planner triages it back to the lane its timeline records, or cancels it |
-| dependency | a ticket parked on an `--until-issue` condition | it stays in `blocked` until that issue closes |
+| dependency wait | a delivery child waiting on another slice's epic | it starts nothing while the blocker is open and stays in its lane, or in `backlog` until promoted; the platform starts its run when the blocker ends |
+| stage wait | a later-stage child beside an earlier-stage sibling | it lists every earlier-stage sibling as the platform's stage blocker; no manual edge duplicates it, and a `--remove-blocked-by` returns success while the relation persists |
+| cancelled blocker | a dependency epic cancelled while a child waits | the wait releases; the woken run records the finding as the build-ready rule states |
 
 
 Record `multica issue timeline <id>` before closing each item: it carries the status and
@@ -455,6 +460,15 @@ assignee changes that prove the route. Put the result on the test issue, not in 
 repository: the catalog is stateless, and this guide is the procedure, not a workspace
 record. Cancel the test tickets and close the test PRs afterwards, then delete the throwaway
 project.
+
+## The platform floor
+
+The catalog declares one platform floor, Multica 0.13.0 or newer, in `templates/default.json`. The
+resolver refuses a lower version before any plan or write — `--dry-run` included — against both
+the syncing CLI and the bound runtime's `metadata.cli_version`, naming both versions; a version
+it cannot read refuses too. The native blocker model, the stage wait and the retired stale sweep
+are 0.13.0 behaviour, so an older platform would sync a contract it cannot run. Upgrade the CLI
+and the runtime together; `docs/apply.md` carries the operator's refusal row.
 
 ## Verification
 

@@ -151,7 +151,7 @@
         "type": "agent",
         "role": "planner"
       },
-      "instructions": "Triage why the ticket stopped. Planner-owned spec work moves to spec_progress; human work to human_progress; agent delivery to in_progress; a release to release_progress. A swept ticket returns to the lane its timeline records. A cross-epic dependency waits on an `--until-issue` condition; an external blocker is unblocked or the ticket is cancelled. Nothing else stays parked."
+      "instructions": "Triage why the ticket stopped. Planner-owned spec work moves to spec_progress; human work to human_progress; agent delivery to in_progress; a release to release_progress. `blocked` is triage only — a missing input or an external condition — and a dependency wait never comes here: it is a `--blocked-by` blocker the platform releases. A cancelled or deleted blocker is not a delivery, so the woken run records the finding here for the Planner. A triaged ticket returns to the lane its timeline records. Unblock or cancel; nothing else stays parked."
     },
     {
       "status_key": "done"

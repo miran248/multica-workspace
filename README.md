@@ -4,8 +4,11 @@ An anonymous, stateless catalog of [Multica](https://multica.ai) agents, skills,
 workflows and one scheduled sync. The repository holds no workspace ID, owner ID, runtime ID,
 email or consumer repository URL: every run resolves those from the live platform.
 
-The same catalog applies to any number of workspaces, on any Multica account. A workspace
-never writes back to Git, so the catalog stays a delivery input rather than a workspace record.
+The same catalog applies to any number of workspaces, on any Multica account that runs its
+platform floor: Multica 0.13.0 or newer. The floor is declared once in the catalog and refused at
+the resolver before any plan or write — `--dry-run` included — against both the syncing CLI and
+the bound runtime's `metadata.cli_version`, naming both versions. A workspace never writes back
+to Git, so the catalog stays a delivery input rather than a workspace record.
 
 Documentation: [docs/README.md](docs/README.md) is the index; [GLOSSARY.md](GLOSSARY.md) holds
 the vocabulary, [docs/adr/](docs/adr/) the decisions, [docs/specs/](docs/specs/) the accepted
@@ -76,7 +79,7 @@ and ensures exactly one enabled schedule trigger.
 | `roles/` | five seats, each one job |
 | `skills/` | the fifteen bound methods; each attaches to exactly one role |
 | `templates/default.json` | the only deployable catalog: agents, labels, defaults, skills, autopilots and workflows |
-| `templates/autopilots/` | the `config-sync` control, the `stale-sweep` and their prompts |
+| `templates/autopilots/` | the `config-sync` control and its prompt |
 | `templates/workflows/` | the `Factory` project workflow |
 | `schemas/` | JSON Schema contracts for the catalog, binding, skills and ledger |
 | `migrations/` | optional ledger for renames and authorized retirements |

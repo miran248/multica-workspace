@@ -31,7 +31,7 @@ test('schedule is idempotent and never adds a second trigger', t => {
   assert.deepEqual(control(f).triggers, before);
   const newCalls = f.state.calls.slice(calls).map(call => call[2]);
   assert.ok(!newCalls.includes('trigger-add'));
-  assert.equal(f.state.autopilots.length, 2);
+  assert.equal(f.state.autopilots.length, 1);
 });
 
 test('an existing control is refreshed in place and a stale disabled trigger is updated', t => {
@@ -47,7 +47,7 @@ test('an existing control is refreshed in place and a stale disabled trigger is 
   assert.equal(live.status, 'paused');
   assert.deepEqual(live.triggers.map(trigger => [trigger.id, trigger.kind, trigger.enabled, trigger.cron_expression, trigger.timezone]),
     [[id(921), 'schedule', true, '0 8 * * *', 'UTC']]);
-  assert.equal(f.state.autopilots.length, 2);
+  assert.equal(f.state.autopilots.length, 1);
 });
 
 test('a webhook trigger is operator state and survives a schedule refresh', t => {

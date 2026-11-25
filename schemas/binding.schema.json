@@ -82,6 +82,30 @@
     "repository": {
       "type": "string",
       "pattern": "^https://[^\\s{}]+$"
+    },
+    "versions": {
+      "type": "object",
+      "properties": {
+        "cli": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "runtime": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      },
+      "required": [
+        "cli",
+        "runtime"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
@@ -90,7 +114,8 @@
     "owner_ids",
     "identity",
     "agent_runtimes",
-    "repository"
+    "repository",
+    "versions"
   ],
   "additionalProperties": false
 }
