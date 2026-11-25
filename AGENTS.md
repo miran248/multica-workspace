@@ -26,7 +26,8 @@ that way — that is what makes the catalog reusable and public.
   `allow_implicit_invocation: false`. The runtime drops a gated skill from model invocation
   entirely, including a human slash selection (ADR-0003).
 - `migrations/changelog.jsonl` is the only place for a rename or an authorized retirement.
-  Scope an autopilot event to a workspace slug.
+  Scope an autopilot event to a workspace slug, or to `"*"` when its title renders identically
+  in every workspace and the anonymous catalog cannot name one.
 - Keep the anonymity test green: no live UUIDs, no personal email or user name, no workspace
   slug or consumer repository URL in catalog and documentation files.
 - Run `just validate` and `just test` before delivery.

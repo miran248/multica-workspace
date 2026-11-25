@@ -36,13 +36,14 @@ export function main(args = process.argv.slice(2)) {
   if (parsed.values['dry-run']) {
     const plan = buildPlan(binding, { root: ROOT, runner: run, keepUnmanaged: parsed.values['keep-unmanaged'] });
     console.log(JSON.stringify({ workspace: binding.identity.workspace_slug, runtime: runtime.id, repository: resolved.repository,
-      ...plan, source: sourceIdentity(ROOT), status: plan.operations.length ? 'pending' : 'configured',
+      versions: binding.versions, ...plan, source: sourceIdentity(ROOT), status: plan.operations.length ? 'pending' : 'configured',
       verification: 'plan only; not applied' }, null, 2));
     return;
   }
   const result = deploy(binding, true, { keepUnmanaged: parsed.values['keep-unmanaged'] });
   console.log(JSON.stringify({
     workspace: binding.identity.workspace_slug, runtime: runtime.id, repository: resolved.repository,
+    platform: { floor: result.platform_floor, cli: binding.versions.cli, runtime: binding.versions.runtime },
     status: result.status, operations: result.operations, pruned: result.retired,
     sync_control: result.sync_control, migrations: result.migrations,
     source_revision: result.source.revision, verified_at: result.verified_at, journal: result.journal,

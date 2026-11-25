@@ -47,8 +47,7 @@
     }
   },
   "autopilots": {
-    "config-sync": "templates/autopilots/config-sync.json",
-    "stale-sweep": "templates/autopilots/stale-sweep.json"
+    "config-sync": "templates/autopilots/config-sync.json"
   },
   "defaults": {
     "model": "deepseek/deepseek-flash",
@@ -158,6 +157,9 @@
     }
   },
   "model_policy": "flash-first-v1",
+  "platform": {
+    "floor": "0.13.0"
+  },
   "policies": {},
   "schema_version": 2,
   "shared_instructions": "shared/instructions.md",

@@ -211,6 +211,19 @@
         "type": "string",
         "pattern": "^(?:shared|roles|policies|templates|skills)/[a-zA-Z0-9_./-]+$"
       }
+    },
+    "platform": {
+      "type": "object",
+      "properties": {
+        "floor": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      },
+      "required": [
+        "floor"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
@@ -227,7 +240,8 @@
     "policies",
     "skill_manifest",
     "autopilots",
-    "workflows"
+    "workflows",
+    "platform"
   ],
   "additionalProperties": false,
   "$schema": "https://json-schema.org/draft/2020-12/schema"

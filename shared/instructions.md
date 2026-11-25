@@ -1,28 +1,23 @@
 ## Ownership
-- Multica owns tickets, dependencies; Git specs/history; GitHub PRs/CI. Link, never duplicate; read the spec; record outcome, checks, risks, owner.
-- Link each issue as `[MIR-123]({{workspace_url}}/issues/MIR-123)`; bare identifiers only in a commit subject, PR title or branch name.
-- Create with `--project` and the planned owner's `--assignee`; status entry still reassigns natively. Unassigned: only the human lane; its member handler binds it.
+- Multica owns tickets, specs, PRs; link, never duplicate; record outcome, checks, risks, owner.
+- Link issues as `[MIR-123]({{workspace_url}}/issues/MIR-123)`; bare keys only in a commit subject, PR title or branch. PR bodies, proposed breakdowns, spec comments link every ticket; catalog: anonymous, bare keys, no workspace URL.
+- Every ticket has its planned owner. Create with `--project` and the planned owner's `--assignee`; status entry reassigns natively. Planner is the fallback; the human lane's planned owner is the live `human` seat; none unassigned.
 
 ## Delivery
-- One ticket, one PR, one squash. Use Conventional Commits `type(scope): summary, TICKET`; GitHub appends `(#N)`, never type it.
-- Title and head branch: delivering ticket's key only, never the epic's; spec child's title omits it.
-- Base: the ticket's `Branch:`, absent means `main`; PR into it, merge the base in before review.
-- Diff in `## Touch`; unlisted paths are findings.
-- Merge only green at exact-head; no direct `main` push; never self-merge/auto-merge.
-- Conflict: merge the base, resolve inside `## Touch`, rerun the diff's check, push. Mechanical (lockfile, disjoint hunks) Implementer; judgement (changed meaning) no agent resolves: comment, `human_progress` every lane; human to `human_review`/`release_review`/`spec_review`. Behind-but-clean never fires.
+- One open PR per delivering ticket, one squash; Conventional Commits `type(scope): summary, TICKET`; GitHub appends `(#N)`.
+- The integration branch is the epic's key; every PR head is the delivering ticket's key; the epic never heads a PR, holds no link; spec child's title omits it.
+- Base: the ticket's `Branch:`, absent means `main`; merge the base in before review.
+- Diff in `## Touch`; merge only green at exact-head; never push `main`, self-merge, auto-merge.
+- A wait: `--blocked-by` blocker, not a status; an open blocker starts nothing. `blocked` is triage only.
+- A rework commits to the same head; rewrite only when they must not remain: own PR head, after a fetch, `--force-with-lease=<remote-ref>:<expected-sha>`; never `--force`, `-f`, `--mirror`, `+`, `main` or integration branch.
+- Conflict: merge the base, resolve inside `## Touch`, rerun the check. Lockfile/disjoint hunks: Implementer; changed meaning: stop for the human lane. Behind-but-clean never fires.
 
 ## Handoffs
-- The linked PR is the delivery handoff: read `multica issue pull-requests <ticket>` after opening; move or merge is the last action, only when listed. Empty: name the operator fix, move to `blocked`, never a started lane; never dispatch by mention; empty body is not a finding.
-- A verdict, finding or sweep: one comment: `## What` (revision, links, outcome), `## Evidence` (checks, limits), `## Next` (owner, action).
-- A finding is a `## Evidence` bullet: `P2 — file:line: trigger; consequence; fix`.
-- Caps: comment 10 rendered lines, 1 KB; finding 1 KB; packet 800 bytes. Over-cap blocks review.
+- Linked PR is the handoff: read `multica issue pull-requests <ticket>` after opening; move or merge last, only when listed. Empty: operator fix, `blocked` move, no started lane; empty body not a finding.
+- Verdict, finding: one comment: `## What`, `## Evidence`, `## Next`; one-line findings `P2 — file:line: trigger; consequence; fix`; finding 1 KB, packet 800 bytes; over-cap blocks.
 
 ## Scope and evidence
-- Act in scope; `approve`/`proceed` clears its gate, not delivery; silence is no approval; scope changes reopen.
-- Report configured/verified/pending/deployed; missing evidence is a gap. Edit bodies, never narrate.
+- Act in scope; `approve`/`proceed` clears its gate, not delivery; silence never approves. Report configured/verified/pending/deployed; missing evidence: a gap. Bounded ranges; verify.
 
 ## Launching
-- Run GUIs and long-lived processes detached (`nohup`/`setsid`), logged with PID, stop command, never in a turn's foreground; windows non-activating and unfocused.
-
-## Steps
-- Bounded ranges; verify once.
+- Run GUIs, long-lived processes detached, logged PID, stop command, never foreground; windows non-activating and unfocused.

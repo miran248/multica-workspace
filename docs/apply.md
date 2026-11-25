@@ -15,7 +15,14 @@ just sync
 just schedule           # optional: install the daily sync
 ```
 
-`just sync` refuses before any write when it cannot resolve an unambiguous binding:
+The catalog's platform floor is Multica 0.13.0 or newer, declared once in
+`templates/default.json`. The resolver refuses a lower version before any plan or write —
+`--dry-run` included — against both the CLI that runs the sync and the bound runtime's
+`metadata.cli_version`, and a version it cannot read refuses rather than passing. Upgrade the CLI
+and the runtime together: a matching CLI can still dispatch to an older runtime.
+
+`just sync` refuses before any write when it cannot resolve an unambiguous binding or the
+platform floor:
 
 | Refusal | Fix |
 | --- | --- |
@@ -24,6 +31,7 @@ just schedule           # optional: install the daily sync
 | more than one online runtime of that provider | stop all but one; the selector requires exactly one and offers no `--runtime-id` override |
 | no `origin` | `git remote add origin <url>`; the rendered prompt uses it |
 | app not on `https://multica.ai` | `just sync --app-url <origin>` or `MULTICA_APP_URL=<origin>`; an https origin, no path, query, fragment or credentials |
+| CLI or runtime below the floor | upgrade both to Multica 0.13.0 or newer; the refusal names the syncing CLI version and the bound runtime's `metadata.cli_version` |
 | uncommitted source | commit or stash the checkout |
 
 ## Repository prerequisites
@@ -33,17 +41,17 @@ repository adopts the integration branch:
 
 | Prerequisite | State | Why |
 | --- | --- | --- |
-| `spec/*` branch protection | unprotected | the integration branch is scratch: its only PR is the spec approval, it deploys nothing, and the release merge deletes it |
-| **Automatically delete head branches** | on | a merge from the GitHub UI does not delete the head branch itself, and the release merge deletes `spec/<epic>` |
+| integration branch protection | unprotected | the branch is the epic's key and the base of the spec approval and every delivery PR; it deploys nothing, and the Planner deletes it on acceptance |
+| **Automatically delete head branches** | on | a merge from the GitHub UI does not delete the head branch itself, and the release merge deletes the release branch |
 | **Allow auto-merge** | off | an armed pull request merges on its checks and completes the linked ticket, bypassing the human gates |
-| **Require branches to be up to date** on `main` | on | the release PASS is a claim about the tree that merges, so behind or dirty must fail |
+| **Require branches to be up to date** on `main` | on | release order is this requirement plus the Reviewer's `mergeStateStatus`; behind or dirty must fail |
 
 The CI trigger shape is part of the same operator state:
 
 | Trigger | Shape | Why |
 | --- | --- | --- |
 | `push` | `branches: [main]` | the post-merge run is the only check of the merged tree and the deploy/bookkeeping point |
-| `pull_request` | `branches: [main]` | the release PR is the first automated check of the integrated tree; the spec PR and the ticket PRs into `spec/<epic>` cost no run |
+| `pull_request` | `branches: [main]` | the release PR is the first automated check of the integrated tree; the spec PR and the ticket PRs into the integration branch cost no run |
 
 `.github/workflows/validate.yml` in this repository is the reference implementation: it runs on
 `push: branches: [main]` and on `pull_request: branches: [main]`. Filtering an N-ticket spec to
@@ -67,7 +75,9 @@ those triggers reduces it from `2N + 2` runs to two — the release PR and the p
   enabled schedule trigger and refuses when it finds more than one.
 - Repository settings are operator state. Apply the four prerequisites above on every repository
   a Factory project uses: the catalog cannot set repository settings, and a merge from the
-  GitHub UI does not delete the head branch itself.
+  GitHub UI does not delete the head branch itself. Release order is the up-to-date requirement
+  and the Reviewer's `mergeStateStatus` read; there is no open-head query and no release park, so
+  a repository without the requirement is an operator delta to report, not a gap to fill.
 - Leave **Allow auto-merge** off. Auto-merge is a pull-request setting, not a ticket status: an
   armed pull request merges as soon as its checks pass, and the platform completes the linked
   ticket on merge — including an `awaiting_merge` ticket and a spec child.

@@ -33,11 +33,29 @@
       "uniqueItems": true,
       "items": {
         "type": "string",
-        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        "pattern": "^(?:\\*|[a-z0-9]+(?:-[a-z0-9]+)*)$"
       }
     }
   },
   "required": ["kind", "entity"],
+  "allOf": [
+    {
+      "if": {
+        "required": ["workspaces"],
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "contains": { "const": "*" }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "entity": { "const": "autopilot" }
+        }
+      }
+    }
+  ],
   "additionalProperties": false,
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

@@ -9,6 +9,8 @@ try {
   const scoped = args[0] === '--workspace-id';
   const call = args.slice(scoped ? 2 : 0);
   const [entity, action, third] = call;
+  // `version` is the other top-level read the CLI answers without a workspace scope.
+  const unscoped = call.slice(0, -2).join(' ') === 'workspace get' || entity === 'version';
   // Mirror the CLI surface: these commands reject --output; skill delete confirms with --yes.
   const silent = (entity === 'skill' && (action === 'delete' || (action === 'files' && third === 'delete')))
     || (entity === 'autopilot' && action === 'delete');
@@ -16,8 +18,8 @@ try {
   if (entity === 'skill' && action === 'delete' && !call.includes('--yes')) throw new Error('skill delete needs --yes');
   const json = args.at(-2) === '--output' && args.at(-1) === 'json';
   if (!silent && !json) throw new Error('Missing scope or JSON flags');
-  if (!scoped && (silent ? call.join(' ') !== 'workspace get' : call.slice(0, -2).join(' ') !== 'workspace get'))
-    throw new Error('Only workspace identity lookup may omit scope');
+  if (!scoped && !(silent ? call.join(' ') === 'workspace get' : unscoped))
+    throw new Error('Only workspace identity and version lookups may omit scope');
   const rest = (silent ? call : call.slice(0, -2)).filter(argument => argument !== '--yes');
   const result = command(state, scoped ? args[1] : '', ...rest);
   writeFileSync(process.env.FAKE_STATE, JSON.stringify(state));

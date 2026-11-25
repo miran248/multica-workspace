@@ -33,7 +33,7 @@ export const ROLES = ['general', 'planner', 'implementer', 'reviewer', 'release'
 /** Operator state, not catalog content: the app origin issue references point at. A self-hosted
  *  consumer overrides it with --app-url / MULTICA_APP_URL; the slug is never committed. */
 export const DEFAULT_APP_URL = 'https://multica.ai';
-export const AUTOPILOTS = ['config-sync', 'stale-sweep'];
+export const AUTOPILOTS = ['config-sync'];
 export const WORKFLOWS = ['factory'];
 const keyPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ajv = new Ajv2020({ coerceTypes: false, useDefaults: false, removeAdditional: false });
@@ -50,6 +50,31 @@ function validateSchema(value, name, root) {
   }
 }
 export const sha256 = value => createHash('sha256').update(value).digest('hex');
+
+/** The catalog's one platform fact: the floor every sync is refused below. A version that
+ *  cannot be read refuses too — a sync that skipped the check would write a contract the
+ *  platform cannot run. Both facts are named on refusal: the CLI applies the catalog and the
+ *  bound runtime executes the runs it dispatches, and a new CLI can dispatch to an old runtime. */
+export function parseVersion(value) {
+  const match = typeof value === 'string' ? /^(\d+)\.(\d+)\.(\d+)$/.exec(value) : null;
+  return match ? match.slice(1).map(Number) : null;
+}
+export function compareVersions(left, right) {
+  const a = parseVersion(left), b = parseVersion(right);
+  if (!a || !b) return null;
+  for (let index = 0; index < 3; index += 1) if (a[index] !== b[index]) return a[index] < b[index] ? -1 : 1;
+  return 0;
+}
+export function assertPlatformFloor(floor, versions = {}) {
+  const cli = versions?.cli ?? null, runtime = versions?.runtime ?? null;
+  const failing = [['syncing CLI', cli], ['bound runtime metadata.cli_version', runtime]]
+    .filter(([, version]) => { const order = compareVersions(version, floor); return order === null || order < 0; })
+    .map(([name]) => name);
+  if (!failing.length) return;
+  throw new Error(`Platform floor ${floor} or newer required (catalog platform.floor): `
+    + `syncing CLI ${cli ?? 'unreadable'}, bound runtime metadata.cli_version ${runtime ?? 'unreadable'}; `
+    + `${failing.join(' and ')} ${failing.length > 1 ? 'fail' : 'fails'} the floor; upgrade both`);
+}
 /** JSON.parse validates grammar; a token walk additionally rejects duplicate object keys. */
 export function parseJSON(text) {
   const value = JSON.parse(text);
@@ -211,6 +236,8 @@ export function resolve(binding, root = ROOT) {
 
 function resolveChecked(catalog, binding, root) {
   validateSchema(binding, 'binding', root);
+  // Before any plan or write, `--dry-run` included: the floor is the first refusal.
+  assertPlatformFloor(catalog.platform.floor, binding.versions);
   validateDefaults(catalog.defaults);
   sameKeys(Object.keys(catalog.agents), ROLES, 'agents');
   sameKeys(Object.keys(catalog.autopilots), AUTOPILOTS, 'catalog autopilots');
@@ -355,7 +382,8 @@ function resolveChecked(catalog, binding, root) {
     scope: binding.identity.workspace_slug,
   });
   const shared = { catalog: structuredClone(catalog), autopilots: definitions, workflows: projectWorkflows, assets };
-  return { shared, shared_hash: sha256(canonical(shared)), binding_hash: sha256(canonical(binding)),
+  return { shared, shared_hash: sha256(canonical(shared)), platform_floor: catalog.platform.floor,
+    binding_hash: sha256(canonical(binding)),
     ledger_hash: sha256(canonical(migrations)), migrations,
     agents, squads, autopilots, project_workflows: projectWorkflows, sync, role_skills: roleOfSkill,
     bindings: structuredClone(binding), deployment: { status: blocked.length ? 'blocked' : 'configured', reasons: blocked,
@@ -366,7 +394,12 @@ function resolveChecked(catalog, binding, root) {
  *  the platform, and the anonymity test pins the all-zero prefix as the only allowed UUID. */
 export function syntheticBinding() {
   const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  // The placeholder binding runs at the declared floor, so offline validation resolves the
+  // catalog exactly as a supported workspace would.
+  const floor = loadTemplate('default').platform.floor;
+  const versions = { cli: floor, runtime: floor };
   return { workspace_id: id(1), human_user_id: id(2), owner_ids: [id(2)], app_url: DEFAULT_APP_URL,
+    versions,
     identity: { workspace_name: 'Validation', workspace_slug: 'validation', human_name: 'Owner' },
     agent_runtimes: Object.fromEntries(ROLES.map(role => [role, id(3)])), repository: 'https://github.com/OWNER/multica-workspace' };
 }

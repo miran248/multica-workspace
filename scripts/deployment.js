@@ -282,7 +282,8 @@ export function buildPlan(binding, { root = ROOT, runner, keepUnmanaged = false 
     }
   }
 
-  const plan = { version: 5, workspace_id: binding.workspace_id, shared_hash: resolved.shared_hash, binding_hash: resolved.binding_hash,
+  const plan = { version: 5, workspace_id: binding.workspace_id, platform_floor: resolved.platform_floor,
+    shared_hash: resolved.shared_hash, binding_hash: resolved.binding_hash,
     ledger_hash: resolved.ledger_hash, sync_control: control ? 'configured' : 'absent',
     statuses: declaredStatuses(resolved.shared.workflows),
     operations, checks };
