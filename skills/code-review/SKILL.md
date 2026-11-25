@@ -29,7 +29,10 @@ A breach is a blocking finding on the Standards axis.
 A spec PASS begins by reading the epic's children at the exact head against shared
 `## Ownership`. Every child the spec run published must be in `backlog`, carry its planned owner
 and sit in a stage higher than the one before it; the human lane's planned owner is the live
-`human` seat, so any ownerless child is a blocking finding and no PASS stands over one.
+`human` seat, so any ownerless child is a blocking finding and no PASS stands over one. Read each
+child's `blocked_by` too: a cross-slice edge names the dependency's epic and sits only on a
+delivery child, and an edge on the spec child, the release child or the epic is a blocking
+finding.
 
 ## The exit rule
 

@@ -96,7 +96,7 @@ export function deploy(binding, apply = false, options = {}) {
       const result = executePlan(binding, plan, { root, runner, pack: options.pack, assets: current.shared.assets });
       journal.status = 'verified'; journal.result = result; journal.verified_at = new Date().toISOString(); saveJournal();
       log(`Readback verified: ${result.operations} planned operations, ${result.retired.length} retired; no catalog write.`);
-      return { ...result, journal: journalPath, source: pinned, verified_at: journal.verified_at };
+      return { ...result, platform_floor: current.platform_floor, journal: journalPath, source: pinned, verified_at: journal.verified_at };
     } catch (error) { journal.error = error.message; saveJournal(); throw error; }
   });
 }

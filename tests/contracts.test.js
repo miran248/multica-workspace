@@ -460,30 +460,31 @@ test('the glossary carries the changed terms and the corrected handoff gate', ()
 });
 
 // The release lane is the whole-slice gate: the release branch is the release child's key, the
-// order gate is `mergeStateStatus` against `main`, a remaining condition reads `ended`, and a
-// package release is outside the factory. The old prefix query and park are the negatives.
-const RELEASE_LANE = ["release branch is the release child's key", 'mergeStateStatus', 'against `main`', '`ended`', 'package release', 'outside the factory'];
+// order gate is the up-to-date requirement plus `mergeStateStatus` against `main`, and a package
+// release is outside the factory. The retired condition, the old prefix query and the park are
+// the negatives.
+const RELEASE_LANE = ["release branch is the release child's key", 'up-to-date requirement', 'mergeStateStatus', 'against `main`', 'package release', 'outside the factory'];
 
 function releaseLaneViolations({ release, catalog }) {
   const violations = [];
   const text = release.replace(/\s+/g, ' ');
   for (const phrase of RELEASE_LANE) if (!text.includes(phrase)) violations.push(`roles/release.md: no ${phrase}`);
-  if (!/--until-issue/.test(text)) violations.push('roles/release.md: no remaining condition');
-  if (/spec\/\*|gh pr list --base main|--until-issue <release>/.test(text)) violations.push('roles/release.md: keeps the serialization query or park');
+  if (/--until-issue|`ended`/.test(text)) violations.push('roles/release.md: keeps the retired condition');
+  if (/spec\/\*|gh pr list --base main/.test(text)) violations.push('roles/release.md: keeps the serialization query');
   for (const [path, body] of Object.entries(catalog))
     if (path !== 'roles/release.md' && body.includes("release branch is the release child's key"))
       violations.push(`${path}: second release-branch rule`);
   return violations;
 }
 
-test('the release contract names the release branch, the order gate, ended and the package boundary', () => {
+test('the release contract names the release branch, the up-to-date order gate and the package boundary', () => {
   const contract = { release: read('roles/release.md'), catalog: catalogText() };
   assert.deepEqual(releaseLaneViolations(contract), []);
   // A release contract without the release branch is the old prefix head.
   assert.notDeepEqual(releaseLaneViolations({ ...contract, release: contract.release.replace("release branch is the release child's key", 'release branch is the integration branch') }), []);
-  // A contract without `ended` hangs a cancelled dependency.
-  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: contract.release.replace('`ended`', '`done`') }), []);
-  // A prefix query or a park is the serialization the lane removes.
+  // A contract that keeps the retired condition parks a release the platform already wakes.
+  assert.notDeepEqual(releaseLaneViolations({ ...contract, release: `${contract.release} A remaining \`--until-issue\` reads \`ended\`.` }), []);
+  // A prefix query is the serialization the lane removes.
   assert.notDeepEqual(releaseLaneViolations({ ...contract, release: `${contract.release} gh pr list --base main` }), []);
   // A second carrier of the release-branch rule is the duplicate the contract removes.
   assert.notDeepEqual(releaseLaneViolations({

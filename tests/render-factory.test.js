@@ -104,7 +104,7 @@ test('the promotion table and the exit rule agree with the workflow', () => {
   for (const key of REVIEWS) assert.ok(section.includes(`\`${key}\``), `the exit rule omits ${key}`);
   assert.ok(!/_gate\b|gate lane/i.test(document), 'the guide names a gate lane');
   // The guide's four rows and `roles/planner.md`'s are one table, so neither can drift alone.
-  const rows = text => text.split('\n').filter(line => /^\|/.test(line) && !/^\| ---/.test(line)).slice(1);
+  const rows = text => text.split('\n').filter(line => /^\|/.test(line) && !/^\|[- |]+$/.test(line)).slice(1);
   assert.deepEqual(rows(section), rows(readFileSync(join(ROOT, 'roles/planner.md'), 'utf8')));
 });
 

@@ -169,7 +169,7 @@ test('the exit rule lives once and the promotion table lives once', () => {
   assert.equal([...rule.matchAll(/^- /gm)].length, 4);
 
   const planner = read('roles/planner.md');
-  const rows = planner.split('\n').filter(line => /^\|/.test(line)).filter(line => !/^\| ---/.test(line)).slice(1);
+  const rows = planner.split('\n').filter(line => /^\|/.test(line)).filter(line => !/^\|[- |]+$/.test(line)).slice(1);
   assert.deepEqual(rows, [
     '| any | spec child | `spec_progress` |',
     '| neither or `has-human-release` | delivery | `in_progress` |',
@@ -216,14 +216,15 @@ test('the sweep is the only stale-review guard and the 90m timer is gone', () =>
   assert.doesNotMatch(step, /gh pr list --base main/);
 });
 
-test('the guide carries the sweep, its threshold, its move and the human columns it skips', () => {
-  const section = /### The stale sweep\n\n([\s\S]*?)\n\n### /.exec(guide)?.[1] ?? '';
-  for (const column of REVIEWS) assert.ok(section.includes(`\`${column}\``), `the sweep section does not read ${column}`);
-  assert.match(section, /two or more hours/);
-  assert.match(section, /moves to `blocked`/);
-  assert.match(section, /`human_progress`/);
-  assert.match(section, /`awaiting_merge`/);
-  assert.match(section, /first live run is the acceptance/);
+test('the guide carries the blocker model once and no retired sweep section', () => {
+  assert.doesNotMatch(guide, /### The stale sweep/);
+  assert.doesNotMatch(guide, /two or more hours/);
+  const section = /^## One integration branch per spec\n\n([\s\S]*?)\n\n```text/m.exec(guide)?.[1] ?? '';
+  assert.match(section, /`--blocked-by <dependency-epic>`/);
+  assert.match(section, /`via: stage`/);
+  assert.match(section, /no manual intra-epic edge/);
+  assert.match(section, /release squash is on `main`/);
+  assert.match(section, /parks the\n?ticket in `blocked`/);
 });
 
 test('no skill or glossary carries a gate twin or the deleted promotion lanes', () => {
@@ -742,7 +743,11 @@ function guideViolations({ guide: text, apply, workflowFile }) {
     ['the two-merge has-human-release', /two human merges/],
     ['release order', /### Release order/],
     ['the cancelled-epic sweep', /cancelled-epic sweep/],
-    ['the stale sweep', /### The stale sweep/],
+    ['the blocker carrier', /`--blocked-by <dependency-epic>`/],
+    ['the stage wait', /`via: stage`/],
+    ['no manual intra-epic edge', /no manual intra-epic edge/],
+    ['the platform floor', /Multica 0\.13\.0 or newer/],
+    ['the floor refusal', /refuses a lower version before any plan or write/],
     ['the one topology', /Every grilling produces an epic/],
     ['the one closing question', /one close-and-start question: apply the chosen mode labels and start\s+stage 1/],
     ['the human seat', /human seat the project's workflow binds to the\s+`human`\s+role from the live handler/],

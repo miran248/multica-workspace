@@ -71,7 +71,7 @@ A description of the things that are out of scope for this spec.
 
 ## Proposed breakdown
 
-The ticket list the approval covers: one line per ticket with its stage and the behavior it delivers.
+The ticket list the approval covers: one line per ticket with its stage, its `Blocked by` cell — the dependency's epic for a cross-slice edge, empty when it has none — and the behavior it delivers.
 
 ## Further Notes
 

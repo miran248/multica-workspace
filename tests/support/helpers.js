@@ -25,6 +25,7 @@ export function fixture(t) {
   for (const dir of ['schemas', 'templates', 'roles', 'shared', 'skills']) cpSync(join(ROOT, dir), join(root, dir), { recursive: true });
   mkdirSync(join(root, 'migrations'));
   const binding = { workspace_id: id(1), human_user_id: id(3), owner_ids: [id(3)],
+    versions: { cli: '0.13.0', runtime: '0.13.0' },
     identity: { workspace_name: 'Fixture', workspace_slug: 'fixture', human_name: 'miran' },
     agent_runtimes: Object.fromEntries(ROLES.map(role => [role, id(2)])),
     repository: 'https://github.com/example/multica-workspace' };
@@ -44,7 +45,7 @@ export function apply(f, extra = {}) {
 
 export const writes = state => state.calls.filter(call => call[1] === 'project' && call[2] === 'workflow' ? call[3] === 'set'
   : call[1] === 'workflow' && call[2] === 'handoff' ? true
-  : !['get', 'list', 'runs'].includes(call[2]) && !(call[1] === 'workspace') && !(call[2] === 'member' && call[3] === 'list'));
+  : !['get', 'list', 'runs'].includes(call[2]) && call[1] !== 'workspace' && call[1] !== 'version' && !(call[2] === 'member' && call[3] === 'list'));
 
 export const seedImport = (f, name) => {
   const { content, files } = readSkill(f.root, name);

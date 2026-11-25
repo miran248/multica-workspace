@@ -111,22 +111,6 @@ test('shared autopilot templates carry no catalog identity and no stale reposito
   }
 });
 
-test('the catalog resolves the hourly stale sweep with its role and prompt', () => {
-  const resolved = resolve(syntheticBinding());
-  const sweep = resolved.autopilots.find(item => item.key === 'stale-sweep');
-  assert.ok(sweep, 'the catalog does not deploy a stale-sweep autopilot');
-  assert.equal(sweep.cron, '0 * * * *');
-  assert.equal(sweep.role, 'planner');
-  assert.equal(sweep.execution_mode, 'run_only');
-  assert.equal(sweep.issue_title_template, null);
-  assert.equal(sweep.timezone, 'UTC');
-  for (const column of ['spec_review', 'in_review', 'human_review', 'release_review'])
-    assert.ok(sweep.prompt.includes(`\`${column}\``), `the sweep prompt does not read ${column}`);
-  assert.match(sweep.prompt, /two hours/);
-  assert.match(sweep.prompt, /issue timeline/);
-  assert.doesNotMatch(sweep.prompt, /human_progress|awaiting_merge/);
-});
-
 for (const [name, mutate] of Object.entries({
   unknown: binding => { binding.typo = true; },
   'manifest override': binding => { binding.agent_overrides = { general: { model: 'fallback' } }; },
