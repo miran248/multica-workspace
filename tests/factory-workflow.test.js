@@ -192,7 +192,7 @@ test('the exit rule lives once and the promotion table lives once', () => {
   assert.match(read('skills/code-review/SKILL.md'), /has-human-release/);
 });
 
-test('no stale-review timer or sweep guard is armed and the stage wake is the promotion', () => {
+test('no stale-review timer is armed and the stage wake is the promotion', () => {
   const catalog = ['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
     readdirSync(join(ROOT, directory), { recursive: true })
       .filter(name => /\.(md|json)$/.test(name))
@@ -443,6 +443,9 @@ function changeWindowViolations({ step, review, planner }) {
     if (!review.includes(term)) violations.push(`spec_review: no ${term}`);
   for (const term of SPEC_LANE)
     if (!new RegExp(term, 'i').test(planner)) violations.push(`roles/planner.md: no ${term}`);
+  if (!/branches: epic integration/.test(planner)) violations.push('roles/planner.md: the integration branch is not the epic key');
+  // The new epic is the route after the freeze, not part of the in-window sequence.
+  if (!/freeze; else new epic, superseded/.test(planner)) violations.push('roles/planner.md: the new epic is not conditional');
   return violations;
 }
 
@@ -459,6 +462,10 @@ test('the spec lane names the reslice window, the freeze latch and the new-epic 
   assert.notDeepEqual(changeWindowViolations({ ...contract, review: contract.review.replace('A second open spec pull request', 'A pull request') }), []);
   // A Planner contract without the freeze arms the old open-ended slice.
   assert.notDeepEqual(changeWindowViolations({ ...contract, planner: contract.planner.replace(/freeze/g, 'boundary') }), []);
+  // Dropping `else` folds the new epic back into the in-window sequence ADR-0019 forbids.
+  assert.notDeepEqual(changeWindowViolations({ ...contract, planner: contract.planner.replace('freeze; else new epic', 'freeze; new epic') }), []);
+  // A bare `integration` loses the qualifier shared and the guide define as the epic's key.
+  assert.notDeepEqual(changeWindowViolations({ ...contract, planner: contract.planner.replace('branches: epic integration', 'branches: integration') }), []);
 });
 
 // One kickoff: the packet closes on one question, the Planner creates the epic and its stage-1

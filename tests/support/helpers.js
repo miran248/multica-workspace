@@ -5,6 +5,17 @@ import { ROOT, ROLES } from '../../scripts/config.js';
 import { deploy } from '../../scripts/deploy.js';
 import { id, initialState, command } from './platform.js';
 
+// The catalog's text, one reader for every test: a repository path, its Markdown/JSON file set,
+// and those files keyed by path.
+export const read = path => readFileSync(join(ROOT, path), 'utf8');
+
+export const catalogFiles = () => ['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
+  readdirSync(join(ROOT, directory), { recursive: true })
+    .filter(name => /\.(md|json)$/.test(name))
+    .map(name => `${directory}/${name}`));
+
+export const catalogText = () => Object.fromEntries(catalogFiles().map(path => [path, read(path)]));
+
 export const catalogSkills = root => readdirSync(join(root, 'skills'), { withFileTypes: true })
   .filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
 

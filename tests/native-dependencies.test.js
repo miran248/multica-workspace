@@ -7,19 +7,13 @@ import {
 } from '../scripts/config.js';
 import { deploy } from '../scripts/deploy.js';
 import { resolveWorkspace } from '../scripts/workspace.js';
-import { fixture, writes } from './support/helpers.js';
+import { catalogFiles, catalogText, fixture, read, writes } from './support/helpers.js';
 
 // The dependency contract has one home per rule: shared `## Delivery` carries the wait as a
 // blocker, the Implementer carries the build-ready woken run, the Planner and to-tickets carry
 // the edge's place, and the guide states the model once. The retired carriers are pinned by
 // absence: `--until-issue`, the stale sweep, and a dependency parked in `blocked`.
 
-const read = path => readFileSync(join(ROOT, path), 'utf8');
-const catalogFiles = () => ['roles', 'shared', 'skills', 'templates'].flatMap(directory =>
-  readdirSync(join(ROOT, directory), { recursive: true })
-    .filter(name => /\.(md|json)$/.test(name))
-    .map(name => `${directory}/${name}`));
-const catalogText = () => Object.fromEntries(catalogFiles().map(path => [path, read(path)]));
 const deliveryOf = shared => /^## Delivery\n([\s\S]*?)\n## /m.exec(shared)?.[1] ?? '';
 
 function waitViolations({ shared, implementer, planner, release, tickets, specSkill, review, blocked, guide, glossary, catalog }) {
@@ -137,12 +131,19 @@ test('the stale sweep is gone from every carrier and explicit in the ledger', ()
   const pins = readdirSync(join(ROOT, 'tests')).filter(name => name.endsWith('.js') && name !== 'native-dependencies.test.js')
     .filter(name => /stale-sweep|Stale sweep|stale-review guard/.test(read(`tests/${name}`)));
   assert.deepEqual(pins, []);
-  // The standard and the ledger guide state the wildcard exception the event relies on; a
-  // slug-only rule is the contradiction the first review found.
-  for (const path of ['AGENTS.md', 'migrations/README.md']) {
-    assert.match(read(path), /renders identically\s+in\s+every workspace/, `${path} omits the wildcard's condition`);
-    assert.match(read(path), /anonymous catalog cannot name/, `${path} omits why the wildcard is needed`);
-    assert.ok(read(path).includes('"*"'), `${path} does not show the wildcard scope`);
+});
+
+test('the ledger wildcard is a stated exception, never a slug-only rule', () => {
+  const standard = read('AGENTS.md');
+  const guide = read('migrations/README.md');
+  assert.ok(standard.includes('or to `"*"` when its title renders identically'), 'AGENTS.md does not state the wildcard exception');
+  // The bullet opens with the exception: a slug-only sentence followed by a wildcard carve-out
+  // is the contradiction the first review found.
+  assert.ok(guide.includes('named workspace slugs, or to `["*"]`'), 'migrations/README.md does not open with the wildcard exception');
+  assert.ok(!guide.includes('limits an event to named workspace slugs.'), 'migrations/README.md still states a slug-only rule');
+  for (const [path, text] of [['AGENTS.md', standard], ['migrations/README.md', guide]]) {
+    assert.match(text, /renders\s+identically\s+in\s+every workspace/, `${path} omits the wildcard's condition`);
+    assert.match(text, /anonymous catalog cannot name/, `${path} omits why the wildcard is needed`);
   }
 });
 

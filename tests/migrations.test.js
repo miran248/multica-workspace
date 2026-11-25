@@ -61,6 +61,10 @@ test('a `*`-scoped autopilot event applies in every workspace', t => {
   // A named slug still filters: the event does not leak into another workspace.
   writeLedger(f, [{ kind: 'retire', entity: 'autopilot', name: 'Retired sweep', workspaces: ['another-workspace'] }]);
   assert.deepEqual(resolve(f.binding, f.root).migrations, []);
+  // The wildcard is a rendered autopilot title's scope, not a general one: another entity
+  // scoped `*` is the unscoped default with no per-workspace title to justify it.
+  writeLedger(f, [{ kind: 'retire', entity: 'label', name: 'in-use', workspaces: ['*'] }]);
+  assert.throws(() => resolve(f.binding, f.root), /Invalid migration \/entity/);
 });
 
 test('two chained renames apply in order and keep the object identity', t => {
