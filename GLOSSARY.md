@@ -6,8 +6,8 @@ when an issue, spec or commit names a concept, it uses the term here rather than
 ## Catalog
 
 **catalog** — `templates/default.json` plus the assets it names (roles, shared instructions,
-labels, skill bindings, the `config-sync` and `stale-sweep` autopilots). It is the only
-deployable unit; `just validate` refuses anything but `default`.
+labels, skill bindings, the `config-sync` autopilot). It is the only deployable unit;
+`just validate` refuses anything but `default`.
 
 **role** — one of the five seats: `general`, `planner`, `implementer`, `reviewer`, `release`.
 A role's behavior is `roles/<role>.md`; the shared rules are `shared/instructions.md`.
@@ -36,7 +36,13 @@ skill. It is not a dependency: nothing fetches it, and a skill is a local file s
 ## Sync
 
 **consumer workspace** — a live workspace the catalog is synced into. The same catalog
-applies unchanged to any number of them.
+applies unchanged to any number of them, each at or above the version floor.
+
+**version floor** — the minimum platform the catalog runs on: Multica 0.13.0, declared once and
+refused at the resolver before any plan or write, `--dry-run` included, against both the syncing
+CLI and the bound runtime's `metadata.cli_version`, naming both versions. A version that cannot
+be read refuses too. ADR-0030 owns the decision; the refusal table in `docs/apply.md` is the
+operator's side.
 
 **live binding** — what a run resolves at start and never stores: the workspace id, name,
 slug and owners (`multica workspace get`, `member list`), the single online Dsh runtime
@@ -93,6 +99,25 @@ spec PR, the ticket itself for a delivery PR, the release child for the release 
 the only key in the PR title and head branch; the epic's key never appears there, and the spec
 child's title does not repeat the epic key.
 
+**blocker** — a `--blocked-by` relation on the ticket that waits, and the only carrier for a wait
+on another issue. A promoted ticket with an open blocker starts nothing; it stays in its lane, or
+in `backlog` until promoted, and the platform starts its assignee when the last blocker ends. A
+cross-slice dependency names the dependency's epic and sits on every delivery child that needs
+it, set at publish — never on the spec child, the release child or the epic. The woken run
+verifies the dependency's release squash on `main` and syncs the base; a cancelled or deleted
+blocker is not a delivery, so the run records the finding and parks the ticket in `blocked` for
+the Planner.
+
+**stage wait** — the blocker the platform materialises on every later-stage child of a parent,
+against every earlier-stage sibling, with `via: stage`. It is the stage barrier inside an epic:
+the catalog adds no manual intra-epic edge, and a same-stage dependency is a slicing defect —
+distinct stages, never a relation.
+
+**blocked** — the triage status: missing information or an external condition. It never carries a
+wait on another issue; that is a **blocker**, and the platform starts the ticket when the last one
+ends. A ticket moved here for triage returns to the lane its timeline records, or is cancelled;
+nothing else stays parked.
+
 **handoff** — the linked pull request that records the work, followed by the status move that
 assigns the issue to the new column's handler and starts that handler's run. The PR's title and
 head branch carry the delivering ticket's key, never the epic's; the link is read back
@@ -143,17 +168,11 @@ applies the exit rule in `code-review`, merging at the reviewed head or landing 
 `awaiting_merge` when the base is `main` and the epic carries `has-human-release`. The procedure
 lives once in `roles/release.md`; the release ticket carries only its instance.
 
-**stale sweep** — the hourly `stale-sweep` autopilot. It dates a ticket in one of the
-reviewer-handled review columns — `spec_review`, `in_review`, `human_review`, `release_review` —
-from `issue timeline`, and past two hours comments the age and moves it to `blocked` for triage.
-Human-handled columns (`human_progress`, `awaiting_merge`) are never swept: a human merge waits
-indefinitely. It replaces the per-issue 90m timer; `task.failed` stays a per-issue wake.
-
 **drill** — a throwaway project and a disposable repository bound to a copy of a workflow, used
 to prove a graph change on the platform before the catalog reaches a live project. One drill
-epic per mode, one ticket in each lane, both release exits, the epic state, a stale ticket and an
-in-flight move, each with its `issue timeline` evidence; the copy, the epics and the project are
-archived when it is green.
+epic per mode, one ticket in each lane, both release exits, the epic state and an in-flight move,
+each with its `issue timeline` evidence; the copy, the epics and the project are archived when it
+is green.
 
 **spec child** — the epic's stage-1 child that carries the spec pull request, including the
 proposed breakdown and the published slice. The PR is headed by the spec child's key and targets
